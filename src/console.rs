@@ -1,8 +1,41 @@
-use core::fmt::{Write, Result, Arguments};
+use core::{fmt::{Write, Result, Arguments}, ops::Add};
+use alloc::string::String;
+
 use crate::sbi::*;
+
+// 读入一个字符
+pub fn read() -> char {
+    console_getchar()
+}
+
+// 无回显输入
+pub fn read_line(str: &mut String) {
+    loop {
+        let c = read();
+        if c == '\n' {
+            break;
+        }
+        str.push(c);
+    }
+}
+
+// 有回显输入
+pub fn read_line_display(str: &mut String) {
+    loop {
+        let c = read();
+        console_putchar(c as u8);
+
+        if c as u8 == 0x0D {
+            console_putchar(0xa);
+            break;
+        }
+        str.push(c);
+    }
+}
 
 struct Stdout;
 
+// 实现输出Trait
 impl Write for Stdout {
     fn write_str(&mut self, s: &str) -> Result {
         let mut buffer = [0u8; 4];
@@ -15,10 +48,12 @@ impl Write for Stdout {
     }
 }
 
+// 输出函数
 pub fn print(args: Arguments) {
     Stdout.write_fmt(args).unwrap();
 }
 
+// 定义宏
 #[macro_export]
 macro_rules! print {
     ($fmt: literal $(, $($arg: tt)+)?) => {

@@ -11,7 +11,6 @@ static mut HEAP: [u8;HEAP_SIZE] = [0;HEAP_SIZE];
 #[global_allocator]
 static HEAP_ALLOCATOR: LockedHeap<64> = LockedHeap::empty();
 
-
 // 初始化堆内存分配器
 pub fn init() {
     unsafe {

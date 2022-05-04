@@ -14,9 +14,10 @@ mod panic;
 
 extern crate alloc;
 use core::arch::global_asm;
-use alloc::vec::Vec;
+use alloc::{vec::Vec, string::String};
 
-use crate::sbi::shutdown;
+use crate::sbi::{shutdown};
+use crate::console::{read_line_display};
 
 global_asm!(include_str!("entry.asm"));
 
@@ -47,6 +48,12 @@ pub extern "C" fn rust_main() -> ! {
     // 提示信息
     info!("Welcome to test os!");
 
+    // 测试获取信息
+    let mut words = String::new();
+    read_line_display(&mut words);
+    info!("I say {}", words);
+
+    // 测试数据分配
     let mut a1: Vec<u8> = Vec::new();
     a1.push(1);
     a1.push(2);
@@ -54,5 +61,8 @@ pub extern "C" fn rust_main() -> ! {
         info!("{}", a);
     }
 
+    
+
+    // 调用rust api关机
     shutdown()
 }
