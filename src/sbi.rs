@@ -14,7 +14,7 @@ const SBI_REMOTE_SFENCE_VMA: usize = 6;
 const SBI_REMOTE_SFENCE_VMA_ASID: usize = 7;
 const SBI_SHUTDOWN: usize = 8;
 
-// sbi calls
+// SBI 调用
 fn sbi_call(which: usize, arg0: usize, arg1: usize, arg2: usize) -> i32 {
     let mut ret;
     unsafe {
@@ -27,16 +27,17 @@ fn sbi_call(which: usize, arg0: usize, arg1: usize, arg2: usize) -> i32 {
     ret
 }
 
+/// 设置定时器
 pub fn set_timer(time: usize) {
     sbi_call(SBI_SET_TIMER, time, 0, 0);
 }
 
-/// display a character on screen
+/// 输出一个字符到屏幕
 pub fn console_putchar(ch: u8) {
     sbi_call(SBI_CONSOLE_PUT_CHAR, ch as usize, 0, 0);
 }
 
-/// get a cahracter from screen
+/// 获取输入
 pub fn console_getchar() -> i32 {
     sbi_call(SBI_CONSOLE_GET_CHAR, 0, 0, 0)
 }

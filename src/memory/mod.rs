@@ -1,13 +1,7 @@
-use ::alloc::boxed::Box;
+mod heap;
 
-mod alloc;
-mod page;
-
+// 内存初始化
 pub fn init() {
-    alloc::init();
-    page::init();
-
-    // test for alloc
-    let a = Box::new(1);
-    warn!("the value of box test: {}", a);
+    // 初始化堆 便于变量指针分配
+    heap::init();
 }
