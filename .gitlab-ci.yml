@@ -6,8 +6,6 @@ pages:
     paths:
     - public
   only:
-    refs:
-    - main
-    changes:
+  - main
 
 
