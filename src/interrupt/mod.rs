@@ -1,6 +1,9 @@
-use core::arch::{global_asm, asm};
-use riscv::register::{sstatus::Sstatus, scause::{self, Trap, Exception, Scause}, stval, sepc};
+mod timer;
 
+use core::arch::{global_asm, asm};
+use riscv::register::{sstatus::Sstatus, scause::{Trap, Exception, Interrupt,Scause}, sepc};
+
+pub use timer::TICKS;
 
 #[repr(C)]
 #[derive(Debug)]
@@ -12,8 +15,9 @@ pub struct Context {
 
 // break中断
 fn breakpoint(context: &mut Context) {
-    warn!("寄存器地址 x1 {}", context.x[1]);
     warn!("break中断产生 中断地址 {:#x}", sepc::read());
+    context.sepc = context.sepc + 2;
+    // panic!("中断退出")
 }
 
 // 中断错误
@@ -28,12 +32,10 @@ fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) {
     match scause.cause(){
         Trap::Exception(Exception::Breakpoint) => breakpoint(context),
         // 时钟中断
-        // Trap::Interrupt(Interrupt::SupervisorTimer) => supervisor_timer(context),
+        Trap::Interrupt(Interrupt::SupervisorTimer) => timer::timer_handler(context),
         // 其他情况，终止当前线程
         _ => fault(context, scause, stval),
     }
-    fault(context, scause, stval);
-    panic!("中断产生");
 }
 
 // 包含中断代码
@@ -49,5 +51,8 @@ pub fn init() {
     unsafe {
         asm!("csrw stvec, a0", in("a0") int_callback_entry as usize);
     }
+
+    // 初始化定时器
+    timer::init();
 
 }
