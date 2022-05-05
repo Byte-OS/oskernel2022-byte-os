@@ -8,16 +8,17 @@
 // 使用定义的命令行宏   
 #[macro_use]
 mod console;
+mod interrupt;
 mod memory;
 mod sbi;
 mod panic;
 
 extern crate alloc;
-use core::arch::global_asm;
+use core::arch::{global_asm, asm};
 use alloc::{vec::Vec, string::String};
 
 use crate::sbi::{shutdown};
-use crate::console::{read_line_display};
+use crate::console::{read_line_display, read};
 
 global_asm!(include_str!("entry.asm"));
 
@@ -42,13 +43,23 @@ pub extern "C" fn rust_main() -> ! {
     // 清空bss段
     clear_bss();
 
+    // 初始化中断
+    interrupt::init();
+
     // 初始化内存
     memory::init();
     
     // 提示信息
     info!("Welcome to test os!");
 
+    unsafe {
+        asm!("ebreak");
+    }
+
     // 测试获取信息
+    // let ch = read();
+    // info!("read char {:#x}", ch as u8);
+
     let mut words = String::new();
     read_line_display(&mut words);
     info!("I say {}", words);
