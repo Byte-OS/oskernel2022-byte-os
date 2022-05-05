@@ -6,6 +6,9 @@ pages:
     paths:
     - public
   only:
-  - main
+    refs:
+    - main
+    changes:
+    - "docs/**"
 
 
