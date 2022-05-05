@@ -9,6 +9,6 @@ pages:
     refs:
     - main
     changes:
-    - "docs/**"
+    - "docs/*"
 
 
