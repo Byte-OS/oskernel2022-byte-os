@@ -61,7 +61,7 @@ pub fn read_line(str: &mut String) {
 pub fn read_line_display(str: &mut String) {
     loop {
         let c = read();
-
+        
         if c as u8 >= 0b11000000 {
             // 获取到utf8字符 转unicode
             console_putchar(c as u8);

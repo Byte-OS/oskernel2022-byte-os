@@ -17,8 +17,10 @@ extern crate alloc;
 use core::arch::{global_asm, asm};
 use alloc::{vec::Vec, string::String};
 
+use interrupt::TICKS;
+
 use crate::sbi::{shutdown};
-use crate::console::{read_line_display, read};
+use crate::console::{read_line_display};
 
 global_asm!(include_str!("entry.asm"));
 
@@ -52,13 +54,23 @@ pub extern "C" fn rust_main() -> ! {
     // 提示信息
     info!("Welcome to test os!");
 
-    unsafe {
-        asm!("ebreak");
-    }
+    // // 测试ebreak
+    // unsafe {
+    //     asm!("ebreak");
+    // }
 
     // 测试获取信息
     // let ch = read();
     // info!("read char {:#x}", ch as u8);
+
+    unsafe {
+        loop {
+            if TICKS > 1000 {
+                info!("继续执行");
+                break;
+            }
+        }
+    }
 
     let mut words = String::new();
     read_line_display(&mut words);
