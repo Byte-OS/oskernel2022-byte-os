@@ -6,6 +6,8 @@ BIN_FILE    := target/$(TARGET)/$(MODE)/kernel.bin
 OBJDUMP     := rust-objdump --arch-name=riscv64
 OBJCOPY     := rust-objcopy --binary-architecture=riscv64
 
+FS_IMG := target/$(TARGET)/$(MODE)/fs.img
+
 # BOARD
 BOARD ?= qemu
 SBI ?= rustsbi
@@ -38,13 +40,36 @@ qemu: build
             -machine virt \
             -bios $(BOOTLOADER) \
             -device loader,file=$(BIN_FILE),addr=0x80200000 \
+			-drive file=$(FS_IMG),if=none,format=raw,id=x0 \
+        	-device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0 \
 			-kernel $(BIN_FILE) \
 			-nographic \
 			-smp 4 
+
+debug: build
+	@qemu-system-riscv64 \
+            -machine virt \
+            -bios $(BOOTLOADER) \
+            -device loader,file=$(BIN_FILE),addr=0x80200000 \
+			-drive file=$(FS_IMG),if=none,format=raw,id=x0 \
+        	-device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0 \
+			-kernel $(BIN_FILE) \
+			-nographic \
+			-smp 4 \
+			-s -S
+
+fs-img: 
+	@rm -f $(FS_IMG)
+	@dd if=/dev/zero of=$(FS_IMG) count=16384 bs=512	# 8M
+	@mkfs.vfat $(FS_IMG)
+
 gdb:
 	riscv64-elf-gdb \
         -ex 'file $(KERNEL_FILE)' \
         -ex 'set arch riscv:rv64' \
         -ex 'target remote localhost:1234'
+
+hexdump:
+	hexdump $(FS_IMG)
 
 run: build qemu

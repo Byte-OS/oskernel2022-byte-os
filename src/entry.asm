@@ -3,9 +3,8 @@
     .globl _start
 # 操作系统入口函数
 _start:
-
     # 堆栈初始化
-    la sp, boot_stack_top
+    la sp, boot_stack_top       
     # 进入rust主函数
     call rust_main
 

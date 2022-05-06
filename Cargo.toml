@@ -15,3 +15,7 @@ panic = "abort"
 riscv = { git = "https://github.com/rcore-os/riscv", features = ["inline-asm"] }
 lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
 buddy_system_allocator = "0.8.0"
+# 虚拟驱动
+virtio-drivers = { git = "https://github.com/rcore-os/virtio-drivers" }
+
+device_tree = { git = "https://github.com/rcore-os/device_tree-rs", rev = "2fa8411" }

@@ -1,5 +1,11 @@
 # 操作系统笔记
 
+## 帮助信息
+
+[os-competition-info/ref-info.md at main · oscomp/os-competition-info · GitHub](https://github.com/oscomp/os-competition-info/blob/main/ref-info.md)
+
+
+
 ## 1.操作系统引导
 
 RISC-V芯片引导位置为`0x80000000`，由于可以使用`rustsbi`，因此在`0x80200000`处加入操作系统内核即可，无需再次编写`bootloader`.
@@ -350,3 +356,13 @@ pub fn init() {
     set_next_timeout();
 }
 ```
+
+## Virtual I/O protocol
+
+[参考链接](https://web.eecs.utk.edu/~smarz1/courses/cosc361/notes/virtio/)
+
+[IO Device文档](https://docs.oasis-open.org/virtio/virtio/v1.1/virtio-v1.1.html)
+
+rust 读取设备树      
+
+操作系统在启动后需要了解计算机系统中所有接入的设备，这就要有一个读取全部已接入设备信息的能力，而设备信息放在哪里，又是谁帮我们来做的呢？在 RISC-V 中，这个一般是由 bootloader，即 OpenSBI or RustSBI 固件完成的。它来完成对于包括物理内存在内的各外设的探测，将探测结果以 **设备树二进制对象（DTB，Device Tree Blob）** 的格式保存在物理内存中的某个地方。然后bootloader会启动操作系统，即把放置DTB的物理地址将放在 `a1` 寄存器中，而将会把 HART ID （**HART，Hardware Thread，硬件线程，可以理解为执行的 CPU 核**）放在 `a0` 寄存器上，然后跳转到操作系统的入口地址处继续执行。例如，我们可以查看 `virtio_drivers` crate中的在裸机环境下使用驱动程序的例子。我们只需要给 rust_main 函数增加两个参数（即 `a0` 和 `a1` 寄存器中的值 ）即可：
