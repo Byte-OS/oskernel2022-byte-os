@@ -4,8 +4,6 @@
 
 [os-competition-info/ref-info.md at main · oscomp/os-competition-info · GitHub](https://github.com/oscomp/os-competition-info/blob/main/ref-info.md)
 
-
-
 ## 1.操作系统引导
 
 RISC-V芯片引导位置为`0x80000000`，由于可以使用`rustsbi`，因此在`0x80200000`处加入操作系统内核即可，无需再次编写`bootloader`.
@@ -394,10 +392,6 @@ rust 读取设备树      
 
 操作系统在启动后需要了解计算机系统中所有接入的设备，这就要有一个读取全部已接入设备信息的能力，而设备信息放在哪里，又是谁帮我们来做的呢？在 RISC-V 中，这个一般是由 bootloader，即 OpenSBI or RustSBI 固件完成的。它来完成对于包括物理内存在内的各外设的探测，将探测结果以 **设备树二进制对象（DTB，Device Tree Blob）** 的格式保存在物理内存中的某个地方。然后bootloader会启动操作系统，即把放置DTB的物理地址将放在 `a1` 寄存器中，而将会把 HART ID （**HART，Hardware Thread，硬件线程，可以理解为执行的 CPU 核**）放在 `a0` 寄存器上，然后跳转到操作系统的入口地址处继续执行。例如，我们可以查看 `virtio_drivers` crate中的在裸机环境下使用驱动程序的例子。我们只需要给 rust_main 函数增加两个参数（即 `a0` 和 `a1` 寄存器中的值 ）即可：
 
-
-
-
-
 ## 测试大小端代码
 
 ```rust
@@ -408,5 +402,51 @@ if first_char == 0x11 {
     info!("大端在前")
 } else {
     info!("小端在前")
+}
+```
+
+## FAT32文件系统
+
+[详解FAT32文件系统 - CharyGao - 博客园](https://www.cnblogs.com/Chary/p/12981056.html)
+
+```rust
+struct FAT32 {
+    device_id: usize,
+    fat32bpb: FAT32BPB
+}
+
+#[repr(packed)]
+pub struct FAT32BPB {
+    jmpcode: [u8; 3],       // 跳转代码
+    oem: [u8; 8],           // oem 信息
+    bytes_per_sector: u16,  // 每扇区字节数
+    sectors_per_cluster: u8,// 每簇扇区数
+    reserved_sector: u16,   // 保留扇区数 第一个FAT之前的扇区数 包含引导扇区
+    fat_number: u8,         // fat表数量
+    root_entries: u16,      // 根目录项数 FAT32必须为0
+    small_sector: u16,      // 小扇区区数 FAT32必须为0
+    media_descriptor: u8,   // 媒体描述符 0xF8标识硬盘 0xF0表示3.5寸软盘
+    sectors_per_fat: u16,   // 每FAT扇区数
+    sectors_per_track: u16, // 每道扇区数
+    number_of_head: u16,    // 磁头数
+    hidden_sector: u32,     // 隐藏扇区数
+    large_sector: u32,      // 总扇区数
+}
+
+pub fn init() {
+    let mut buf = vec![0u8; size_of::<FAT32BPB>()];
+    unsafe {
+        BLK_CONTROL.read_one_sector(0, 0, &mut buf); 
+        info!("缓冲区地址:{:#x}", buf.as_mut_ptr() as usize);
+        let ref fat_header = *(buf.as_mut_ptr() as *mut u8 as *mut FAT32BPB);
+        info!("fat_header address: {:#x}", fat_header as *const _ as usize);
+        info!("size of :{}", size_of::<FAT32BPB>());
+        info!("变量地址:{:#x}", &(fat_header.jmpcode) as *const _ as usize);
+        info!("磁盘大小:{}", fat_header.large_sector * fat_header.bytes_per_sector as u32);
+        info!("FAT表数量:{}", fat_header.fat_number);
+        info!("保留扇区数: {}, 地址: {:#x}", fat_header.reserved_sector, fat_header.reserved_sector * 512);
+        info!("OEM信息:{}", String::from_utf8_lossy(&fat_header.oem));
+        info!("根目录数量: {:?}", fat_header.jmpcode);
+    }
 }
 ```

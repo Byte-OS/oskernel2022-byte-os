@@ -29,6 +29,7 @@ pub struct FAT32BPB {
     large_sector: u32,      // 总扇区数
 }
 
+
 impl FAT32 {
     
 }
@@ -46,6 +47,9 @@ pub fn init() {
         info!("size of :{}", size_of::<FAT32BPB>());
         info!("变量地址:{:#x}", &(fat_header.jmpcode) as *const _ as usize);
         info!("磁盘大小:{}", fat_header.large_sector * fat_header.bytes_per_sector as u32);
+        info!("FAT表数量:{}, 占扇区:{}, 占空间:{:#x}", fat_header.fat_number, fat_header.fat_number as u16 * fat_header.sectors_per_fat, fat_header.fat_number as u32 * fat_header.sectors_per_fat as u32 * fat_header.bytes_per_sector as u32);
+        info!("保留扇区数: {}, 地址: {:#x}", fat_header.reserved_sector, fat_header.reserved_sector * 512);
+        info!("数据扇区地址: {:#x}", (fat_header.reserved_sector + fat_header.fat_number as u16 * fat_header.sectors_per_fat) as u32 * fat_header.bytes_per_sector as u32);
         info!("OEM信息:{}", String::from_utf8_lossy(&fat_header.oem));
         info!("根目录数量: {:?}", fat_header.jmpcode);
 
