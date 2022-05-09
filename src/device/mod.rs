@@ -1,5 +1,6 @@
 mod block;
 
+pub use block::BLK_CONTROL;
 // #[repr(usize)]
 // pub enum MmioOffsets {
 //   MagicValue = 0x000,

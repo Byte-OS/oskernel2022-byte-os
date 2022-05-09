@@ -10,9 +10,9 @@ pub fn timer_handler(context: &mut Context) {
     set_next_timeout();
     unsafe {
         TICKS=TICKS+1;
-        if TICKS % 100 == 0 {
-            info!("{} TICKS", TICKS);
-        }
+        // if TICKS % 100 == 0 {
+        //     info!("{} TICKS", TICKS);
+        // }
     }
 }
 

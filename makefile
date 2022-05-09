@@ -53,15 +53,14 @@ debug: build
             -device loader,file=$(BIN_FILE),addr=0x80200000 \
 			-drive file=$(FS_IMG),if=none,format=raw,id=x0 \
         	-device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0 \
-			-kernel $(BIN_FILE) \
 			-nographic \
 			-smp 4 \
 			-s -S
 
 fs-img: 
 	@rm -f $(FS_IMG)
-	@dd if=/dev/zero of=$(FS_IMG) count=16384 bs=512	# 8M
-	@mkfs.vfat $(FS_IMG)
+	@dd if=/dev/zero of=$(FS_IMG) count=81920 bs=512	# 8M
+	@mkfs.vfat $(FS_IMG) -F 32
 
 gdb:
 	riscv64-elf-gdb \
@@ -70,6 +69,6 @@ gdb:
         -ex 'target remote localhost:1234'
 
 hexdump:
-	hexdump $(FS_IMG)
+	hexdump $(FS_IMG) -C
 
 run: build qemu

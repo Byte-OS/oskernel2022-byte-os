@@ -363,6 +363,50 @@ pub fn init() {
 
 [IO Device文档](https://docs.oasis-open.org/virtio/virtio/v1.1/virtio-v1.1.html)
 
+### MMIO Offsets
+
+```rust
+#[repr(usize)]
+pub enum MmioOffsets {
+  MagicValue = 0x000,
+  Version = 0x004,
+  DeviceId = 0x008,
+  VendorId = 0x00c,
+  HostFeatures = 0x010,
+  HostFeaturesSel = 0x014,
+  GuestFeatures = 0x020,
+  GuestFeaturesSel = 0x024,
+  GuestPageSize = 0x028,
+  QueueSel = 0x030,
+  QueueNumMax = 0x034,
+  QueueNum = 0x038,
+  QueueAlign = 0x03c,
+  QueuePfn = 0x040,
+  QueueNotify = 0x050,
+  InterruptStatus = 0x060,
+  InterruptAck = 0x064,
+  Status = 0x070,
+  Config = 0x100,
+}
+```
+
 rust 读取设备树      
 
 操作系统在启动后需要了解计算机系统中所有接入的设备，这就要有一个读取全部已接入设备信息的能力，而设备信息放在哪里，又是谁帮我们来做的呢？在 RISC-V 中，这个一般是由 bootloader，即 OpenSBI or RustSBI 固件完成的。它来完成对于包括物理内存在内的各外设的探测，将探测结果以 **设备树二进制对象（DTB，Device Tree Blob）** 的格式保存在物理内存中的某个地方。然后bootloader会启动操作系统，即把放置DTB的物理地址将放在 `a1` 寄存器中，而将会把 HART ID （**HART，Hardware Thread，硬件线程，可以理解为执行的 CPU 核**）放在 `a0` 寄存器上，然后跳转到操作系统的入口地址处继续执行。例如，我们可以查看 `virtio_drivers` crate中的在裸机环境下使用驱动程序的例子。我们只需要给 rust_main 函数增加两个参数（即 `a0` 和 `a1` 寄存器中的值 ）即可：
+
+
+
+
+
+## 测试大小端代码
+
+```rust
+// 测试大小端代码
+let test_str:u32 = 0x11223344;
+let first_char = unsafe {*(&test_str as *const u32 as *const u8)};
+if first_char == 0x11 {
+    info!("大端在前")
+} else {
+    info!("小端在前")
+}
+```
