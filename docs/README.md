@@ -19,6 +19,19 @@ cargo install cargo-binutils
 rustup component add llvm-tools-preview
 ```
 
+## 添加target elf
+
+```shell
+rustup target add riscv64gc-unknown-none-elf
+```
+
+> 可选 使用nightly工具链
+
+```shell
+rustup install nightly
+rustup default nightly
+```
+
 ## 使用Rust定义全局变量
 
 ```rust
