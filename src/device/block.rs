@@ -42,20 +42,4 @@ pub fn init() {
     unsafe {
         BLK_CONTROL.add(VIRTIO0);
     }
-    // let mut input = vec![0xffu8; 512];
-    // let mut output = vec![0; 512];
-    // for i in 0..32 {
-    //     for x in input.iter_mut() {
-    //         *x = i as u8;
-    //     }
-    //     blk.write_block(i, &input).expect("failed to write");
-    //     blk.read_block(i, &mut output).expect("failed to read");
-    //     assert_eq!(input, output);
-    // }
-    // blk.write_block_nb(block_id, buf, resp)
-    // blk.read_block(0, &mut output);
-    // for i in output {
-        // info!("{:#x}", i);
-    // }
-    info!("virtio-blk test finished");
 }

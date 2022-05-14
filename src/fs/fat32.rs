@@ -1,5 +1,6 @@
 use core::mem::size_of;
 
+use alloc::borrow::ToOwned;
 use alloc::string::{String};
 use alloc::vec;
 
@@ -9,12 +10,13 @@ use crate::device::BLK_CONTROL;
 pub trait FilesystemItemOperator {
     fn filename(&self) -> String;            // 获取文件名
     fn file_size(&self) -> usize;            // 获取文件大小
+    fn start_cluster(&self) -> usize;        // 开始簇
 }
 
 #[derive(Default)]
 struct FAT32 {
     device_id: usize,
-    fat32bpb: FAT32BPB
+    bpb: FAT32BPB
 }
 
 #[derive(Default)]
@@ -65,13 +67,28 @@ pub struct FAT32shortFileItem {
 }
 
 impl FilesystemItemOperator for FAT32shortFileItem {
+    // 获取文件名
     fn filename(&self) -> String {
-        todo!()
-        // String::from_utf8_lossy(&self.filename). + &String::from_utf8_lossy(&self.ext)
+        let filename = String::from_utf8_lossy(&self.filename).into_owned();
+        // 获取文件名总长度
+        let mut filename_size = filename.len();
+        // 获取有效文件名长度
+        for i in filename.chars().rev() {
+            if !i.is_whitespace() { break; }
+            filename_size = filename_size - 1;
+        }
+        // 拼接得到文件名
+        filename[..filename_size].to_owned() + "." + &String::from_utf8_lossy(&self.ext).into_owned()
     }
 
+    // 获取文件大小
     fn file_size(&self) -> usize {
-        todo!()
+        self.len as usize
+    }
+
+    // 开始簇
+    fn start_cluster(&self) -> usize {
+        (self.start_high as usize) << 16 | self.start_low as usize
     }
 }
 
@@ -88,60 +105,59 @@ pub struct FAT32longFileItem {
     filename2: [u8; 4]              // 长文件名unicode码
 }
 
+impl FAT32BPB {
+    // 获取数据扇区号
+    fn data_sector(&self) -> usize {
+        (self.reserved_sector + self.fat_number as u16 * self.sectors_per_fat) as usize
+    }
+
+    // 输出fat32信息
+    fn info(&self) {
+        info!("变量地址:{:#x}", &(self.jmpcode) as *const _ as usize);
+        info!("磁盘大小:{}", self.large_sector * self.bytes_per_sector as u32);
+        info!("FAT表数量:{}, 占扇区:{}", self.fat_number, self.fat_number as u16 * self.sectors_per_fat);
+        info!("保留扇区数: {}, 地址: {:#x}", self.reserved_sector, self.reserved_sector * 512);
+        info!("数据扇区: {:#x}", self.data_sector());
+        info!("OEM信息:{}", String::from_utf8_lossy(&self.oem));
+        info!("根目录数量: {:?}", self.jmpcode);
+        info!("每簇扇区数: {:#x}, {:#x}", self.sectors_per_cluster, (&self.sectors_per_cluster as *const u8 as usize - self as *const FAT32BPB as usize));
+        info!("隐藏扇区数: {:#x}", self.hidden_sector);
+    }
+}
+
 /// 目前仅支持挂载文件系统
 impl FAT32 {
     // 创建新的FAT32表项 device_id: 为设备id 目前支持文件系统 
     fn new(device_id: usize) -> FAT32 {
         let fat32 = FAT32 {
             device_id,
-            fat32bpb: Default::default()
+            bpb: Default::default()
         };
         unsafe {
-            BLK_CONTROL.read_one_sector(fat32.device_id, 0, &mut *(&fat32.fat32bpb as *const FAT32BPB as *mut [u8; size_of::<FAT32BPB>()]));
+            BLK_CONTROL.read_one_sector(fat32.device_id, 0, &mut *(&fat32.bpb as *const FAT32BPB as *mut [u8; size_of::<FAT32BPB>()]));
         }
         fat32
-    }
-
-
-    // 获取数据扇区号
-    fn data_sector(&self) -> usize {
-        (self.fat32bpb.reserved_sector + self.fat32bpb.fat_number as u16 * self.fat32bpb.sectors_per_fat) as usize
-    }
-
-    // 输出fat32信息
-    fn info(&self) {
-        info!("变量地址:{:#x}", &(self.fat32bpb.jmpcode) as *const _ as usize);
-        info!("磁盘大小:{}", self.fat32bpb.large_sector * self.fat32bpb.bytes_per_sector as u32);
-        info!("FAT表数量:{}, 占扇区:{}", self.fat32bpb.fat_number, self.fat32bpb.fat_number as u16 * self.fat32bpb.sectors_per_fat);
-        info!("保留扇区数: {}, 地址: {:#x}", self.fat32bpb.reserved_sector, self.fat32bpb.reserved_sector * 512);
-        info!("数据扇区: {:#x}", self.data_sector());
-        info!("OEM信息:{}", String::from_utf8_lossy(&self.fat32bpb.oem));
-        info!("根目录数量: {:?}", self.fat32bpb.jmpcode);
     }
 }
 
 pub fn init() {
-    let mut fat32: FAT32 = FAT32::new(0);
+    let fat32: FAT32 = FAT32::new(0);
     let mut buf = vec![0u8; 64];
     unsafe {
-        fat32.info();
+        fat32.bpb.info();
 
-        BLK_CONTROL.read_one_sector(0, fat32.data_sector(), &mut buf);
+        BLK_CONTROL.read_one_sector(0, fat32.bpb.data_sector(), &mut buf);
         
         let ref file_item = *(buf.as_mut_ptr() as *mut u8 as *mut FAT32shortFileItem);
-        info!("文件名: {}.{}", String::from_utf8_lossy(&file_item.filename), String::from_utf8_lossy(&file_item.ext));
-        let start_cluster = (file_item.start_high as usize) << 16 + file_item.start_low as usize;
-        info!("起始地址: {:#x}", file_item as *const FAT32shortFileItem as usize);
-        info!("地址: {:#x}", &file_item.start_high as *const u16 as usize);
-        info!("起始簇: {:#x}{:x}, 文件大小: {:#x}", file_item.start_high, file_item.start_low, file_item.len);
-        info!("文件起始地址: {:#x}", start_cluster);
+        info!("文件名: {}", file_item.filename());
+        info!("起始簇: {:#x}, 文件大小: {:#x}", file_item.start_cluster(), file_item.file_size());
+        info!("文件起始地址: {:#x}", (fat32.bpb.data_sector() + file_item.start_cluster() * fat32.bpb.sectors_per_cluster as usize) << 9);
 
         let ref file_item = *(buf.as_mut_ptr().add(32) as *mut u8 as *mut FAT32shortFileItem);
-        info!("文件名: {}.{}", String::from_utf8_lossy(&file_item.filename), String::from_utf8_lossy(&file_item.ext));
-        let start_cluster = (file_item.start_high as usize) << 16 | file_item.start_low as usize;
-        info!("起始地址: {:#x}", file_item as *const FAT32shortFileItem as usize);
-        info!("地址: {:#x}", &file_item.start_high as *const u16 as usize);
-        info!("起始簇: {:#x}{:x}, 文件大小: {:#x}", file_item.start_high, file_item.start_low, file_item.len);
-        info!("文件起始地址: {:#x}", start_cluster * fat32.fat32bpb.sectors_per_cluster as usize);
+        info!("文件名: {}", file_item.filename());
+        info!("起始簇: {:#x}, 文件大小: {:#x}", file_item.start_cluster(), file_item.file_size());
+        info!("文件起始地址: {:#x}", (fat32.bpb.data_sector() + (file_item.start_cluster() - 2) * fat32.bpb.sectors_per_cluster as usize) << 9);
     }
 }
+
+// 00540003
