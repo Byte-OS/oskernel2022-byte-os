@@ -6,7 +6,7 @@ BIN_FILE    := target/$(TARGET)/$(MODE)/kernel.bin
 OBJDUMP     := rust-objdump --arch-name=riscv64
 OBJCOPY     := rust-objcopy --binary-architecture=riscv64
 
-FS_IMG := target/$(TARGET)/$(MODE)/fs.img
+FS_IMG := fs.img
 
 # BOARD
 BOARD ?= qemu
@@ -59,7 +59,7 @@ debug: build
 
 fs-img: 
 	@rm -f $(FS_IMG)
-	@dd if=/dev/zero of=$(FS_IMG) count=81920 bs=512	# 8M
+	@dd if=/dev/zero of=$(FS_IMG) count=81920 bs=512	# 40M
 	@mkfs.vfat $(FS_IMG) -F 32
 
 gdb:
