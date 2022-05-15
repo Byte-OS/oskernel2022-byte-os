@@ -1,22 +1,33 @@
 use core::mem::size_of;
 
 use alloc::borrow::ToOwned;
-use alloc::string::{String};
-use alloc::vec;
+use alloc::boxed::Box;
+use alloc::string::String;
+use alloc::{vec, str};
 
 use crate::device::BLK_CONTROL;
 
-// 获取文件系统操作接口
+use super::file::File;
+use super::partition::Partition;
+
+// 文件项操作接口
 pub trait FilesystemItemOperator {
     fn filename(&self) -> String;            // 获取文件名
     fn file_size(&self) -> usize;            // 获取文件大小
     fn start_cluster(&self) -> usize;        // 开始簇
 }
 
+// 文件系统操作接口
+pub trait FilesystemOperator {
+    fn open(&self, filename: &str) -> File;
+    fn write(&self, file: &File);
+}
+
 #[derive(Default)]
-struct FAT32 {
-    device_id: usize,
-    bpb: FAT32BPB
+pub struct FAT32 {
+    pub device_id: usize,
+    pub bpb: FAT32BPB,
+    pub partition: Box<Partition>
 }
 
 #[derive(Default)]
@@ -114,12 +125,12 @@ pub struct FAT32longFileItem {
 
 impl FAT32BPB {
     // 获取数据扇区号
-    fn data_sector(&self) -> usize {
+    pub fn data_sector(&self) -> usize {
         (self.reserved_sector as u32 + self.fat_number as u32 * self.sectors_per_fat) as usize
     }
 
     // 输出fat32信息
-    fn info(&self) {
+    pub fn info(&self) {
         info!("扇区大小: {}", self.bytes_per_sector);
         info!("磁盘大小:{} bytes", self.large_sector * self.bytes_per_sector as u32);
         info!("FAT表数量:{}, 占扇区:{}, {:#x}", self.fat_number, self.fat_number as u32 * self.sectors_per_fat, &self.sectors_per_fat as *const u32 as usize - self as *const FAT32BPB as usize);
@@ -133,12 +144,25 @@ impl FAT32BPB {
 }
 
 /// 目前仅支持挂载文件系统
+impl FilesystemOperator for FAT32 {
+    // 打开文件
+    fn open(&self, filename: &str) -> File {
+        todo!()
+    }
+
+    // 写入文件
+    fn write(&self, file: &File) {
+        todo!()
+    }
+}
+
 impl FAT32 {
     // 创建新的FAT32表项 device_id: 为设备id 目前支持文件系统 
     fn new(device_id: usize) -> FAT32 {
         let fat32 = FAT32 {
             device_id,
-            bpb: Default::default()
+            bpb: Default::default(),
+            partition: Default::default(),
         };
         unsafe {
             BLK_CONTROL.read_one_sector(fat32.device_id, 0, &mut *(&fat32.bpb as *const FAT32BPB as *mut [u8; size_of::<FAT32BPB>()]));
@@ -166,6 +190,12 @@ pub fn init() {
         info!("文件名: {}", file_item.filename());
         info!("起始簇: {:#x}, 文件大小: {:#x}", file_item.start_cluster(), file_item.file_size());
         info!("文件起始地址: {:#x}", (fat32.bpb.data_sector() + (file_item.start_cluster() - 2) * fat32.bpb.sectors_per_cluster as usize) << 9);
+        
+        let mut filebuf = vec![0u8; file_item.file_size()];
+        let sector = fat32.bpb.data_sector() + (file_item.start_cluster() - 2) * fat32.bpb.sectors_per_cluster as usize;
+        BLK_CONTROL.read_one_sector(0, sector, &mut filebuf);
+        info!("文件内容: {}", String::from_utf8_lossy(&filebuf));
+        
     }
 }
 

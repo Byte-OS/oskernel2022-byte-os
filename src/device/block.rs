@@ -19,22 +19,18 @@ impl BlockDeviceContainer<'_> {
         self.device.push(VirtIOBlk::new(unsafe {&mut *(virtio as *mut VirtIOHeader)}).expect("failed to create blk driver"));
     }
 
-    // pub fn read(&mut self, index: usize, addr: usize, buf:& mut [u8]) {
-    //     let mut needRead = buf.len();
-    //     let mut output = vec![0; 512];
-    //     let remainder = addr % 512;
-    //     let mut device_id = addr >> 9;
-    //     if remainder > 0 {
-    //         self.device[index].read_block(device_id, &mut output);
-    //         buf.copy_from_slice(&output[remainder..512]);
-    //         needRead = needRead - 512 + remainder;
-    //     }
-    // }
-
+    // 读取一个扇区
     pub fn read_one_sector(&mut self, device_id: usize, block_id: usize, buf:& mut [u8]) {
         let mut output = vec![0; 512];
         self.device[device_id].read_block(block_id, &mut output).expect("读取失败");
         buf.copy_from_slice(&output[..buf.len()]);
+    }
+
+    // 写入一个扇区
+    pub fn write_one_sector(&mut self, device_id: usize, block_id: usize, buf:& mut [u8]) {
+        let mut input = vec![0; 512];
+        input.copy_from_slice(&buf);
+        self.write_one_sector(device_id, block_id, &mut input);
     }
 }
 
