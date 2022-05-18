@@ -1,10 +1,15 @@
+use core::borrow::Borrow;
+use core::mem::size_of;
+
 use alloc::sync::Arc;
 use alloc::vec;
 use alloc::vec::Vec;
 use virtio_drivers::VirtIOBlk;
 use virtio_drivers::VirtIOHeader;
+use crate::fs::PARTITIONS;
 use crate::fs::Partition;
 use crate::fs::fat32::FAT32;
+use crate::fs::fat32::FAT32BPB;
 use crate::sync::mutex::Mutex;
 // use crate::fs::get_partitions;
 
@@ -35,25 +40,31 @@ impl<'a> DiskDevice<'a> {
 
     // 识别分区
     pub fn spefic_partitions(&mut self, device: Arc<Mutex<DiskDevice<'a>>>) {
-        let partition = Arc::new(Mutex::new(FAT32::new(device, 0)));
+        // fat32
+        let fat32 = FAT32::new(device, 0);
+        unsafe {
+            self.read_sector(0, &mut *(&fat32.bpb as *const FAT32BPB as *mut [u8; size_of::<FAT32BPB>()]))
+        }
+        let partition = Arc::new(Mutex::new(fat32));
+
         // 添加分区
         self.parition.push(partition);
+        // PARTITIONS.lock().push(partition);
     }
 }
 
 pub struct BlockDeviceContainer<'a> (Vec<Arc<Mutex<DiskDevice<'a>>>>);
 
-impl BlockDeviceContainer<'_> {
+impl<'a> BlockDeviceContainer<'a> {
     pub fn add(&mut self, virtio: usize) {
         // 创建存储设备
         let disk_device = Arc::new(Mutex::new(DiskDevice { 
             device: VirtIOBlk::new(unsafe {&mut *(virtio as *mut VirtIOHeader)}).expect("failed to create blk driver"), 
             parition: vec![]
         }));
-        info!("识别扇区");
         // 识别分区
         disk_device.lock().spefic_partitions(disk_device.clone());
-        info!("识别扇区完毕");
+
         self.0.push(disk_device);
     }
 
@@ -65,6 +76,19 @@ impl BlockDeviceContainer<'_> {
     // 写入一个扇区
     pub fn write_one_sector(&mut self, device_id: usize, block_id: usize, buf:& mut [u8]) {
         self.0[device_id].lock().write_sector(block_id, buf)
+    }
+
+    // 获取所有设备
+    pub fn get_disks() {
+
+    }
+
+    pub fn get_partitions(&self) -> Vec<Arc<Mutex<dyn Partition + 'a>>> {
+        if let Some(disk) = self.0.last() {
+            disk.lock().parition
+        } else {
+            Vec::new()
+        }
     }
 }
 

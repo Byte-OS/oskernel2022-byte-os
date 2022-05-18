@@ -171,17 +171,12 @@ impl<'a> Partition for FAT32<'a> {
 
 /// 目前仅支持挂载文件系统
 impl<'a> FAT32<'a> {
-    // 创建新的FAT32表项 device_id: 为设备id 目前支持文件系统 
+    // 创建新的FAT32表项 device_id: 为设备id 目前支持文件系统 需要手动读取bpb
     pub fn new(device: Arc<Mutex<DiskDevice<'a>>>, start_sector: usize) -> Self {
-        let fat32= FAT32 {
+        FAT32 {
             device,
             bpb: Default::default()
-        };
-        info!("fat32");
-        unsafe {
-            fat32.device.lock().read_sector(0, &mut *(&fat32.bpb as *const FAT32BPB as *mut [u8; size_of::<FAT32BPB>()]))
         }
-        fat32
     }
 }
 

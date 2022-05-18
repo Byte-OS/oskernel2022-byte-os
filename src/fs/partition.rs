@@ -1,6 +1,6 @@
 use core::fmt::Error;
 
-use alloc::{vec::Vec, sync::Arc, boxed::Box};
+use alloc::{vec::Vec, sync::Arc};
 
 
 use crate::sync::mutex::Mutex;
@@ -16,12 +16,8 @@ pub trait Partition {
 }
 
 lazy_static! {
-    pub static ref PARTITIONS: Arc<Mutex<Vec<&'static dyn Partition>>> = Arc::new(Mutex::new(vec![]));                         // 所有扇区
+    pub static ref PARTITIONS: Arc<Mutex<Vec<Arc<Mutex<dyn Partition>>>>> = Arc::new(Mutex::new(vec![]));                         // 所有扇区
 }
-
-// pub fn get_partitions() -> PARTITIONS {
-//     PARTITIONS
-// }
 
 pub fn test() {
     
