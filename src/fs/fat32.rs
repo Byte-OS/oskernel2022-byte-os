@@ -25,7 +25,7 @@ pub trait FilesystemOperator {
 pub struct FAT32<'a> {
     pub device_id: usize,
     pub bpb: FAT32BPB,
-    pub partition: &'a Partition
+    pub partition: &'static Partition<'a>
 }
 
 #[allow(dead_code)]
@@ -145,6 +145,17 @@ impl FAT32BPB {
     }
 }
 
+impl Partition for FAT32<'_> {
+    fn new() -> dyn Partition {
+        
+    }
+    // fn read_sector(&self, sector_offset: usize, buf: &mut [u8]);        // 读取扇区
+    // fn write_sector(&self, sector_offset: usize, buf: &mut [u8]);       // 写入扇区
+    // fn open_file(&self, filename: &str) -> Result<File, Error>;              // 打开文件
+    // fn read_file(&self, file: File, buf: &mut [u8]) -> Result<(), Error>;    // 读取文件
+    // fn write_file(&self, filename: &str, file: &File) -> Result<(), Error>;  // 写入文件
+}
+
 /// 目前仅支持挂载文件系统
 impl FilesystemOperator for FAT32<'_> {
     // 打开文件
@@ -160,7 +171,7 @@ impl FilesystemOperator for FAT32<'_> {
 
 impl<'a> FAT32<'a> {
     // 创建新的FAT32表项 device_id: 为设备id 目前支持文件系统 
-    fn new(device_id: usize, partition: &'a Partition) -> FAT32 {
+    fn new(device_id: usize, partition: &'a Partition) -> FAT32<'a> {
         let fat32 = FAT32 {
             device_id,
             bpb: Default::default(),
@@ -173,7 +184,7 @@ impl<'a> FAT32<'a> {
     }
 }
 
-pub fn init(partition: &Partition) {
+pub fn init(partition: &dyn Partition) {
     let fat32: FAT32 = FAT32::new(0, partition);
     let mut buf = vec![0u8; 64];
     unsafe {

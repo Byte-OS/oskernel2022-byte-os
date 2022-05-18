@@ -1,4 +1,4 @@
-mod block;
+pub mod block;
 
 pub use block::BLK_CONTROL;
 

@@ -6,7 +6,7 @@ const INTERVAL: usize = 10000;     // 定时器周期
 
 pub static mut TICKS: usize = 0;
 /// 时钟中断处理器
-pub fn timer_handler(context: &mut Context) {
+pub fn timer_handler(_context: &mut Context) {
     set_next_timeout();
     unsafe {
         TICKS=TICKS+1;
