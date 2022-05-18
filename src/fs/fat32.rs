@@ -1,7 +1,6 @@
 use core::mem::size_of;
 
 use alloc::borrow::ToOwned;
-use alloc::boxed::Box;
 use alloc::string::String;
 use alloc::{vec, str};
 
@@ -23,13 +22,13 @@ pub trait FilesystemOperator {
     fn write(&self, file: &File);
 }
 
-#[derive(Default)]
-pub struct FAT32 {
+pub struct FAT32<'a> {
     pub device_id: usize,
     pub bpb: FAT32BPB,
-    pub partition: Box<Partition>
+    pub partition: &'a Partition
 }
 
+#[allow(dead_code)]
 #[derive(Default)]
 #[repr(packed)]
 pub struct FAT32BPB {
@@ -56,6 +55,7 @@ pub struct FAT32BPB {
     reserved_sector1: [u8;12]   // 系统保留
 }
 
+#[allow(dead_code)]
 pub enum FAT32FileItemAttr {
     RW  = 0,            // 读写
     R   = 1,            // 只读
@@ -67,6 +67,7 @@ pub enum FAT32FileItemAttr {
 }
 
 // FAT32短文件目录项
+#[allow(dead_code)]
 #[repr(packed)]
 pub struct FAT32shortFileItem {
     filename: [u8; 8],          // 文件名
@@ -111,6 +112,7 @@ impl FilesystemItemOperator for FAT32shortFileItem {
 }
 
 // FAT32长文件目录项
+#[allow(dead_code)]
 #[repr(packed)]
 pub struct FAT32longFileItem {
     attr: FAT32FileItemAttr,        // 属性
@@ -144,7 +146,7 @@ impl FAT32BPB {
 }
 
 /// 目前仅支持挂载文件系统
-impl FilesystemOperator for FAT32 {
+impl FilesystemOperator for FAT32<'_> {
     // 打开文件
     fn open(&self, filename: &str) -> File {
         todo!()
@@ -156,13 +158,13 @@ impl FilesystemOperator for FAT32 {
     }
 }
 
-impl FAT32 {
+impl<'a> FAT32<'a> {
     // 创建新的FAT32表项 device_id: 为设备id 目前支持文件系统 
-    fn new(device_id: usize) -> FAT32 {
+    fn new(device_id: usize, partition: &'a Partition) -> FAT32 {
         let fat32 = FAT32 {
             device_id,
             bpb: Default::default(),
-            partition: Default::default(),
+            partition
         };
         unsafe {
             BLK_CONTROL.read_one_sector(fat32.device_id, 0, &mut *(&fat32.bpb as *const FAT32BPB as *mut [u8; size_of::<FAT32BPB>()]));
@@ -171,8 +173,8 @@ impl FAT32 {
     }
 }
 
-pub fn init() {
-    let fat32: FAT32 = FAT32::new(0);
+pub fn init(partition: &Partition) {
+    let fat32: FAT32 = FAT32::new(0, partition);
     let mut buf = vec![0u8; 64];
     unsafe {
         fat32.bpb.info();

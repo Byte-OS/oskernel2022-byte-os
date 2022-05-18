@@ -85,6 +85,8 @@ pub extern "C" fn rust_main(_hartid: usize, device_tree_paddr: usize) -> ! {
         }
     }
 
+    // 
+
     // let mut words = String::new();
     // read_line_display(&mut words);
     // info!("I say {}", words);

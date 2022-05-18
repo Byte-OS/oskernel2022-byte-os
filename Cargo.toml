@@ -19,3 +19,4 @@ buddy_system_allocator = "0.8.0"
 virtio-drivers = { git = "https://github.com/rcore-os/virtio-drivers" }
 
 device_tree = { git = "https://github.com/rcore-os/device_tree-rs", rev = "2fa8411" }
+

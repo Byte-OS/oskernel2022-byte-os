@@ -1,21 +1,11 @@
 
 use alloc::{string::{String, ToString}, vec::Vec};
 
-
-// lazy_static! {
-//     // static FILETREEs = FileTreeNode {
-//     //     filename: "".to_string(),
-//     //     file_type: FileTreeType::Directory,
-//     //     parent: core::ptr::null(),
-//     //     children: Vec::new(),
-//     // };
-//     static i1 = 123;
-// }
-
 pub struct FileTree(FileTreeNode);
 
 lazy_static! {
-    static ref FILETREE: FileTree = FileTree(FileTreeNode { 
+    // 文件树初始化
+    pub static ref FILETREE: FileTree = FileTree(FileTreeNode { 
         filename: "".to_string(), 
         file_type: FileTreeType::Directory, 
         parent: None, 
@@ -31,6 +21,7 @@ impl FileTree {
 }
 
 // 文件类型
+#[allow(dead_code)]
 #[derive(Default)]
 pub enum FileTreeType {
     File,           // 文件
@@ -103,4 +94,8 @@ impl FileTreeNode {
         self.parent.is_none()
         // self.filename == ""
     }
+}
+
+pub fn get_file_tree() -> &'static FileTree {
+    &FILETREE
 }
