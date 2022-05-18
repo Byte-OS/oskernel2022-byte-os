@@ -4,9 +4,9 @@ use alloc::borrow::ToOwned;
 use alloc::string::String;
 use alloc::sync::Arc;
 use alloc::{vec, str};
+use virtio_drivers::VirtIOBlk;
 
-use crate::device::BLK_CONTROL;
-use crate::device::block::DiskDevice;
+use crate::device::{SECTOR_SIZE, BLK_CONTROL};
 use crate::sync::mutex::Mutex;
 
 use super::file::File;
@@ -26,7 +26,7 @@ pub trait FilesystemOperator {
 }
 
 pub struct FAT32<'a> {
-    pub device: Arc<Mutex<DiskDevice<'a>>>,
+    pub device: Arc<Mutex<VirtIOBlk<'a>>>,
     pub bpb: FAT32BPB,
 }
 
@@ -149,11 +149,15 @@ impl FAT32BPB {
 
 impl<'a> Partition for FAT32<'a> {
     fn read_sector(&self, sector_offset: usize, buf: &mut [u8]) {
-        todo!()
+        let mut output = vec![0; SECTOR_SIZE];
+        self.device.lock().read_block(sector_offset, &mut output).expect("读取失败");
+        buf.copy_from_slice(&output[..buf.len()]);
     }
 
     fn write_sector(&self, sector_offset: usize, buf: &mut [u8]) {
-        todo!()
+        let mut input = vec![0; SECTOR_SIZE];
+        input.copy_from_slice(&buf);
+        self.device.lock().write_block(sector_offset, &mut input).expect("写入失败")
     }
 
     fn open_file(&self, filename: &str) -> Result<File, core::fmt::Error> {
@@ -172,24 +176,35 @@ impl<'a> Partition for FAT32<'a> {
 /// 目前仅支持挂载文件系统
 impl<'a> FAT32<'a> {
     // 创建新的FAT32表项 device_id: 为设备id 目前支持文件系统 需要手动读取bpb
-    pub fn new(device: Arc<Mutex<DiskDevice<'a>>>, start_sector: usize) -> Self {
-        FAT32 {
+    pub fn new(device: Arc<Mutex<VirtIOBlk<'a>>>) -> Self {
+        let fat32 = FAT32 {
             device,
             bpb: Default::default()
+        };
+        unsafe {
+            fat32.read_sector(0, &mut *(&fat32.bpb as *const FAT32BPB as *mut [u8; size_of::<FAT32BPB>()]));
         }
+        fat32
     }
 }
 
-pub fn init(device: Arc<Mutex<DiskDevice>>) {
-    let fat32 = FAT32::new(device, 0);
+pub fn init() {
     let mut buf = vec![0u8; 64];
     unsafe {
-        fat32.bpb.info();
+        // 获取智能指针
+        let fat32 = BLK_CONTROL.get_partitions().last().unwrap().clone();
 
-        info!("数据扇区地址: {:#x}", fat32.bpb.data_sector() << 9);
+        fat32.lock().bpb.info();
 
-        BLK_CONTROL.read_one_sector(0, fat32.bpb.data_sector(), &mut buf);
+        info!("数据扇区地址: {:#x}", fat32.lock().bpb.data_sector() << 9);
+
+        let data_sector = fat32.lock().bpb.data_sector();
         
+        // 锁定fat32 获取权限
+        let fat32 = fat32.lock();
+        
+        fat32.read_sector(data_sector, &mut buf);
+
         let ref file_item = *(buf.as_mut_ptr() as *mut u8 as *mut FAT32shortFileItem);
         info!("文件名: {}", file_item.filename());
         info!("起始簇: {:#x}, 文件大小: {:#x}", file_item.start_cluster(), file_item.file_size());
@@ -202,7 +217,7 @@ pub fn init(device: Arc<Mutex<DiskDevice>>) {
         
         let mut filebuf = vec![0u8; file_item.file_size()];
         let sector = fat32.bpb.data_sector() + (file_item.start_cluster() - 2) * fat32.bpb.sectors_per_cluster as usize;
-        BLK_CONTROL.read_one_sector(0, sector, &mut filebuf);
+        fat32.read_sector(sector, &mut filebuf);
         info!("文件内容: {}", String::from_utf8_lossy(&filebuf));
         
     }

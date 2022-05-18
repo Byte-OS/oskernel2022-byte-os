@@ -1,70 +1,26 @@
-use core::borrow::Borrow;
-use core::mem::size_of;
-
 use alloc::sync::Arc;
 use alloc::vec;
 use alloc::vec::Vec;
 use virtio_drivers::VirtIOBlk;
 use virtio_drivers::VirtIOHeader;
-use crate::fs::PARTITIONS;
 use crate::fs::Partition;
 use crate::fs::fat32::FAT32;
-use crate::fs::fat32::FAT32BPB;
 use crate::sync::mutex::Mutex;
 // use crate::fs::get_partitions;
 
 const VIRTIO0: usize = 0x10001000;
-const SECTOR_SIZE: usize = 512;
+pub const SECTOR_SIZE: usize = 512;
 
 pub static mut BLK_CONTROL: BlockDeviceContainer = BlockDeviceContainer(vec![]);
 
-pub struct DiskDevice<'a> {
-    pub device: VirtIOBlk<'a>,
-    pub parition: Vec<Arc<Mutex<dyn Partition + 'a>>>
-}
-
-impl<'a> DiskDevice<'a> {
-    // 读取一个扇区
-    pub fn read_sector(&mut self, block_id: usize, buf:& mut [u8]) {
-        let mut output = vec![0; SECTOR_SIZE];
-        self.device.read_block(block_id, &mut output).expect("读取失败");
-        buf.copy_from_slice(&output[..buf.len()]);
-    }
-
-    // 写入一个扇区
-    pub fn write_sector(&mut self, block_id: usize, buf:& mut [u8]) {
-        let mut input = vec![0; SECTOR_SIZE];
-        input.copy_from_slice(&buf);
-        self.device.write_block(block_id, &mut input).expect("写入失败")
-    }
-
-    // 识别分区
-    pub fn spefic_partitions(&mut self, device: Arc<Mutex<DiskDevice<'a>>>) {
-        // fat32
-        let fat32 = FAT32::new(device, 0);
-        unsafe {
-            self.read_sector(0, &mut *(&fat32.bpb as *const FAT32BPB as *mut [u8; size_of::<FAT32BPB>()]))
-        }
-        let partition = Arc::new(Mutex::new(fat32));
-
-        // 添加分区
-        self.parition.push(partition);
-        // PARTITIONS.lock().push(partition);
-    }
-}
-
-pub struct BlockDeviceContainer<'a> (Vec<Arc<Mutex<DiskDevice<'a>>>>);
+pub struct BlockDeviceContainer<'a> (Vec<Arc<Mutex<FAT32<'a>>>>);
 
 impl<'a> BlockDeviceContainer<'a> {
     pub fn add(&mut self, virtio: usize) {
         // 创建存储设备
-        let disk_device = Arc::new(Mutex::new(DiskDevice { 
-            device: VirtIOBlk::new(unsafe {&mut *(virtio as *mut VirtIOHeader)}).expect("failed to create blk driver"), 
-            parition: vec![]
-        }));
+        let device = Arc::new(Mutex::new(VirtIOBlk::new(unsafe {&mut *(virtio as *mut VirtIOHeader)}).expect("failed to create blk driver")));
+        let disk_device = Arc::new(Mutex::new(FAT32::new(device)));
         // 识别分区
-        disk_device.lock().spefic_partitions(disk_device.clone());
-
         self.0.push(disk_device);
     }
 
@@ -78,17 +34,9 @@ impl<'a> BlockDeviceContainer<'a> {
         self.0[device_id].lock().write_sector(block_id, buf)
     }
 
-    // 获取所有设备
-    pub fn get_disks() {
-
-    }
-
-    pub fn get_partitions(&self) -> Vec<Arc<Mutex<dyn Partition + 'a>>> {
-        if let Some(disk) = self.0.last() {
-            disk.lock().parition
-        } else {
-            Vec::new()
-        }
+    // 获取所有文件系统
+    pub fn get_partitions(&self) -> Vec<Arc<Mutex<FAT32<'a>>>> {
+        self.0.clone()
     }
 }
 

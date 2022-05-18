@@ -8,5 +8,5 @@ pub use partition::PARTITIONS;
 // pub use partition::get_partitions;
 
 pub fn init() {
-    // fat32::init();
+    fat32::init();
 }

@@ -46,7 +46,6 @@ unsafe impl<T: ?Sized> Send for Mutex<T> {}
 
 impl<T: ?Sized> Mutex<T> {
     fn obtain_lock(&self) {
-        info!("结果: {}", self.lock.load(Ordering::Relaxed));
         // 尝试获得锁
         loop {
             if let Ok(res) = self.lock.compare_exchange(false, true, Ordering::Relaxed, Ordering::Relaxed) {
