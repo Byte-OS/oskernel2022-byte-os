@@ -46,8 +46,12 @@ unsafe impl<T: ?Sized> Send for Mutex<T> {}
 
 impl<T: ?Sized> Mutex<T> {
     fn obtain_lock(&self) {
+        info!("结果: {}", self.lock.load(Ordering::Relaxed));
         // 尝试获得锁
-        while self.lock.compare_and_swap(false, true, Ordering::Acquire) {
+        loop {
+            if let Ok(res) = self.lock.compare_exchange(false, true, Ordering::Relaxed, Ordering::Relaxed) {
+                break;
+            }
             // 循环判断是否已经解锁如果没有解锁
             while self.lock.load(Ordering::Relaxed) {
                 // 向处理器发出信号，表明现在处于自旋状态
@@ -73,14 +77,14 @@ impl<T: ?Sized> Mutex<T> {
 
 
     pub fn try_lock(&self) -> Option<MutexGuard<T>> {
-        if self.lock.compare_and_swap(false, true, Ordering::Acquire) == false {
-            Some(MutexGuard {
+        if let Ok(res) = self.lock.compare_exchange(false, true, Ordering::Relaxed, Ordering::Relaxed) {
+            return Some(MutexGuard {
                 lock: &self.lock,
                 data: unsafe { &mut *self.data.get() },
-            })
-        } else {
-            None
+            });
         }
+        // 循环判断是否已经解锁如果没有解锁
+        None
     }
 }
 

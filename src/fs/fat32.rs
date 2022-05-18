@@ -177,6 +177,7 @@ impl<'a> FAT32<'a> {
             device,
             bpb: Default::default()
         };
+        info!("fat32");
         unsafe {
             fat32.device.lock().read_sector(0, &mut *(&fat32.bpb as *const FAT32BPB as *mut [u8; size_of::<FAT32BPB>()]))
         }

@@ -15,10 +15,10 @@ pub static mut BLK_CONTROL: BlockDeviceContainer = BlockDeviceContainer(vec![]);
 
 pub struct DiskDevice<'a> {
     pub device: VirtIOBlk<'a>,
-    pub parition: Vec<Arc<Mutex<dyn Partition>>>
+    pub parition: Vec<Arc<Mutex<dyn Partition + 'a>>>
 }
 
-impl DiskDevice<'_> {
+impl<'a> DiskDevice<'a> {
     // 读取一个扇区
     pub fn read_sector(&mut self, block_id: usize, buf:& mut [u8]) {
         let mut output = vec![0; SECTOR_SIZE];
@@ -34,7 +34,7 @@ impl DiskDevice<'_> {
     }
 
     // 识别分区
-    pub fn spefic_partitions(&mut self, device: Arc<Mutex<DiskDevice>>) {
+    pub fn spefic_partitions(&mut self, device: Arc<Mutex<DiskDevice<'a>>>) {
         let partition = Arc::new(Mutex::new(FAT32::new(device, 0)));
         // 添加分区
         self.parition.push(partition);
@@ -50,8 +50,10 @@ impl BlockDeviceContainer<'_> {
             device: VirtIOBlk::new(unsafe {&mut *(virtio as *mut VirtIOHeader)}).expect("failed to create blk driver"), 
             parition: vec![]
         }));
+        info!("识别扇区");
         // 识别分区
         disk_device.lock().spefic_partitions(disk_device.clone());
+        info!("识别扇区完毕");
         self.0.push(disk_device);
     }
 

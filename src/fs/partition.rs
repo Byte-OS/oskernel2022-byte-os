@@ -16,7 +16,7 @@ pub trait Partition {
 }
 
 lazy_static! {
-    static ref PARTITIONS: Arc<Mutex<Vec<&'static dyn Partition>>> = Arc::new(Mutex::new(vec![]));                         // 所有扇区
+    pub static ref PARTITIONS: Arc<Mutex<Vec<&'static dyn Partition>>> = Arc::new(Mutex::new(vec![]));                         // 所有扇区
 }
 
 // pub fn get_partitions() -> PARTITIONS {
