@@ -2,9 +2,12 @@ use core::mem::size_of;
 
 use alloc::borrow::ToOwned;
 use alloc::string::String;
+use alloc::sync::Arc;
 use alloc::{vec, str};
 
 use crate::device::BLK_CONTROL;
+use crate::device::block::DiskDevice;
+use crate::sync::mutex::Mutex;
 
 use super::file::File;
 use super::partition::Partition;
@@ -23,9 +26,8 @@ pub trait FilesystemOperator {
 }
 
 pub struct FAT32<'a> {
-    pub device_id: usize,
+    pub device: Arc<Mutex<DiskDevice<'a>>>,
     pub bpb: FAT32BPB,
-    pub partition: &'static Partition<'a>
 }
 
 #[allow(dead_code)]
@@ -145,47 +147,45 @@ impl FAT32BPB {
     }
 }
 
-impl Partition for FAT32<'_> {
-    fn new() -> dyn Partition {
-        
+impl<'a> Partition for FAT32<'a> {
+    fn read_sector(&self, sector_offset: usize, buf: &mut [u8]) {
+        todo!()
     }
-    // fn read_sector(&self, sector_offset: usize, buf: &mut [u8]);        // 读取扇区
-    // fn write_sector(&self, sector_offset: usize, buf: &mut [u8]);       // 写入扇区
-    // fn open_file(&self, filename: &str) -> Result<File, Error>;              // 打开文件
-    // fn read_file(&self, file: File, buf: &mut [u8]) -> Result<(), Error>;    // 读取文件
-    // fn write_file(&self, filename: &str, file: &File) -> Result<(), Error>;  // 写入文件
+
+    fn write_sector(&self, sector_offset: usize, buf: &mut [u8]) {
+        todo!()
+    }
+
+    fn open_file(&self, filename: &str) -> Result<File, core::fmt::Error> {
+        todo!()
+    }
+
+    fn read_file(&self, file: File, buf: &mut [u8]) -> Result<(), core::fmt::Error> {
+        todo!()
+    }
+
+    fn write_file(&self, filename: &str, file: &File) -> Result<(), core::fmt::Error> {
+        todo!()
+    }
 }
 
 /// 目前仅支持挂载文件系统
-impl FilesystemOperator for FAT32<'_> {
-    // 打开文件
-    fn open(&self, filename: &str) -> File {
-        todo!()
-    }
-
-    // 写入文件
-    fn write(&self, file: &File) {
-        todo!()
-    }
-}
-
 impl<'a> FAT32<'a> {
     // 创建新的FAT32表项 device_id: 为设备id 目前支持文件系统 
-    fn new(device_id: usize, partition: &'a Partition) -> FAT32<'a> {
-        let fat32 = FAT32 {
-            device_id,
-            bpb: Default::default(),
-            partition
+    pub fn new(device: Arc<Mutex<DiskDevice<'a>>>, start_sector: usize) -> Self {
+        let fat32= FAT32 {
+            device,
+            bpb: Default::default()
         };
         unsafe {
-            BLK_CONTROL.read_one_sector(fat32.device_id, 0, &mut *(&fat32.bpb as *const FAT32BPB as *mut [u8; size_of::<FAT32BPB>()]));
+            fat32.device.lock().read_sector(0, &mut *(&fat32.bpb as *const FAT32BPB as *mut [u8; size_of::<FAT32BPB>()]))
         }
         fat32
     }
 }
 
-pub fn init(partition: &dyn Partition) {
-    let fat32: FAT32 = FAT32::new(0, partition);
+pub fn init(device: Arc<Mutex<DiskDevice>>) {
+    let fat32 = FAT32::new(device, 0);
     let mut buf = vec![0u8; 64];
     unsafe {
         fat32.bpb.info();
@@ -212,4 +212,3 @@ pub fn init(partition: &dyn Partition) {
     }
 }
 
-// 00540003

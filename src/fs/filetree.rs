@@ -1,16 +1,18 @@
 
-use alloc::{string::{String, ToString}, vec::Vec};
+use alloc::{string::{String, ToString}, vec::Vec, sync::Arc};
+
+use crate::sync::mutex::Mutex;
 
 pub struct FileTree(FileTreeNode);
 
 lazy_static! {
     // 文件树初始化
-    pub static ref FILETREE: FileTree = FileTree(FileTreeNode { 
+    pub static ref FILETREE: Arc<Mutex<FileTree>> = Arc::new(Mutex::new(FileTree(FileTreeNode { 
         filename: "".to_string(), 
         file_type: FileTreeType::Directory, 
         parent: None, 
         children: vec![] 
-    });
+    })));
 }
 
 impl FileTree {
@@ -94,8 +96,4 @@ impl FileTreeNode {
         self.parent.is_none()
         // self.filename == ""
     }
-}
-
-pub fn get_file_tree() -> &'static FileTree {
-    &FILETREE
 }

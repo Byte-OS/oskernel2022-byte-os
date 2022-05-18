@@ -1,6 +1,6 @@
 use alloc::{string::String, rc::Rc};
 
-use super::fat32::{FilesystemItemOperator};
+use super::fat32::FilesystemItemOperator;
 
 pub struct File {
     pub fat32: Rc<dyn FilesystemItemOperator>,

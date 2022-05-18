@@ -1,13 +1,13 @@
 use core::fmt::Error;
 
-use alloc::vec::Vec;
+use alloc::{vec::Vec, sync::Arc, boxed::Box};
 
-use crate::device::block::DiskDevice;
+
+use crate::sync::mutex::Mutex;
 
 use super::file::File;
 
-pub trait Partition<'a> {
-    fn new(device: &'a DiskDevice, start_sector: usize) -> dyn Partition<'a>;   // 创建
+pub trait Partition {
     fn read_sector(&self, sector_offset: usize, buf: &mut [u8]);                // 读取扇区
     fn write_sector(&self, sector_offset: usize, buf: &mut [u8]);               // 写入扇区
     fn open_file(&self, filename: &str) -> Result<File, Error>;                 // 打开文件
@@ -16,9 +16,13 @@ pub trait Partition<'a> {
 }
 
 lazy_static! {
-    static ref PARTITIONS: Vec<dyn Partition> = vec![];     // 所有扇区
+    static ref PARTITIONS: Arc<Mutex<Vec<&'static dyn Partition>>> = Arc::new(Mutex::new(vec![]));                         // 所有扇区
 }
 
-pub fn get_partitions() {
-    PARTITIONS
+// pub fn get_partitions() -> PARTITIONS {
+//     PARTITIONS
+// }
+
+pub fn test() {
+    
 }

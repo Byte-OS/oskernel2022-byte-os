@@ -4,6 +4,7 @@
 #![feature(panic_info_message)]
 #![feature(default_alloc_error_handler)]
 #![allow(unaligned_references)]
+#![feature(derive_default_enum)]
 
 
 // 使用定义的命令行宏   
@@ -15,6 +16,7 @@ mod memory;
 mod fs;
 mod sbi;
 mod panic;
+mod sync;
 
 #[macro_use]
 extern crate lazy_static; 
