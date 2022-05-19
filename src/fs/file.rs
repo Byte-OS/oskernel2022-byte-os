@@ -1,9 +1,11 @@
-use alloc::{string::String, rc::Rc};
+use alloc::{string::String, rc::Rc, sync::Arc};
 
-use super::fat32::FilesystemItemOperator;
+use crate::sync::mutex::Mutex;
 
-pub struct File {
-    pub fat32: Rc<dyn FilesystemItemOperator>,
+use super::fat32::{FilesystemItemOperator, FAT32};
+
+pub struct File<'a> {
+    pub fat32: Arc<Mutex<FAT32<'a>>>,
     pub filename : String,
     pub start_cluster : usize,
     pub block_idx : usize,
@@ -12,7 +14,7 @@ pub struct File {
     pub flag : u8,
 }
 
-impl File {
+impl File<'_> {
     fn read_string(&self) -> String {
         // self.fat32.bpb.data_sector();
         todo!()

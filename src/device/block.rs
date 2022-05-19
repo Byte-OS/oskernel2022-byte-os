@@ -20,6 +20,7 @@ impl<'a> BlockDeviceContainer<'a> {
         // 创建存储设备
         let device = Arc::new(Mutex::new(VirtIOBlk::new(unsafe {&mut *(virtio as *mut VirtIOHeader)}).expect("failed to create blk driver")));
         let disk_device = Arc::new(Mutex::new(FAT32::new(device)));
+        // device.lock().write_block_nb(block_id, buf, resp)
         // 识别分区
         self.0.push(disk_device);
     }

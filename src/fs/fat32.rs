@@ -1,4 +1,5 @@
 use core::mem::size_of;
+use core::panic;
 
 use alloc::borrow::ToOwned;
 use alloc::string::String;
@@ -7,10 +8,12 @@ use alloc::{vec, str};
 use virtio_drivers::VirtIOBlk;
 
 use crate::device::{SECTOR_SIZE, BLK_CONTROL};
+use crate::fs::filetree::{FileTreeType, self};
 use crate::sync::mutex::Mutex;
 
-use super::file::File;
-use super::partition::Partition;
+use super::file::{File, self};
+use super::filetree::{FILETREE, FileTreeNode};
+use super::partition::{Partition, self};
 
 // 文件项操作接口
 pub trait FilesystemItemOperator {
@@ -171,6 +174,38 @@ impl<'a> Partition for FAT32<'a> {
     fn write_file(&self, filename: &str, file: &File) -> Result<(), core::fmt::Error> {
         todo!()
     }
+
+    fn mount(&self, prefix: &str) {
+        // 获取文件树前缀节点
+        let filetree = FILETREE.lock();
+        if let Ok(filetree_node) = filetree.open(prefix) {
+            info!("当前文件树节点：{}", filetree_node.get_pwd());
+            if let FileTreeType::Directory = filetree_node.file_type {
+                if filetree_node.children.is_empty() {
+                    let mut buf = vec![0u8; self.bpb.sectors_per_cluster as usize * SECTOR_SIZE];
+                    self.read_cluster(0, &mut buf);
+                    
+                    let mut start = 0;
+                    let mut end = 0;
+                    loop {
+                        start = end;
+
+                        end = end + 0x20;
+
+                        let mut new_node = self.read_file_from(&buf[start..end]);
+                        new_node.parent = Some(filetree_node.clone());
+
+                        if end >= self.bpb.sectors_per_cluster as usize * SECTOR_SIZE {
+                            break;
+                        }
+                    }
+                }
+            }
+            
+        } else {
+            panic!("不存在文件数节点： {}", prefix);
+        }
+    }
 }
 
 /// 目前仅支持挂载文件系统
@@ -186,39 +221,65 @@ impl<'a> FAT32<'a> {
         }
         fat32
     }
+
+    pub fn read_cluster(&self, cluster_offset: usize, buf: &mut [u8]) {
+        for i in 0..self.bpb.sectors_per_cluster as usize {
+            self.read_sector(self.bpb.data_sector() + i, &mut buf[512*i..512*(i+1)])
+        }
+    }
+
+    pub fn read_file_from(&self, buf: &[u8]) -> FileTreeNode {
+        let file_item;
+        unsafe {
+            file_item = &*(buf.as_ptr() as *const u8 as *const FAT32shortFileItem);
+            info!("文件名: {}", file_item.filename());
+            info!("起始簇: {:#x}, 文件大小: {:#x}", file_item.start_cluster(), file_item.file_size());
+            info!("文件起始地址: {:#x}", (self.bpb.data_sector() + file_item.start_cluster() * self.bpb.sectors_per_cluster as usize) << 9);
+        }
+        FileTreeNode {
+            filename: file_item.filename(),
+            file_type: FileTreeType::File,
+            parent: Default::default(),
+            children: vec![],
+        }
+    }
 }
 
 pub fn init() {
-    let mut buf = vec![0u8; 64];
+    // let mut buf = vec![0u8; 64];
     unsafe {
-        // 获取智能指针
-        let fat32 = BLK_CONTROL.get_partitions().last().unwrap().clone();
+        for partition in BLK_CONTROL.get_partitions() {
+            let fat32 = partition.lock();
+            fat32.mount("/");
+        }
+        // // 获取智能指针
+        // let fat32 = BLK_CONTROL.get_partitions().last().unwrap().clone();
 
-        fat32.lock().bpb.info();
+        // fat32.lock().bpb.info();
 
-        info!("数据扇区地址: {:#x}", fat32.lock().bpb.data_sector() << 9);
+        // info!("数据扇区地址: {:#x}", fat32.lock().bpb.data_sector() << 9);
 
-        let data_sector = fat32.lock().bpb.data_sector();
+        // let data_sector = fat32.lock().bpb.data_sector();
         
-        // 锁定fat32 获取权限
-        let fat32 = fat32.lock();
+        // // 锁定fat32 获取权限
+        // let fat32 = fat32.lock();
         
-        fat32.read_sector(data_sector, &mut buf);
+        // fat32.read_sector(data_sector, &mut buf);
 
-        let ref file_item = *(buf.as_mut_ptr() as *mut u8 as *mut FAT32shortFileItem);
-        info!("文件名: {}", file_item.filename());
-        info!("起始簇: {:#x}, 文件大小: {:#x}", file_item.start_cluster(), file_item.file_size());
-        info!("文件起始地址: {:#x}", (fat32.bpb.data_sector() + file_item.start_cluster() * fat32.bpb.sectors_per_cluster as usize) << 9);
+        // let ref file_item = *(buf.as_mut_ptr() as *mut u8 as *mut FAT32shortFileItem);
+        // info!("文件名: {}", file_item.filename());
+        // info!("起始簇: {:#x}, 文件大小: {:#x}", file_item.start_cluster(), file_item.file_size());
+        // info!("文件起始地址: {:#x}", (fat32.bpb.data_sector() + file_item.start_cluster() * fat32.bpb.sectors_per_cluster as usize) << 9);
 
-        let ref file_item = *(buf.as_mut_ptr().add(32) as *mut u8 as *mut FAT32shortFileItem);
-        info!("文件名: {}", file_item.filename());
-        info!("起始簇: {:#x}, 文件大小: {:#x}", file_item.start_cluster(), file_item.file_size());
-        info!("文件起始地址: {:#x}", (fat32.bpb.data_sector() + (file_item.start_cluster() - 2) * fat32.bpb.sectors_per_cluster as usize) << 9);
+        // let ref file_item = *(buf.as_mut_ptr().add(32) as *mut u8 as *mut FAT32shortFileItem);
+        // info!("文件名: {}", file_item.filename());
+        // info!("起始簇: {:#x}, 文件大小: {:#x}", file_item.start_cluster(), file_item.file_size());
+        // info!("文件起始地址: {:#x}", (fat32.bpb.data_sector() + (file_item.start_cluster() - 2) * fat32.bpb.sectors_per_cluster as usize) << 9);
         
-        let mut filebuf = vec![0u8; file_item.file_size()];
-        let sector = fat32.bpb.data_sector() + (file_item.start_cluster() - 2) * fat32.bpb.sectors_per_cluster as usize;
-        fat32.read_sector(sector, &mut filebuf);
-        info!("文件内容: {}", String::from_utf8_lossy(&filebuf));
+        // let mut filebuf = vec![0u8; file_item.file_size()];
+        // let sector = fat32.bpb.data_sector() + (file_item.start_cluster() - 2) * fat32.bpb.sectors_per_cluster as usize;
+        // fat32.read_sector(sector, &mut filebuf);
+        // info!("文件内容: {}", String::from_utf8_lossy(&filebuf));
         
     }
 }
