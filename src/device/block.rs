@@ -3,10 +3,8 @@ use alloc::vec;
 use alloc::vec::Vec;
 use virtio_drivers::VirtIOBlk;
 use virtio_drivers::VirtIOHeader;
-use crate::fs::Partition;
 use crate::fs::fat32::FAT32;
 use crate::sync::mutex::Mutex;
-// use crate::fs::get_partitions;
 
 const VIRTIO0: usize = 0x10001000;
 pub const SECTOR_SIZE: usize = 512;
@@ -23,16 +21,6 @@ impl<'a> BlockDeviceContainer<'a> {
         // device.lock().write_block_nb(block_id, buf, resp)
         // 识别分区
         self.0.push(disk_device);
-    }
-
-    // 读取一个扇区
-    pub fn read_one_sector(&mut self, device_id: usize, block_id: usize, buf:& mut [u8]) {
-        self.0[device_id].lock().read_sector(block_id, buf)
-    }
-
-    // 写入一个扇区
-    pub fn write_one_sector(&mut self, device_id: usize, block_id: usize, buf:& mut [u8]) {
-        self.0[device_id].lock().write_sector(block_id, buf)
     }
 
     // 获取所有文件系统

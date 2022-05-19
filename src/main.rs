@@ -24,9 +24,11 @@ extern crate lazy_static;
 extern crate alloc;
 use core::arch::{global_asm, asm};
 
+use fs::filetree::FileTreeNode;
 use interrupt::TICKS;
 
-use crate::sbi::shutdown;
+use crate::{sbi::shutdown, fs::filetree::FILETREE};
+
 
 mod virtio_impl;
 
@@ -73,6 +75,7 @@ pub extern "C" fn rust_main(_hartid: usize, device_tree_paddr: usize) -> ! {
     // 提示信息
     info!("Welcome to test os!");
 
+    //
     unsafe {
         loop {
             if TICKS % 100 == 0 {
@@ -87,6 +90,9 @@ pub extern "C" fn rust_main(_hartid: usize, device_tree_paddr: usize) -> ! {
         }
     }
 
+    // 输出文件树
+    print_file_tree(FILETREE.lock().open("/").unwrap());
+
     // 
 
     // let mut words = String::new();
@@ -95,4 +101,32 @@ pub extern "C" fn rust_main(_hartid: usize, device_tree_paddr: usize) -> ! {
 
     // 调用rust api关机
     shutdown()
+}
+
+pub fn print_file_tree(node: FileTreeNode) {
+    // info!("is root {:?}", node.is_root());
+    info!("{}", node.get_pwd());
+    print_file_tree_back(&node, 2);
+}
+
+pub fn print_file_tree_back(node: &FileTreeNode, space: usize) {
+    let iter = node.get_children();
+    let mut iter = iter.iter().peekable();
+    while let Some(sub_node) = iter.next() {
+        if iter.peek().is_none() {
+            info!("└{:─>2$}{}", "", sub_node.get_filename(), space);
+        } else {
+            info!("├{:─>2$}{}", "", sub_node.get_filename(), space);
+            if sub_node.is_dir() {
+                print_file_tree_back(sub_node, space + 2);
+            }
+        }
+    }
+    // for sub_node in node.get_children() {
+    //     info!("├{:─>2$}{}", "", sub_node.get_filename(), space);
+    //     // └
+    //     if sub_node.is_dir() {
+    //         print_file_tree_back(sub_node, space + 2);
+    //     }
+    // }
 }

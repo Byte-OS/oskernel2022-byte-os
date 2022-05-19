@@ -1,7 +1,7 @@
 pub mod fat32;
-mod file;
+pub mod file;
 mod partition;
-mod filetree;
+pub mod filetree;
 
 pub use partition::Partition;
 // pub use partition::get_partitions;

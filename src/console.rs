@@ -42,11 +42,13 @@ macro_rules! println {
 }
 
 // 读入一个字符
+#[allow(unused)]
 pub fn read() -> char {
     console_getchar()
 }
 
 // 无回显输入
+#[allow(unused)]
 pub fn read_line(str: &mut String) {
     loop {
         let c = read();
@@ -58,6 +60,7 @@ pub fn read_line(str: &mut String) {
 }
 
 // 有回显输入
+#[allow(unused)]
 pub fn read_line_display(str: &mut String) {
     loop {
         let c = read();

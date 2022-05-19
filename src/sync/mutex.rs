@@ -31,6 +31,7 @@ impl<T> Mutex<T> {
         }
     }
 
+    #[allow(unused)]
     pub fn into_runner(self) -> T {
         // 注意data的变量名一定要跟Mutex中的成员名一致
         // 这里只获取Mutex.data
@@ -48,7 +49,7 @@ impl<T: ?Sized> Mutex<T> {
     fn obtain_lock(&self) {
         // 尝试获得锁
         loop {
-            if let Ok(res) = self.lock.compare_exchange(false, true, Ordering::Relaxed, Ordering::Relaxed) {
+            if let Ok(_) = self.lock.compare_exchange(false, true, Ordering::Relaxed, Ordering::Relaxed) {
                 break;
             }
             // 循环判断是否已经解锁如果没有解锁
@@ -69,12 +70,13 @@ impl<T: ?Sized> Mutex<T> {
         }
     }
 
-
+    #[allow(unused)]
     pub unsafe fn force_unlock(&self) {
         self.lock.store(false, Ordering::Release)
     }
 
 
+    #[allow(unused)]
     pub fn try_lock(&self) -> Option<MutexGuard<T>> {
         if let Ok(res) = self.lock.compare_exchange(false, true, Ordering::Relaxed, Ordering::Relaxed) {
             return Some(MutexGuard {

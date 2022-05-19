@@ -1,8 +1,8 @@
-use alloc::{string::String, rc::Rc, sync::Arc};
+use alloc::{string::String, sync::Arc};
 
 use crate::sync::mutex::Mutex;
 
-use super::fat32::{FilesystemItemOperator, FAT32};
+use super::fat32::FAT32;
 
 pub struct File<'a> {
     pub fat32: Arc<Mutex<FAT32<'a>>>,
@@ -15,6 +15,7 @@ pub struct File<'a> {
 }
 
 impl File<'_> {
+    #[allow(unused)]
     fn read_string(&self) -> String {
         // self.fat32.bpb.data_sector();
         todo!()
