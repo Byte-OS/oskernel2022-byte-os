@@ -6,7 +6,6 @@ use riscv::register::{sstatus::Sstatus, scause::{Trap, Exception, Interrupt,Scau
 pub use timer::TICKS;
 
 #[repr(C)]
-#[derive(Debug)]
 pub struct Context {
     pub x: [usize; 32],     // 32 个通用寄存器
     pub sstatus: Sstatus,

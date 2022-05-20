@@ -41,75 +41,75 @@ macro_rules! println {
     }
 }
 
-// 读入一个字符
-#[allow(unused)]
-pub fn read() -> char {
-    console_getchar()
-}
+// // 读入一个字符
+// #[allow(unused)]
+// pub fn read() -> char {
+//     console_getchar()
+// }
 
-// 无回显输入
-#[allow(unused)]
-pub fn read_line(str: &mut String) {
-    loop {
-        let c = read();
-        if c == '\n' {
-            break;
-        }
-        str.push(c);
-    }
-}
+// // 无回显输入
+// #[allow(unused)]
+// pub fn read_line(str: &mut String) {
+//     loop {
+//         let c = read();
+//         if c == '\n' {
+//             break;
+//         }
+//         str.push(c);
+//     }
+// }
 
-// 有回显输入
-#[allow(unused)]
-pub fn read_line_display(str: &mut String) {
-    loop {
-        let c = read();
+// // 有回显输入
+// #[allow(unused)]
+// pub fn read_line_display(str: &mut String) {
+//     loop {
+//         let c = read();
         
-        if c as u8 >= 0b11000000 {
-            // 获取到utf8字符 转unicode
-            console_putchar(c as u8);
-            let mut char_u32:u32 = c as u32;
-            let times = if c as u8 <= 0b11100000 {
-                char_u32 = char_u32 & 0x1f;
-                1
-            } else if c as u8 <= 0b11110000 {
-                char_u32 = char_u32 & 0x0f;
-                2
-            } else {
-                char_u32 = char_u32 & 0x07;
-                3
-            };
+//         if c as u8 >= 0b11000000 {
+//             // 获取到utf8字符 转unicode
+//             console_putchar(c as u8);
+//             let mut char_u32:u32 = c as u32;
+//             let times = if c as u8 <= 0b11100000 {
+//                 char_u32 = char_u32 & 0x1f;
+//                 1
+//             } else if c as u8 <= 0b11110000 {
+//                 char_u32 = char_u32 & 0x0f;
+//                 2
+//             } else {
+//                 char_u32 = char_u32 & 0x07;
+//                 3
+//             };
             
 
-            for _ in 0..times {
-                let c = read();
-                console_putchar(c as u8);
-                char_u32 = char_u32 << 6;
-                char_u32 = char_u32 | ((c as u32) & 0x3f);
-            }
+//             for _ in 0..times {
+//                 let c = read();
+//                 console_putchar(c as u8);
+//                 char_u32 = char_u32 << 6;
+//                 char_u32 = char_u32 | ((c as u32) & 0x3f);
+//             }
             
-            str.push(char::from_u32(char_u32).unwrap());
-            continue;
-        }
+//             str.push(char::from_u32(char_u32).unwrap());
+//             continue;
+//         }
         
-        match c as u8 {
-            0x0D => {       // 回车
-                console_putchar(0xa);
-                break;
-            },
-            0x7F => {       // 退格
-                console_putchar(0x08);  // 回到上一格
-                console_putchar(' ' as u8);  // 填充空格
-                console_putchar(0x08);  // 回到上一格
-                str.pop();
-            },
-            _ => {
-                console_putchar(c as u8);
-                str.push(c);
-            }
-        }
-    }
-}
+//         match c as u8 {
+//             0x0D => {       // 回车
+//                 console_putchar(0xa);
+//                 break;
+//             },
+//             0x7F => {       // 退格
+//                 console_putchar(0x08);  // 回到上一格
+//                 console_putchar(' ' as u8);  // 填充空格
+//                 console_putchar(0x08);  // 回到上一格
+//                 str.pop();
+//             },
+//             _ => {
+//                 console_putchar(c as u8);
+//                 str.push(c);
+//             }
+//         }
+//     }
+// }
 
 struct Stdout;
 

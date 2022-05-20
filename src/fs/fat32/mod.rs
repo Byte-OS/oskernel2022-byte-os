@@ -3,11 +3,11 @@ use core::{cell::RefCell, mem::size_of};
 use alloc::{sync::Arc, rc::Rc, string::String};
 use virtio_drivers::VirtIOBlk;
 
-use crate::{sync::mutex::Mutex, device::{SECTOR_SIZE, BLK_CONTROL}, fs::{fat32::{long_file::FAT32longFileItem, short_file::FAT32shortFileItem}, filetree::{FileTreeType, FileTreeNodeRaw}, file}};
+use crate::{sync::mutex::Mutex, device::{SECTOR_SIZE, BLK_CONTROL}, fs::{fat32::{long_file::FAT32longFileItem, short_file::FAT32shortFileItem}, filetree::{FileTreeType, FileTreeNodeRaw}}};
 
 use self::{fat32bpb::FAT32BPB, file_trait::FilesystemItemOperator};
 
-use super::{Partition, file::File, filetree::{FILETREE, FileTreeNode, self}};
+use super::{Partition, file::File, filetree::{FILETREE, FileTreeNode}};
 
 pub mod fat32bpb;
 pub mod short_file;

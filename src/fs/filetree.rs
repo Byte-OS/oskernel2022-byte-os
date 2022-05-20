@@ -5,6 +5,8 @@ use alloc::{string::{String, ToString}, vec::Vec, sync::Arc, rc::Rc};
 
 use crate::sync::mutex::Mutex;
 
+use super::file::File;
+
 pub struct FileTree(FileTreeNode);
 
 lazy_static! {
@@ -39,6 +41,7 @@ pub enum FileTreeType {
     None            // 空
 }
 
+// 文件树原始树
 pub struct FileTreeNodeRaw {
     pub filename: String,               // 文件名
     pub file_type: FileTreeType,        // 文件数类型
@@ -134,10 +137,12 @@ impl FileTreeNode {
         self.0.borrow_mut().parent.clone()
     }
 
+    // 判断是否为空
     pub fn is_empty(&self) -> bool {
         self.0.borrow_mut().children.is_empty()
     }
 
+    // 添加节点
     pub fn add(&self, node: FileTreeNode) {
         let mut curr_node = self.0.borrow_mut();
         curr_node.children.push(node);
@@ -147,5 +152,19 @@ impl FileTreeNode {
     // 获取簇位置
     pub fn get_cluster(&self) -> usize {
         self.0.borrow_mut().cluster
+    }
+
+    // 到文件
+    pub fn to_file(&self) -> File {
+        // File { 
+        //     fat32: (), 
+        //     filename: (), 
+        //     start_cluster: (), 
+        //     block_idx: (), 
+        //     open_cnt: (), 
+        //     size: (), 
+        //     flag: () 
+        // }
+        todo!()
     }
 }

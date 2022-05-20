@@ -93,6 +93,8 @@ pub extern "C" fn rust_main(_hartid: usize, device_tree_paddr: usize) -> ! {
     // 输出文件树
     print_file_tree(FILETREE.lock().open("/").unwrap());
 
+    
+
     // 
 
     // let mut words = String::new();
@@ -103,30 +105,25 @@ pub extern "C" fn rust_main(_hartid: usize, device_tree_paddr: usize) -> ! {
     shutdown()
 }
 
+// 打印目录树
 pub fn print_file_tree(node: FileTreeNode) {
     // info!("is root {:?}", node.is_root());
     info!("{}", node.get_pwd());
-    print_file_tree_back(&node, 2);
+    print_file_tree_back(&node, 0);
 }
 
+// 打印目录树 - 递归
 pub fn print_file_tree_back(node: &FileTreeNode, space: usize) {
     let iter = node.get_children();
     let mut iter = iter.iter().peekable();
     while let Some(sub_node) = iter.next() {
         if iter.peek().is_none() {
-            info!("└{:─>2$}{}", "", sub_node.get_filename(), space);
+            info!("{:>2$}└──{}", "", sub_node.get_filename(), space);
         } else {
-            info!("├{:─>2$}{}", "", sub_node.get_filename(), space);
-            if sub_node.is_dir() {
-                print_file_tree_back(sub_node, space + 2);
-            }
+            info!("{:>2$}├──{}", "", sub_node.get_filename(), space);
+        }
+        if sub_node.is_dir() {
+            print_file_tree_back(sub_node, space + 3);
         }
     }
-    // for sub_node in node.get_children() {
-    //     info!("├{:─>2$}{}", "", sub_node.get_filename(), space);
-    //     // └
-    //     if sub_node.is_dir() {
-    //         print_file_tree_back(sub_node, space + 2);
-    //     }
-    // }
 }
