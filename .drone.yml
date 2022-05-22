@@ -10,7 +10,7 @@ steps:
     - cp -r doc/* /root/site
     when:
       branch:
-      - master
+      - main
 
 
 volumes: # 定义流水线挂载目录，用于共享数据
