@@ -7,7 +7,7 @@ steps:
       - name: site
         path: /root/site # 将maven下载依赖的目录挂载出来，防止重复下载
     commands:
-    - cp -r doc/* /root/site
+    - cp -r docs/* /root/site
     when:
       branch:
       - main
