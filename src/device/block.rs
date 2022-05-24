@@ -27,6 +27,11 @@ impl<'a> BlockDeviceContainer<'a> {
     pub fn get_partitions(&self) -> Vec<Arc<Mutex<FAT32<'a>>>> {
         self.0.clone()
     }
+
+    // 获取分区
+    pub fn get_partition(&self, device_id: usize) -> Arc<Mutex<FAT32<'a>>> {
+        self.0[device_id].clone()
+    }
 }
 
 pub fn init() {

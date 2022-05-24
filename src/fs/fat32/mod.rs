@@ -3,11 +3,11 @@ use core::{cell::RefCell, mem::size_of};
 use alloc::{sync::Arc, rc::Rc, string::String};
 use virtio_drivers::VirtIOBlk;
 
-use crate::{sync::mutex::Mutex, device::{SECTOR_SIZE, BLK_CONTROL}, fs::{fat32::{long_file::FAT32longFileItem, short_file::FAT32shortFileItem}, filetree::{FileTreeType, FileTreeNodeRaw}}};
+use crate::{sync::mutex::Mutex, device::{SECTOR_SIZE, BLK_CONTROL}, fs::{fat32::{long_file::FAT32longFileItem, short_file::FAT32shortFileItem}, filetree::FileTreeNodeRaw}};
 
 use self::{fat32bpb::FAT32BPB, file_trait::FilesystemItemOperator};
 
-use super::{Partition, file::File, filetree::{FILETREE, FileTreeNode}};
+use super::{Partition, file::{File, FileType}, filetree::{FILETREE, FileTreeNode}};
 
 pub mod fat32bpb;
 pub mod short_file;
@@ -125,28 +125,25 @@ impl<'a> FAT32<'a> {
                             filename = filename + &file_item.filename();
                         }
                         file_tree_type = match file_item.get_attr(){
-                            FAT32FileItemAttr::FILE =>FileTreeType::File,
+                            FAT32FileItemAttr::FILE =>FileType::File,
                             FAT32FileItemAttr::RW => todo!(),
                             FAT32FileItemAttr::R => todo!(),
                             FAT32FileItemAttr::HIDDEN => todo!(),
                             FAT32FileItemAttr::SYSTEM => todo!(),
                             FAT32FileItemAttr::VOLUME => todo!(),
-                            FAT32FileItemAttr::SUBDIR => FileTreeType::Directory,
+                            FAT32FileItemAttr::SUBDIR => FileType::Directory,
                         };
                         return Some(FileTreeNode(Rc::new(RefCell::new(FileTreeNodeRaw{
                             filename: filename,
                             file_type: file_tree_type,
                             parent: Default::default(),
                             children: vec![],
+                            size: file_item.file_size(),
                             cluster: file_item.start_cluster()
                         }))))
                     },
                 }
             }
-            // file_item = &*(buf.as_ptr() as *const u8 as *const FAT32shortFileItem);
-            // info!("文件名: {}", file_item.filename());
-            // info!("起始簇: {:#x}, 文件大小: {:#x}", file_item.start_cluster(), file_item.file_size());
-            // info!("文件起始地址: {:#x}", (self.bpb.data_sector() + file_item.start_cluster() * self.bpb.sectors_per_cluster as usize) << 9);
         }
         None
     }
@@ -157,6 +154,23 @@ impl<'a> FAT32<'a> {
         let byte_offset = (curr_cluster % (SECTOR_SIZE / 4)) * 4;
         self.read_sector(self.bpb.reserved_sector as usize + sector_offset, &mut buf);
         u32::from_ne_bytes(buf[byte_offset..byte_offset + 4].try_into().unwrap()) as usize
+    }
+
+    // 读取文件
+    pub fn read(&self, start_cluster: usize, file_size: usize, buf: &mut [u8]) {
+        let mut cluster = start_cluster;
+        // 文件需要读取的大小
+        let size = if file_size < buf.len() {file_size} else {buf.len()};
+
+        for i in (0..size).step_by(SECTOR_SIZE) {
+            let end = if size < i + SECTOR_SIZE {size} else { i + SECTOR_SIZE};
+            self.read_cluster(cluster, &mut buf[i..end]);
+
+            // 如果不是有效簇 则跳出循环
+            if cluster >= 0x0fff_ffef { return; }
+            // 如果是有效簇 获取下一个簇地址
+            cluster = self.get_next_cluster(cluster);
+        }
     }
 
     pub fn read_directory(&self, start_cluster: usize, filetree_node: &FileTreeNode) {

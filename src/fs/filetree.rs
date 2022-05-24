@@ -5,7 +5,7 @@ use alloc::{string::{String, ToString}, vec::Vec, sync::Arc, rc::Rc};
 
 use crate::sync::mutex::Mutex;
 
-use super::file::File;
+use super::file::{File, FileType};
 
 pub struct FileTree(FileTreeNode);
 
@@ -14,9 +14,10 @@ lazy_static! {
     pub static ref FILETREE: Arc<Mutex<FileTree>> = Arc::new(Mutex::new(FileTree(FileTreeNode(
         Rc::new(RefCell::new(FileTreeNodeRaw { 
             filename: "".to_string(), 
-            file_type: FileTreeType::Directory, 
+            file_type: FileType::Directory, 
             parent: None, 
             children: vec![],
+            size: 0,
             cluster: 2
         }))
     ))));
@@ -29,25 +30,14 @@ impl FileTree {
     }
 }
 
-// 文件类型
-#[allow(dead_code)]
-#[derive(Default)]
-pub enum FileTreeType {
-    File,           // 文件
-    Directory,      // 文件夹
-    Device,         // 设备
-    Pipline,        // 管道
-    #[default]
-    None            // 空
-}
-
 // 文件树原始树
 pub struct FileTreeNodeRaw {
     pub filename: String,               // 文件名
-    pub file_type: FileTreeType,        // 文件数类型
+    pub file_type: FileType,            // 文件数类型
     pub parent: Option<FileTreeNode>,   // 父节点
-    pub children: Vec<FileTreeNode>,     // 子节点
-    pub cluster: usize
+    pub children: Vec<FileTreeNode>,    // 子节点
+    pub cluster: usize,                 // 开始簇
+    pub size: usize                     // 文件大小
 }
 
 
@@ -72,6 +62,7 @@ impl FileTreeNode {
                     let mut sign = false;
                     // 遍历名称
                     for node in tree_node.get_children() {
+                        // info!("文件夹内容:{} 长度:{} 需要匹配:{} 长度:{}", node.get_filename(), node.get_filename().len(), locate, locate.len());
                         if node.get_filename() == locate {
                             tree_node = node.clone();
                             sign = true;
@@ -113,7 +104,7 @@ impl FileTreeNode {
     // 判断是否为目录
     pub fn is_dir(&self) -> bool {
         match self.0.borrow_mut().file_type {
-            FileTreeType::Directory => {
+            FileType::Directory => {
                 true
             },
             _ => {
@@ -154,17 +145,23 @@ impl FileTreeNode {
         self.0.borrow_mut().cluster
     }
 
+    // 获取文件大小
+    pub fn get_file_size(&self) -> usize {
+        self.0.borrow_mut().size
+    }
+
+    pub fn get_file_type(&self) -> FileType {
+        self.0.borrow_mut().file_type
+    }
+
     // 到文件
     pub fn to_file(&self) -> File {
-        // File { 
-        //     fat32: (), 
-        //     filename: (), 
-        //     start_cluster: (), 
-        //     block_idx: (), 
-        //     open_cnt: (), 
-        //     size: (), 
-        //     flag: () 
-        // }
-        todo!()
+        File { 
+            device_id: 0,
+            filename: self.get_filename(), 
+            start_cluster: self.get_cluster(), 
+            size: self.get_file_size(), 
+            flag: self.get_file_type()
+        }
     }
 }
