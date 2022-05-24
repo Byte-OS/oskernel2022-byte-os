@@ -25,18 +25,13 @@ pub struct File {
 impl File {
     #[allow(unused)]
     fn read_string(&self) -> String {
-        // self.fat32.bpb.data_sector();
         todo!()
     }
 
     // 读取文件内容
     pub fn read(&self) -> Vec<u8> {
         let mut file_vec = vec![0u8; self.size];
-        // let mut file_vec = Vec::with_capacity(self.size);
-        // file_vec.set_len(file_vec.capacity());
-        info!("文件size: {}", file_vec.len());
         unsafe {
-            // info!("文件锁状态: {}", BLK_CONTROL.get_partition(self.device_id).try_lock());
             BLK_CONTROL.get_partition(self.device_id).lock().read(self.start_cluster, self.size, &mut file_vec);
         }
         file_vec

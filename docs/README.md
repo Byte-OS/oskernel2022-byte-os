@@ -463,3 +463,163 @@ pub fn init() {
     }
 }
 ```
+
+```rust
+// FAT32长文件目录项
+#[allow(dead_code)]
+#[repr(packed)]
+pub struct FAT32longFileItem {
+    attr: FAT32FileItemAttr,        // 属性
+    filename: [u16; 5],             // 长目录文件名unicode码
+    sign: u8,                       // 长文件名目录项标志, 取值0FH
+    system_reserved: u8,            // 系统保留
+    verification: u8,               // 校验值
+    filename1: [u16; 6],            // 长文件名unicode码
+    start: u16,                     // 文件起始簇号
+    filename2: [u16; 2]              // 长文件名unicode码
+}
+
+impl FilesystemItemOperator for FAT32longFileItem {
+    fn filename(&self) -> String {
+        let mut filename = String::new();
+
+        for i in self.filename {
+            if i == 0x00 {return filename;}
+            filename.push(char::from_u32(i as u32).unwrap());
+        }
+
+        for i in self.filename1 {
+            if i == 0x00 {return filename;}
+            filename.push(char::from_u32(i as u32).unwrap());
+        }
+
+        for i in self.filename2 {
+            if i == 0x00 {return filename;}
+            filename.push(char::from_u32(i as u32).unwrap());
+        }
+        filename
+    }
+
+    fn file_size(&self) -> usize {
+        todo!()
+    }
+
+    fn start_cluster(&self) -> usize {
+        self.start as usize
+    }
+
+    fn get_attr(&self) -> FAT32FileItemAttr {
+        self.attr.clone()
+    }
+}
+```
+
+```rust
+// FAT32短文件目录项
+#[allow(dead_code)]
+#[repr(packed)]
+pub struct FAT32shortFileItem {
+    filename: [u8; 8],          // 文件名
+    ext: [u8; 3],               // 扩展名
+    attr: FAT32FileItemAttr,    // 属性
+    system_reserved: u8,        // 系统保留
+    create_time_10ms: u8,       // 创建时间的10毫秒位
+    create_time: u16,           // 创建时间
+    create_date: u16,           // 创建日期
+    last_access_date: u16,      // 最后访问日期
+    start_high: u16,            // 起始簇号的高16位
+    last_modify_time: u16,      // 最近修改时间
+    last_modify_date: u16,      // 最近修改日期
+    start_low: u16,             // 起始簇号的低16位
+    len: u32                    // 文件长度
+}
+
+impl FilesystemItemOperator for FAT32shortFileItem {
+    // 获取文件名
+    fn filename(&self) -> String {
+        let filename = String::from_utf8_lossy(&self.filename);
+        // 获取文件名总长度
+        let mut filename_size = filename.len();
+        // 获取有效文件名长度
+        for i in filename.chars().rev() {
+            if !i.is_whitespace() { break; }
+            filename_size = filename_size - 1;
+        }
+        // 拼接得到文件名
+        let filename = filename[..filename_size].to_string();
+        let ext = String::from_utf8_lossy(&self.ext);
+        if ext.trim() == "" {
+            filename 
+        } else {
+            filename + "." + &ext
+        }
+    }
+
+    // 获取文件大小
+    fn file_size(&self) -> usize {
+        self.len as usize
+    }
+
+    // 开始簇
+    fn start_cluster(&self) -> usize {
+        (self.start_high as usize) << 16 | self.start_low as usize
+    }
+
+    fn get_attr(&self) -> FAT32FileItemAttr {
+        self.attr.clone()
+    }
+}
+```
+
+```rust
+// 文件项操作接口
+pub trait FilesystemItemOperator {
+    fn filename(&self) -> String;            // 获取文件名
+    fn file_size(&self) -> usize;            // 获取文件大小
+    fn start_cluster(&self) -> usize;        // 开始簇
+    fn get_attr(&self) -> FAT32FileItemAttr;     // 文件属性
+}
+```
+
+
+
+### 文件项
+
+```rust
+// 文件类型
+#[allow(dead_code)]
+#[derive(Default, Clone, Copy)]
+pub enum FileType {
+    File,           // 文件
+    Directory,      // 文件夹
+    Device,         // 设备
+    Pipline,        // 管道
+    #[default]
+    None            // 空
+}
+
+pub struct File {
+    pub device_id: usize,       // 设备id
+    pub filename : String,      // 文件名
+    pub start_cluster : usize,  // 开始簇
+    pub size : usize,           // 文件大小
+    pub flag : FileType,        // 文件标志
+}
+
+impl File {
+    #[allow(unused)]
+    fn read_string(&self) -> String {
+        todo!()
+    }
+
+    // 读取文件内容
+    pub fn read(&self) -> Vec<u8> {
+        let mut file_vec = vec![0u8; self.size];
+        unsafe {
+            BLK_CONTROL.get_partition(self.device_id).lock().read(self.start_cluster, self.size, &mut file_vec);
+        }
+        file_vec
+    }
+}
+```
+

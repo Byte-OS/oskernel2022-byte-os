@@ -1,5 +1,3 @@
-use core::ops::Add;
-
 use alloc::string::String;
 
 use super::{file_trait::FilesystemItemOperator, FAT32FileItemAttr};
@@ -36,30 +34,6 @@ impl FilesystemItemOperator for FAT32longFileItem {
             if i == 0x00 {return filename;}
             filename.push(char::from_u32(i as u32).unwrap());
         }
-
-        // while self.filename[end_pos - 2] == 0x00 || self.filename[end_pos - 2] == 0xff {
-        //     end_pos = end_pos - 2;
-        // }
-
-        // filename = filename + &String::from_utf8_lossy(&self.filename[..end_pos]);
-        // if end_pos < 10 {
-        //     return filename;
-        // }
-
-        // end_pos = 12;
-        // while end_pos >= 2 && (self.filename1[end_pos - 2] == 0x00 || self.filename1[end_pos - 2] == 0xff) {
-        //     end_pos = end_pos - 2;
-        // }
-        // filename = filename + &String::from_utf8_lossy(&self.filename1[..end_pos]);
-        // if end_pos < 12 {
-        //     return filename;
-        // }
-
-        // end_pos = 4;
-        // while end_pos >= 2 && (self.filename2[end_pos - 2] == 0x00 || self.filename2[end_pos - 2] == 0xff) {
-        //     end_pos = end_pos - 2;
-        // }
-        // filename = filename + &String::from_utf8_lossy(&self.filename2[..end_pos]);
         filename
     }
 
