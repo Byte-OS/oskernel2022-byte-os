@@ -74,7 +74,7 @@ hexdump:
 coredump:
 	hexdump $(BIN_FILE) -C
 
-run: build qemu
+run: qemu
 
 k210: 
 	@cp src/linker-k210.ld src/linker.ld

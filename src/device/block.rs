@@ -1,3 +1,6 @@
+use core::borrow::Borrow;
+
+use alloc::boxed::Box;
 use alloc::sync::Arc;
 use alloc::vec;
 use alloc::vec::Vec;
@@ -18,11 +21,11 @@ pub struct BlockDeviceContainer (Vec<Arc<Mutex<FAT32>>>);
 pub struct VirtIOBlock(VirtIOBlk<'static>);
 
 impl BlockDevice for VirtIOBlock {
-    fn read_block(&self, sector_offset: usize, buf: &mut [u8]) {
+    fn read_block(&mut self, sector_offset: usize, buf: &mut [u8]) {
         self.0.read_block(sector_offset, buf).expect("读取失败")
     }
 
-    fn write_block(&self, sector_offset: usize, buf: &mut [u8]) {
+    fn write_block(&mut self, sector_offset: usize, buf: &mut [u8]) {
         self.0.read_block(sector_offset, buf).expect("写入失败")
     }
 }
@@ -31,7 +34,7 @@ impl BlockDeviceContainer {
     pub fn add(&mut self, virtio: usize) {
         // 创建存储设备
         let device = VirtIOBlk::new(unsafe {&mut *(virtio as *mut VirtIOHeader)}).expect("failed to create blk driver");
-        let block_device = Arc::new(Mutex::new(VirtIOBlock(device)));
+        let block_device:Arc<Mutex<Box<dyn BlockDevice>>> = Arc::new(Mutex::new(Box::new(VirtIOBlock(device))));
         let disk_device = Arc::new(Mutex::new(FAT32::new(block_device)));
         // device.lock().write_block_nb(block_id, buf, resp)
         // 识别分区

@@ -1,6 +1,6 @@
 use core::{cell::RefCell, mem::size_of};
 
-use alloc::{sync::Arc, rc::Rc, string::String};
+use alloc::{sync::Arc, rc::Rc, string::String, boxed::Box};
 
 use crate::{sync::mutex::Mutex, device::{SECTOR_SIZE, BLK_CONTROL, BlockDevice}, fs::{fat32::{long_file::FAT32longFileItem, short_file::FAT32shortFileItem}, filetree::FileTreeNodeRaw}};
 
@@ -28,16 +28,16 @@ pub enum FAT32FileItemAttr {
 
 pub struct FAT32 {
     // pub device: Arc<Mutex<VirtIOBlk<'a>>>,
-    pub device: Arc<Mutex<dyn BlockDevice>>,
+    pub device: Arc<Mutex<Box<dyn BlockDevice>>>,
     pub bpb: FAT32BPB,
 }
 
 impl Partition for FAT32 {
     fn read_sector(&self, sector_offset: usize, buf: &mut [u8]) {
         let mut output = vec![0; SECTOR_SIZE];
-        let t = self.device.lock();
+        // let t = self.device.lock();
+        self.device.lock().read_block(sector_offset, &mut output);
         
-        t.
         buf.copy_from_slice(&output[..buf.len()]);
     }
 
@@ -78,7 +78,7 @@ impl Partition for FAT32 {
 /// 目前仅支持挂载文件系统
 impl FAT32 {
     // 创建新的FAT32表项 device_id: 为设备id 目前支持文件系统 需要手动读取bpb
-    pub fn new(device: Arc<Mutex<dyn BlockDevice>>) -> Self {
+    pub fn new(device: Arc<Mutex<Box<dyn BlockDevice>>>) -> Self {
         let fat32 = FAT32 {
             device,
             bpb: Default::default()
