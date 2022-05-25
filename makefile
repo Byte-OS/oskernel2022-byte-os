@@ -1,5 +1,5 @@
 TARGET      := riscv64gc-unknown-none-elf
-MODE        := debug
+MODE        := release
 KERNEL_FILE := target/$(TARGET)/$(MODE)/os
 BIN_FILE    := target/$(TARGET)/$(MODE)/kernel.bin
 
@@ -12,21 +12,21 @@ FS_IMG := fs.img
 BOOTLOADER := bootloader/rustsbi-qemu.bin
 BOOTLOADER_K210 := bootloader/rustsbi-k210.bin
 
-K210-SERIALPORT	= /dev/ttyS3
+K210-SERIALPORT	= /dev/ttyUSB0
 K210-BURNER	= ../tools/kflash.py
 
 
-.PHONY: doc kernel build clean qemu run
+.PHONY: doc kernel build clean qemu run k210
 
 all: build
 
-build: $(BIN_FILE) 
+build: kernel $(BIN_FILE)
 
 kernel:
-	@cargo build
-
-$(BIN_FILE): kernel
-	$(OBJCOPY) $(KERNEL_FILE) --strip-all -O binary $@
+	@cp src/linker-qemu.ld src/linker.ld
+	@cargo build --release --features "board_qemu"
+	@rm src/linker.ld
+	$(OBJCOPY) $(KERNEL_FILE) --strip-all -O binary $(BIN_FILE)
 
 asm:
 	@$(OBJDUMP) -d $(KERNEL_FILE) | less
@@ -41,7 +41,6 @@ clean:
 qemu: build
 	@qemu-system-riscv64 \
             -machine virt \
-            -bios $(BOOTLOADER) \
             -device loader,file=$(BIN_FILE),addr=0x80200000 \
 			-drive file=$(FS_IMG),if=none,format=raw,id=x0 \
         	-device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0 \
@@ -74,9 +73,18 @@ gdb:
 hexdump:
 	hexdump $(FS_IMG) -C
 
+coredump:
+	hexdump $(BIN_FILE) -C
+
 run: build qemu
 
-flash:
+k210: 
+	@cp src/linker-k210.ld src/linker.ld
+	@cargo build --release --features "board_k210"
+	@rm src/linker.ld
+	$(OBJCOPY) $(KERNEL_FILE) --strip-all -O binary $(BIN_FILE)
+
+flash: k210
 	(which $(K210-BURNER)) || (cd .. && git clone https://hub.fastgit.xyz/sipeed/kflash.py.git && mv kflash.py tools)
 	@cp $(BOOTLOADER_K210) $(BOOTLOADER_K210).copy
 	@dd if=$(BIN_FILE) of=$(BOOTLOADER_K210).copy bs=131072 seek=1

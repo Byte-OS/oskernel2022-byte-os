@@ -11,6 +11,11 @@ static mut HEAP: [u8;HEAP_SIZE] = [0;HEAP_SIZE];
 #[global_allocator]
 static HEAP_ALLOCATOR: LockedHeap<64> = LockedHeap::empty();
 
+#[cfg(feature = "board_k210")]
+const program_start:usize = 0x80020000;
+#[cfg(not(feature = "board_k210"))]
+const program_start:usize = 0x80200000;
+
 // 初始化堆内存分配器
 pub fn init() {
     extern "C" {
@@ -20,7 +25,8 @@ pub fn init() {
     }
     unsafe {
         HEAP_ALLOCATOR.lock().init(HEAP.as_ptr() as usize, HEAP_SIZE);
-        let file_size = end as usize - 0x80200000;
+        let file_size = end as usize - program_start;
+
         let file_size_kb = file_size / 1024;
 
         let text_start = stext as usize;
