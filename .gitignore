@@ -1,2 +1,3 @@
 target/
 .vscode/
+bootloader/rust-qemu.bin.copy

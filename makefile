@@ -9,9 +9,12 @@ OBJCOPY     := rust-objcopy --binary-architecture=riscv64
 FS_IMG := fs.img
 
 # BOARD
-BOARD ?= qemu
-SBI ?= rustsbi
-BOOTLOADER := bootloader/$(SBI)-$(BOARD).bin
+BOOTLOADER := bootloader/rustsbi-qemu.bin
+BOOTLOADER_K210 := bootloader/rustsbi-k210.bin
+
+K210-SERIALPORT	= /dev/ttyS3
+K210-BURNER	= ../tools/kflash.py
+
 
 .PHONY: doc kernel build clean qemu run
 
@@ -72,3 +75,12 @@ hexdump:
 	hexdump $(FS_IMG) -C
 
 run: build qemu
+
+flash:
+	(which $(K210-BURNER)) || (cd .. && git clone https://hub.fastgit.xyz/sipeed/kflash.py.git && mv kflash.py tools)
+	@cp $(BOOTLOADER_K210) $(BOOTLOADER_K210).copy
+	@dd if=$(BIN_FILE) of=$(BOOTLOADER_K210).copy bs=131072 seek=1
+	@mv $(BOOTLOADER_K210).copy $(BIN_FILE)
+	@sudo chmod 777 $(K210-SERIALPORT)
+	python3 $(K210-BURNER) -p $(K210-SERIALPORT) -b 1500000 $(BIN_FILE)
+	python3 -m serial.tools.miniterm --eol LF --dtr 0 --rts 0 --filter direct $(K210-SERIALPORT) 115200
