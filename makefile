@@ -10,14 +10,13 @@ FS_IMG := fs.img
 
 # BOARD
 BOOTLOADER := bootloader/rustsbi-qemu.bin
-BOOTLOADER_K210 := bootloader/opensbi.bin
-# BOOTLOADER_K210 := bootloader/rustsbi-k210.bin
+BOOTLOADER_K210 := bootloader/rustsbi-k210.bin
 
 K210-SERIALPORT	= /dev/ttyUSB0
 K210-BURNER	= ../tools/kflash.py
 
 
-.PHONY: doc kernel build clean qemu run k210
+.PHONY: doc kernel build clean qemu run k210 flash
 
 all: build
 
@@ -39,7 +38,7 @@ clean:
 qemu: build
 	@qemu-system-riscv64 \
             -machine virt \
-            -bios bootloader/opensbi-qemu.bin \
+            -bios $(BOOTLOADER) \
             -device loader,file=$(BIN_FILE),addr=0x80200000 \
 			-drive file=$(FS_IMG),if=none,format=raw,id=x0 \
         	-device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0 \

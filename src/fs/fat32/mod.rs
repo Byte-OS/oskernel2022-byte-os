@@ -1,9 +1,8 @@
 use core::{cell::RefCell, mem::size_of};
 
 use alloc::{sync::Arc, rc::Rc, string::String};
-use virtio_drivers::VirtIOBlk;
 
-use crate::{sync::mutex::Mutex, device::{SECTOR_SIZE, BLK_CONTROL}, fs::{fat32::{long_file::FAT32longFileItem, short_file::FAT32shortFileItem}, filetree::FileTreeNodeRaw}};
+use crate::{sync::mutex::Mutex, device::{SECTOR_SIZE, BLK_CONTROL, BlockDevice}, fs::{fat32::{long_file::FAT32longFileItem, short_file::FAT32shortFileItem}, filetree::FileTreeNodeRaw}};
 
 use self::{fat32bpb::FAT32BPB, file_trait::FilesystemItemOperator};
 
@@ -27,22 +26,25 @@ pub enum FAT32FileItemAttr {
 }
 
 
-pub struct FAT32<'a> {
-    pub device: Arc<Mutex<VirtIOBlk<'a>>>,
+pub struct FAT32 {
+    // pub device: Arc<Mutex<VirtIOBlk<'a>>>,
+    pub device: Arc<Mutex<dyn BlockDevice>>,
     pub bpb: FAT32BPB,
 }
 
-impl<'a> Partition for FAT32<'a> {
+impl Partition for FAT32 {
     fn read_sector(&self, sector_offset: usize, buf: &mut [u8]) {
         let mut output = vec![0; SECTOR_SIZE];
-        self.device.lock().read_block(sector_offset, &mut output).expect("读取失败");
+        let t = self.device.lock();
+        
+        t.
         buf.copy_from_slice(&output[..buf.len()]);
     }
 
     fn write_sector(&self, sector_offset: usize, buf: &mut [u8]) {
         let mut input = vec![0; SECTOR_SIZE];
         input.copy_from_slice(&buf);
-        self.device.lock().write_block(sector_offset, &mut input).expect("写入失败")
+        self.device.lock().write_block(sector_offset, &mut input);
     }
 
     fn open_file(&self, _filename: &str) -> Result<File, core::fmt::Error> {
@@ -74,9 +76,9 @@ impl<'a> Partition for FAT32<'a> {
 }
 
 /// 目前仅支持挂载文件系统
-impl<'a> FAT32<'a> {
+impl FAT32 {
     // 创建新的FAT32表项 device_id: 为设备id 目前支持文件系统 需要手动读取bpb
-    pub fn new(device: Arc<Mutex<VirtIOBlk<'a>>>) -> Self {
+    pub fn new(device: Arc<Mutex<dyn BlockDevice>>) -> Self {
         let fat32 = FAT32 {
             device,
             bpb: Default::default()

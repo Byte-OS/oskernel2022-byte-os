@@ -54,9 +54,9 @@ fn clear_bss() {
 #[no_mangle]
 pub extern "C" fn rust_main(hartid: usize, device_tree_paddr: usize) -> ! {
     // 保证仅有一个核心工作
-    // if hartid != 0 {
-    //     sbi::hart_suspend(0x00000000, support_hart_resume as usize, 0);
-    // }
+    if hartid != 0 {
+        sbi::hart_suspend(0x00000000, support_hart_resume as usize, 0);
+    }
     // 清空bss段
     clear_bss();
 
@@ -70,10 +70,10 @@ pub extern "C" fn rust_main(hartid: usize, device_tree_paddr: usize) -> ! {
     // 初始化内存
     memory::init();
 
-    // // 初始化设备
-    // device::init();
+    // 初始化设备
+    device::init();
 
-    // // 初始化文件系统
+    // 初始化文件系统
     // fs::init();
     
     // 提示信息
