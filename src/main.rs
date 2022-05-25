@@ -86,7 +86,7 @@ pub extern "C" fn rust_main(_hartid: usize, device_tree_paddr: usize) -> ! {
                 info!("继续执行");
                 break;
             }
-            if TICKS > 1 {
+            if TICKS % 100 == 0 {
                 info!("{} TICKS", TICKS);
             }
 
