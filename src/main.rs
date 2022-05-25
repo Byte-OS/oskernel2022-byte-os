@@ -24,11 +24,10 @@ extern crate lazy_static;
 extern crate alloc;
 use core::arch::{global_asm, asm};
 
-use alloc::string::String;
 use fs::filetree::FileTreeNode;
 use interrupt::TICKS;
 
-use crate::{sbi::shutdown, fs::{filetree::FILETREE, file}};
+use crate::sbi::shutdown;
 
 
 mod virtio_impl;
@@ -53,12 +52,16 @@ fn clear_bss() {
 }
 
 #[no_mangle]
-pub extern "C" fn rust_main(_hartid: usize, device_tree_paddr: usize) -> ! {
+pub extern "C" fn rust_main(hartid: usize, device_tree_paddr: usize) -> ! {
+    // 保证仅有一个核心工作
+    // if hartid != 0 {
+    //     sbi::hart_suspend(0x00000000, support_hart_resume as usize, 0);
+    // }
     // 清空bss段
     clear_bss();
 
     // 输出设备信息
-    info!("当前核心 {}", _hartid);
+    info!("当前核心 {}", hartid);
     info!("设备树地址 {:#x}", device_tree_paddr);
 
     // 初始化中断
@@ -129,6 +132,13 @@ pub extern "C" fn rust_main(_hartid: usize, device_tree_paddr: usize) -> ! {
     // 调用rust api关机
     shutdown()
 }
+
+
+extern "C" fn support_hart_resume(hart_id: usize, _param: usize) {
+    info!("核心 {} 作为辅助核心进行等待", hart_id);
+    loop {} // 进入循环
+}
+
 
 // 打印目录树
 pub fn print_file_tree(node: FileTreeNode) {
