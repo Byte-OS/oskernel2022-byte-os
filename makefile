@@ -1,5 +1,6 @@
 TARGET      := riscv64gc-unknown-none-elf
-MODE        := release
+MODE        := debug
+MODE_FLAG	:= 
 KERNEL_FILE := target/$(TARGET)/$(MODE)/os
 BIN_FILE    := target/$(TARGET)/$(MODE)/kernel.bin
 
@@ -24,7 +25,7 @@ build: kernel $(BIN_FILE)
 
 kernel:
 	@cp src/linker-qemu.ld src/linker.ld
-	@cargo build --release --features "board_qemu"
+	@cargo build $(MODE_FLAG) --features "board_qemu"
 	@rm src/linker.ld
 	$(OBJCOPY) $(KERNEL_FILE) --strip-all -O binary $(BIN_FILE)
 
@@ -78,7 +79,7 @@ run: qemu
 
 k210: 
 	@cp src/linker-k210.ld src/linker.ld
-	@cargo build --release --features "board_k210"
+	@cargo build $(MODE_FLAG) --features "board_k210"
 	@rm src/linker.ld
 	$(OBJCOPY) $(KERNEL_FILE) --strip-all -O binary $(BIN_FILE)
 

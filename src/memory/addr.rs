@@ -91,6 +91,6 @@ impl Debug for VirtAddr {
 
 impl From<PhysPageNum> for PhysAddr  {
     fn from(page: PhysPageNum) -> Self {
-        PhysAddr(page.0 << 9)
+        PhysAddr(page.0 << 12)
     }
 }
