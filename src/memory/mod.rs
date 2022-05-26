@@ -1,6 +1,7 @@
 mod heap;
 mod page;
 pub mod addr;
+mod page_table;
 
 // 内存初始化
 pub fn init() {
