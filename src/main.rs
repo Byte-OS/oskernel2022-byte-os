@@ -80,48 +80,37 @@ pub extern "C" fn rust_main(hartid: usize, device_tree_paddr: usize) -> ! {
     // 提示信息
     info!("Welcome to test os!");
 
-    //
-    unsafe {
-        loop {
-            // 正常使用代码
-            // 等待中断产生
-            asm!("WFI");
-            if TICKS >= 1000 {
-                info!("继续执行");
-                break;
-            }
-            if TICKS % 100 == 0 {
-                info!("{} TICKS", TICKS);
-            }
+    // //
+    // unsafe {
+    //     loop {
+    //         // 正常使用代码
+    //         // 等待中断产生
+    //         asm!("WFI");
+    //         if TICKS >= 1000 {
+    //             info!("继续执行");
+    //             break;
+    //         }
+    //         if TICKS % 100 == 0 {
+    //             info!("{} TICKS", TICKS);
+    //         }
+    //     }
+    // }
 
-            // 异常代码
-            // if TICKS >= 1000 {
-            //     info!("继续执行");
-            //     break;
-            // }
-            // if TICKS % 100 == 0 {
-            //     info!("{} TICKS", TICKS);
-            //     // 等待中断产生
-            //     asm!("WFI");
-            // }
-        }
-    }
+    // // 输出文件树
+    // print_file_tree(FILETREE.lock().open("/").unwrap());
 
-    // 输出文件树
-    print_file_tree(FILETREE.lock().open("/").unwrap());
-
-    // 测试读取文件
-    match FILETREE.lock().open("text.txt") {
-        Ok(file_txt) => {
-            let file_txt = file_txt.to_file();
-            let file_txt_content = file_txt.read();
-            info!("读取到内容: {}", file_txt.size);
-            info!("文件内容：{}", String::from_utf8_lossy(&file_txt_content));
-        }
-        Err(err) => {
-            info!("读取文件错误: {}", &err);
-        }
-    };
+    // // 测试读取文件
+    // match FILETREE.lock().open("text.txt") {
+    //     Ok(file_txt) => {
+    //         let file_txt = file_txt.to_file();
+    //         let file_txt_content = file_txt.read();
+    //         info!("读取到内容: {}", file_txt.size);
+    //         info!("文件内容：{}", String::from_utf8_lossy(&file_txt_content));
+    //     }
+    //     Err(err) => {
+    //         info!("读取文件错误: {}", &err);
+    //     }
+    // };
 
 
     
