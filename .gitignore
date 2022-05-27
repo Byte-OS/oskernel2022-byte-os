@@ -2,3 +2,4 @@ target/
 .vscode/
 bootloader/rust-qemu.bin.copy
 os.bin
+Cargo.lock
