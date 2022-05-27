@@ -104,7 +104,7 @@ impl PageMappingManager {
             info!("申请pte");
             self.pte = PhysAddr::from(self.alloc_pte(2).unwrap());
         }
-        
+
         // 得到 列表中的项
         let l2_pte_list = usize::from(self.pte) as *mut PageTableEntry;
         let l2_pte_ptr = unsafe {l2_pte_list.add(virt_addr.l2())};
@@ -132,17 +132,30 @@ impl PageMappingManager {
         // }
         // info!("读取: {:#x}", l2_pte_list[virt_addr.l2()].bits);
 
-        let l1_pte_list = unsafe {&mut [*(usize::from(PhysAddr::from(l2_pte.ppn())) as *mut PageTableEntry); PAGE_PTE_NUM]};
-        let mut l1_pte = l1_pte_list[virt_addr.l1()];
+        let l1_pte_list = usize::from(PhysAddr::from(l2_pte.ppn())) as *mut PageTableEntry;
+        let l1_pte_ptr = unsafe {l1_pte_list.add(virt_addr.l1())};
+        let mut l1_pte = unsafe {l1_pte_ptr.read()};
 
         // 判断 是否有指向下一级的页表
         if !l1_pte.is_valid_pd(){
             l1_pte = PageTableEntry::new(PhysPageNum::from(PhysAddr::from(self.alloc_pte(0).unwrap())), PTEFlags::V);
-            l1_pte_list[virt_addr.l1()] = l1_pte;
+            unsafe{l1_pte_ptr.write(l1_pte)};
         }
+
+        // let l1_pte_list = unsafe {&mut [*(usize::from(PhysAddr::from(l2_pte.ppn())) as *mut PageTableEntry); PAGE_PTE_NUM]};
+        // let mut l1_pte = l1_pte_list[virt_addr.l1()];
+
+        // // 判断 是否有指向下一级的页表
+        // if !l1_pte.is_valid_pd(){
+        //     l1_pte = PageTableEntry::new(PhysPageNum::from(PhysAddr::from(self.alloc_pte(0).unwrap())), PTEFlags::V);
+        //     l1_pte_list[virt_addr.l1()] = l1_pte;
+        // }
         
-        let l0_pte_list = unsafe {&mut [*(usize::from(PhysAddr::from(l1_pte.ppn())) as *mut PageTableEntry); PAGE_PTE_NUM]};
-        l0_pte_list[virt_addr.l0()] = PageTableEntry::new(PhysPageNum::from(phy_addr), flags);
+        let l0_pte_list = usize::from(PhysAddr::from(l1_pte.ppn())) as *mut PageTableEntry;
+        unsafe{l0_pte_list.add(virt_addr.l0()).write(PageTableEntry::new(PhysPageNum::from(phy_addr), flags))};
+
+        // let l0_pte_list = unsafe {&mut [*(usize::from(PhysAddr::from(l1_pte.ppn())) as *mut PageTableEntry); PAGE_PTE_NUM]};
+        // l0_pte_list[virt_addr.l0()] = PageTableEntry::new(PhysPageNum::from(phy_addr), flags);
     }
 
     // 获取物理地址
