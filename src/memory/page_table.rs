@@ -2,7 +2,7 @@ use _core::{arch::asm, ops::Add};
 use bitflags::*;
 use riscv::register::satp;
 
-use crate::{memory::addr::PhysAddr, sync::mutex::Mutex};
+use crate::{memory::{addr::PhysAddr}, sync::mutex::Mutex};
 
 use super::{addr::{PhysPageNum,  VirtAddr, PAGE_PTE_NUM}, page::PAGE_ALLOCATOR};
 
@@ -203,7 +203,7 @@ impl PageMappingManager {
 }
 
 lazy_static! {
-    static ref KERNEL_PAGE_MAPPING: Mutex<PageMappingManager> = Mutex::new(PageMappingManager::new());
+    pub static ref KERNEL_PAGE_MAPPING: Mutex<PageMappingManager> = Mutex::new(PageMappingManager::new());
 }
 
 // 初始化页面映射
@@ -237,4 +237,5 @@ pub fn init() {
     mapping_manager.change_satp();
     let b = 0x1000 as *mut usize;
     unsafe{info!("b is {}", b.read())}
+
 }

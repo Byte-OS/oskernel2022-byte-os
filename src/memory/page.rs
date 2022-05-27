@@ -100,7 +100,6 @@ impl MemoryPageAllocator {
 
 lazy_static! {
     pub static ref PAGE_ALLOCATOR: Mutex<MemoryPageAllocator> = Mutex::new(MemoryPageAllocator::new());
-    pub static ref PAGE_MAPPING_MANAGER: Mutex<PageMappingManager> = Mutex::new(PageMappingManager::new());
 }
 
 pub fn init() {

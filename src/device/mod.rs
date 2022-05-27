@@ -9,10 +9,6 @@ use virtio_drivers::VirtIOBlk;
 use virtio_drivers::VirtIOHeader;
 
 use crate::fs::fat32::FAT32;
-use crate::memory::addr::PhysAddr;
-use crate::memory::addr::VirtAddr;
-use crate::memory::page::PAGE_MAPPING_MANAGER;
-use crate::memory::page_table::PTEFlags;
 use crate::sync::mutex::Mutex;
 
 use self::block::VIRTIO0;

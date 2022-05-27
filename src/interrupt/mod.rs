@@ -5,7 +5,7 @@ use riscv::register::{sstatus::Sstatus, scause::{Trap, Exception, Interrupt,Scau
 
 pub use timer::TICKS;
 
-use crate::memory::{addr::{VirtAddr, PhysAddr}, page::PAGE_MAPPING_MANAGER, page_table::PTEFlags};
+use crate::memory::{addr::{VirtAddr, PhysAddr},  page_table::{PTEFlags, KERNEL_PAGE_MAPPING}};
 
 #[repr(C)]
 pub struct Context {
@@ -28,11 +28,12 @@ fn fault(_context: &mut Context, scause: Scause, stval: usize) {
 }
 
 fn handle_page_fault(stval: usize) {
-    
-    // unsafe{
-    //     asm!("sfence.vma")
-    // };
-    panic!("缺页异常");
+    warn!("缺页中断触发 缺页地址: {:#x} 已同步映射", stval);
+    KERNEL_PAGE_MAPPING.lock().add_mapping(PhysAddr::from(stval), VirtAddr::from(stval), PTEFlags::VRWX);
+    unsafe{
+        asm!("sfence.vma {x}", x = in(reg) stval)
+    };
+    // panic!("缺页异常");
 }
 
 // 中断回调

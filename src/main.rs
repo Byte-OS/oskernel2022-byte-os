@@ -30,7 +30,7 @@ use alloc::string::String;
 use fs::filetree::FileTreeNode;
 use interrupt::TICKS;
 
-use crate::{sbi::shutdown, fs::filetree::FILETREE, device::block::VIRTIO0, memory::{page::PAGE_MAPPING_MANAGER, addr::{PhysAddr, VirtAddr}, page_table::PTEFlags}};
+use crate::{sbi::shutdown, fs::filetree::FILETREE, device::block::VIRTIO0, memory::{addr::{PhysAddr, VirtAddr}, page_table::PTEFlags}};
 
 
 mod virtio_impl;
@@ -72,6 +72,7 @@ pub extern "C" fn rust_main(hartid: usize, device_tree_paddr: usize) -> ! {
 
     // 初始化内存
     memory::init();
+
 
     // let mut page_mapping_manager = PAGE_MAPPING_MANAGER.lock();
     // page_mapping_manager.add_mapping(PhysAddr::from(VIRTIO0), VirtAddr::from(VIRTIO0), PTEFlags::VRWX);
