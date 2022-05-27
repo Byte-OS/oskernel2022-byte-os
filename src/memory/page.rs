@@ -50,6 +50,52 @@ impl MemoryPageAllocator {
             self.pages[index] = false;
         }
     }
+
+    pub fn alloc_more(&mut self, pages: usize) ->Option<PhysPageNum> {
+        let mut i = 0;
+        loop {
+            if i >= self.pages.len() {
+                break;
+            }
+
+            if !self.pages[i] {
+                let mut is_ok = true;
+                // 判断后面是否连续未被使用
+                for j in 1..pages {
+                    if self.pages[i+j] {
+                        is_ok = false;
+                        i=i+j;
+                    }
+                }
+                if is_ok {
+                   for j in 0..pages {
+                       self.pages[i+j] = true;
+                       return Some(PhysPageNum::from((self.start >> 12) + i));
+                   } 
+                }
+            }
+
+            // 进行下一个计算
+            i+=1;
+        }
+        for i in 0..self.pages.len() {
+            if !self.pages[i] {
+                self.pages[i] = true;
+                return Some(PhysPageNum::from((self.start >> 12) + i));
+            }
+        }
+        None
+    }
+
+    pub fn dealloc_more(&mut self, page: PhysPageNum, pages: usize) {
+        let index = usize::from(page) - (self.start >> 12); 
+        if let Some(_) = self.pages.get(index) {
+            info!("释放页: {:?}", page);
+            for i in 0..pages {
+                self.pages[index + i] = false;
+            }
+        }
+    }
 }
 
 lazy_static! {

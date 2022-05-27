@@ -1,36 +1,35 @@
 use core::sync::atomic::*;
+use alloc::alloc::dealloc;
 use lazy_static::lazy_static;
 
-extern "C" {
-    fn end();
-}
+use crate::memory::{page::{PAGE_ALLOCATOR, self}, addr::{PhysPageNum, PhysAddr, VirtAddr}};
 
-lazy_static! {
-    static ref DMA_PADDR: AtomicUsize = AtomicUsize::new(end as usize);
-}
 
 #[no_mangle]
 extern "C" fn virtio_dma_alloc(pages: usize) -> PhysAddr {
-    let paddr = DMA_PADDR.fetch_add(0x1000 * pages, Ordering::SeqCst);
-    info!("alloc DMA: paddr={:#x}, pages={}", paddr, pages);
-    paddr
+    info!("申请设备地址!");
+    if let Some(page_num) = PAGE_ALLOCATOR.lock().alloc_more(pages) {
+        let addr = PhysAddr::from(page_num);
+        info!("alloc DMA: {:?}, pages={}", addr, pages);
+        return addr
+    } else {
+        panic!("申请失败");
+    }
+    // let paddr = DMA_PADDR.fetch_add(0x1000 * pages, Ordering::SeqCst);
 }
 
 #[no_mangle]
 extern "C" fn virtio_dma_dealloc(paddr: PhysAddr, pages: usize) -> i32 {
-    info!("dealloc DMA: paddr={:#x}, pages={}", paddr, pages);
+    PAGE_ALLOCATOR.lock().dealloc_more(PhysPageNum::from(paddr), pages);
     0
 }
 
 #[no_mangle]
 extern "C" fn virtio_phys_to_virt(paddr: PhysAddr) -> VirtAddr {
-    paddr
+    VirtAddr::from(usize::from(paddr))
 }
 
 #[no_mangle]
 extern "C" fn virtio_virt_to_phys(vaddr: VirtAddr) -> PhysAddr {
-    vaddr
+    PhysAddr::from(usize::from(vaddr))
 }
-
-type VirtAddr = usize;
-type PhysAddr = usize;

@@ -30,7 +30,7 @@ use alloc::string::String;
 use fs::filetree::FileTreeNode;
 use interrupt::TICKS;
 
-use crate::{sbi::shutdown, fs::filetree::FILETREE};
+use crate::{sbi::shutdown, fs::filetree::FILETREE, device::block::VIRTIO0, memory::{page::PAGE_MAPPING_MANAGER, addr::{PhysAddr, VirtAddr}, page_table::PTEFlags}};
 
 
 mod virtio_impl;
@@ -73,46 +73,58 @@ pub extern "C" fn rust_main(hartid: usize, device_tree_paddr: usize) -> ! {
     // 初始化内存
     memory::init();
 
-    // // 初始化设备
-    // device::init();
+    // let mut page_mapping_manager = PAGE_MAPPING_MANAGER.lock();
+    // page_mapping_manager.add_mapping(PhysAddr::from(VIRTIO0), VirtAddr::from(VIRTIO0), PTEFlags::VRWX);
+    // if let Some(addr) = page_mapping_manager.get_phys_addr(VirtAddr::from(VIRTIO0)) {
+    //     info!("物理地址: {:?}", addr);
+    // }
+    // info!("测试1");
+    // if let Some(addr) = page_mapping_manager.get_phys_addr(VirtAddr::from(0x80200000)) {
+    //     info!("物理地址: {:?}", addr);
+    // }
+    // info!("测试2");
+    // page_mapping_manager.change_satp();
 
-    // // 初始化文件系统
-    // fs::init();
+    // 初始化设备
+    device::init();
+
+    // 初始化文件系统
+    fs::init();
     
     // 提示信息
     info!("Welcome to test os!");
 
-    // //
-    // unsafe {
-    //     loop {
-    //         // 正常使用代码
-    //         // 等待中断产生
-    //         asm!("WFI");
-    //         if TICKS >= 1000 {
-    //             info!("继续执行");
-    //             break;
-    //         }
-    //         if TICKS % 100 == 0 {
-    //             info!("{} TICKS", TICKS);
-    //         }
-    //     }
-    // }
+    //
+    unsafe {
+        loop {
+            // 正常使用代码
+            // 等待中断产生
+            asm!("WFI");
+            if TICKS >= 1000 {
+                info!("继续执行");
+                break;
+            }
+            if TICKS % 100 == 0 {
+                info!("{} TICKS", TICKS);
+            }
+        }
+    }
 
-    // // 输出文件树
-    // print_file_tree(FILETREE.lock().open("/").unwrap());
+    // 输出文件树
+    print_file_tree(FILETREE.lock().open("/").unwrap());
 
-    // // 测试读取文件
-    // match FILETREE.lock().open("text.txt") {
-    //     Ok(file_txt) => {
-    //         let file_txt = file_txt.to_file();
-    //         let file_txt_content = file_txt.read();
-    //         info!("读取到内容: {}", file_txt.size);
-    //         info!("文件内容：{}", String::from_utf8_lossy(&file_txt_content));
-    //     }
-    //     Err(err) => {
-    //         info!("读取文件错误: {}", &err);
-    //     }
-    // };
+    // 测试读取文件
+    match FILETREE.lock().open("text.txt") {
+        Ok(file_txt) => {
+            let file_txt = file_txt.to_file();
+            let file_txt_content = file_txt.read();
+            info!("读取到内容: {}", file_txt.size);
+            info!("文件内容：{}", String::from_utf8_lossy(&file_txt_content));
+        }
+        Err(err) => {
+            info!("读取文件错误: {}", &err);
+        }
+    };
 
 
     

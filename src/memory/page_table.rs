@@ -1,4 +1,4 @@
-use _core::arch::asm;
+use _core::{arch::asm, ops::Add};
 use bitflags::*;
 use riscv::register::satp;
 
@@ -54,6 +54,10 @@ impl PageTableEntry {
     pub fn is_valid_pd(&self) -> bool {
         self.flags().contains(PTEFlags::V) && self.flags() & PTEFlags::VRWX == PTEFlags::V
     }
+
+    pub unsafe fn get_mut_ptr_from_Phys(addr:PhysAddr) -> *mut Self {
+        usize::from(addr) as *mut Self
+    }
 }
 
 #[derive(Clone)]
@@ -106,8 +110,9 @@ impl PageMappingManager {
         }
 
         // 得到 列表中的项
-        let l2_pte_list = usize::from(self.pte) as *mut PageTableEntry;
-        let l2_pte_ptr = unsafe {l2_pte_list.add(virt_addr.l2())};
+        let l2_pte_ptr = unsafe {
+            PageTableEntry::get_mut_ptr_from_Phys(self.pte).add(virt_addr.l2())
+        };
         let mut l2_pte = unsafe { l2_pte_ptr.read() };
 
         // 判断 是否是页表项 如果是则申请一个页防止其内容
@@ -117,23 +122,11 @@ impl PageMappingManager {
             l2_pte = PageTableEntry::new(PhysPageNum::from(PhysAddr::from(self.alloc_pte(1).unwrap())), PTEFlags::V);
             // 写入列表
             unsafe {l2_pte_ptr.write(l2_pte)};
-            // l2_pte_list[virt_addr.l2()] = l2_pte;
         }
-        // let l2_pte_list = unsafe {&mut [*(usize::from(self.pte) as *mut PageTableEntry); PAGE_PTE_NUM]};
-        // let mut l2_pte = l2_pte_list[virt_addr.l2()];
 
-        // // 判断 是否是页表项 如果是则申请一个页防止其内容
-        // if !l2_pte.is_valid_pd() {
-        //     info!("申请二级页表");
-        //     // 创建一个页表放置二级页目录 并写入一级页目录的项中
-        //     l2_pte = PageTableEntry::new(PhysPageNum::from(PhysAddr::from(self.alloc_pte(1).unwrap())), PTEFlags::V);
-        //     // 写入列表
-        //     l2_pte_list[virt_addr.l2()] = l2_pte;
-        // }
-        // info!("读取: {:#x}", l2_pte_list[virt_addr.l2()].bits);
-
-        let l1_pte_list = usize::from(PhysAddr::from(l2_pte.ppn())) as *mut PageTableEntry;
-        let l1_pte_ptr = unsafe {l1_pte_list.add(virt_addr.l1())};
+        let l1_pte_ptr = unsafe {
+            PageTableEntry::get_mut_ptr_from_Phys(PhysAddr::from(l2_pte.ppn())).add(virt_addr.l1())
+        };
         let mut l1_pte = unsafe {l1_pte_ptr.read()};
 
         // 判断 是否有指向下一级的页表
@@ -141,21 +134,12 @@ impl PageMappingManager {
             l1_pte = PageTableEntry::new(PhysPageNum::from(PhysAddr::from(self.alloc_pte(0).unwrap())), PTEFlags::V);
             unsafe{l1_pte_ptr.write(l1_pte)};
         }
-
-        // let l1_pte_list = unsafe {&mut [*(usize::from(PhysAddr::from(l2_pte.ppn())) as *mut PageTableEntry); PAGE_PTE_NUM]};
-        // let mut l1_pte = l1_pte_list[virt_addr.l1()];
-
-        // // 判断 是否有指向下一级的页表
-        // if !l1_pte.is_valid_pd(){
-        //     l1_pte = PageTableEntry::new(PhysPageNum::from(PhysAddr::from(self.alloc_pte(0).unwrap())), PTEFlags::V);
-        //     l1_pte_list[virt_addr.l1()] = l1_pte;
-        // }
         
-        let l0_pte_list = usize::from(PhysAddr::from(l1_pte.ppn())) as *mut PageTableEntry;
-        unsafe{l0_pte_list.add(virt_addr.l0()).write(PageTableEntry::new(PhysPageNum::from(phy_addr), flags))};
-
-        // let l0_pte_list = unsafe {&mut [*(usize::from(PhysAddr::from(l1_pte.ppn())) as *mut PageTableEntry); PAGE_PTE_NUM]};
-        // l0_pte_list[virt_addr.l0()] = PageTableEntry::new(PhysPageNum::from(phy_addr), flags);
+        // 写入映射项
+        unsafe {
+            PageTableEntry::get_mut_ptr_from_Phys(PhysAddr::from(l1_pte.ppn()))
+                .add(virt_addr.l0()).write(PageTableEntry::new(PhysPageNum::from(phy_addr), flags));
+        }
     }
 
     // 获取物理地址
@@ -166,8 +150,9 @@ impl PageMappingManager {
         }
 
         // 得到 列表中的项
-        let l2_pte_list = usize::from(self.pte) as *mut PageTableEntry;
-        let l2_pte_ptr = unsafe { l2_pte_list.add(virt_addr.l2()) };
+        let l2_pte_ptr = unsafe {
+            PageTableEntry::get_mut_ptr_from_Phys(self.pte).add(virt_addr.l2())
+        };
         let l2_pte = unsafe { l2_pte_ptr.read() };
 
         // 判断 是否有指向下一级的页表
@@ -178,10 +163,10 @@ impl PageMappingManager {
             return Some(PhysAddr::from(virt_addr.page_offset() | (virt_addr.l0() << 12) | (virt_addr
                 .l1() << 21) | (usize::from(l2_pte.ppn()) << 12)));
         }
-        info!("success get l2");
 
-        let l1_pte_list = usize::from(PhysAddr::from(l2_pte.ppn())) as *mut PageTableEntry;
-        let l1_pte_ptr = unsafe { l1_pte_list.add(virt_addr.l1()) };
+        let l1_pte_ptr = unsafe {
+            PageTableEntry::get_mut_ptr_from_Phys(PhysAddr::from(l2_pte.ppn())).add(virt_addr.l1())
+        };
         let l1_pte = unsafe { l1_pte_ptr.read() };
 
         // 判断 是否有指向下一级的页表
@@ -192,18 +177,15 @@ impl PageMappingManager {
             info!("页表地址: {:?}", PhysAddr::from(l1_pte.ppn()));
             return Some(PhysAddr::from(virt_addr.page_offset() | (virt_addr.l0() << 12) | (usize::from(l1_pte.ppn()) << 12)));
         }
-        info!("success get l1");
 
         // 获取pte项
-        let l0_pte_list = usize::from(PhysAddr::from(l1_pte.ppn())) as *mut PageTableEntry;
-        let l0_pte_ptr = unsafe { l0_pte_list.add(virt_addr.l0()) };
-        let l0_pte = unsafe {
-            l0_pte_ptr.read()
+        let l0_pte_ptr = unsafe {
+            PageTableEntry::get_mut_ptr_from_Phys(PhysAddr::from(l1_pte.ppn())).add(virt_addr.l0())
         };
+        let l0_pte = unsafe { l0_pte_ptr.read() };
         if !l0_pte.flags().contains(PTEFlags::V) {
             return None;
         }
-        info!("success get l0");
         Some(PhysAddr::from(usize::from(PhysAddr::from(l0_pte.ppn())) + virt_addr.page_offset()))
     }
 
@@ -230,6 +212,7 @@ pub fn init() {
     for i in (0x80000000..0x80800000).step_by(4096) {
         mapping_manager.add_mapping(PhysAddr::from(i), VirtAddr::from(i), PTEFlags::VRWX);
     }
+    // mapping_manager.add_mapping(PhysAddr::from(0x10001070), VirtAddr::from(0x10001070), PTEFlags::VRWX);
     if let Some(end_addr) = mapping_manager.get_phys_addr(VirtAddr::from(0x80000000)) {
         info!("物理地址: {:?} 虚拟地址:{:?}", end_addr, VirtAddr::from(0x80000000 as usize));
     } else {
@@ -242,11 +225,16 @@ pub fn init() {
         info!("未找到物理地址");
     }
 
-    // if let Some(end_addr) = mapping_manager.get_phys_addr(VirtAddr::from(end as usize)) {
-    //     info!("物理地址: {:?} 虚拟地址:{:?}", end_addr, VirtAddr::from(end as usize));
-    // } else {
-    //     info!("未找到物理地址");
-    // }
+    mapping_manager.add_mapping(PhysAddr::from(0x80500000), VirtAddr::from(0x1000), PTEFlags::VRWX);
+    let a = 0x80500000 as *mut usize;
+    unsafe {a.write(123)};
+    if let Some(end_addr) = mapping_manager.get_phys_addr(VirtAddr::from(0x1023)) {
+        info!("物理地址: {:?} 虚拟地址:{:?}", end_addr, VirtAddr::from(0x1023));
+    } else {
+        info!("未找到物理地址");
+    }
 
     mapping_manager.change_satp();
+    let b = 0x1000 as *mut usize;
+    unsafe{info!("b is {}", b.read())}
 }

@@ -5,6 +5,8 @@ use riscv::register::{sstatus::Sstatus, scause::{Trap, Exception, Interrupt,Scau
 
 pub use timer::TICKS;
 
+use crate::memory::{addr::{VirtAddr, PhysAddr}, page::PAGE_MAPPING_MANAGER, page_table::PTEFlags};
+
 #[repr(C)]
 pub struct Context {
     pub x: [usize; 32],     // 32 个通用寄存器
@@ -20,9 +22,17 @@ fn breakpoint(context: &mut Context) {
 }
 
 // 中断错误
-fn fault(_context: &mut Context, scause: Scause, _stval: usize) {
-    info!("中断 {:#x} 地址 {:#x}", scause.bits(), sepc::read());
+fn fault(_context: &mut Context, scause: Scause, stval: usize) {
+    info!("中断 {:#x} 地址 {:#x} stval: {:#x}", scause.bits(), sepc::read(), stval);
     panic!("未知中断")
+}
+
+fn handle_page_fault(stval: usize) {
+    
+    // unsafe{
+    //     asm!("sfence.vma")
+    // };
+    panic!("缺页异常");
 }
 
 // 中断回调
@@ -32,6 +42,7 @@ fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) {
         Trap::Exception(Exception::Breakpoint) => breakpoint(context),
         // 时钟中断
         Trap::Interrupt(Interrupt::SupervisorTimer) => timer::timer_handler(context),
+        Trap::Exception(Exception::StorePageFault) => handle_page_fault(stval),
         // 其他情况，终止当前线程
         _ => fault(context, scause, stval),
     }
