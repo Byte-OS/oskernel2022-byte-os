@@ -50,7 +50,7 @@ checksum = "baf1de4339761588bc0619e3cbc0120ee582ebb74b53b4efbf79117bd2da40fd"
 [[package]]
 name = "device_tree"
 version = "1.0.3"
-source = "git+https://github.com/rcore-os/device_tree-rs?rev=2fa8411#2fa8411c421c6b4761992fd3d1a9b2427bf0cfc4"
+source = "git+https://github.com/rcore-os/device_tree-rs#2f2e55fb5238466747fef49d9ce0f59b2e808154"
 
 [[package]]
 name = "embedded-hal"

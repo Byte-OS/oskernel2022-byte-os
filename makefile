@@ -1,4 +1,4 @@
-TARGET      := riscv64gc-unknown-none-elf
+TARGET      := riscv64imac-unknown-none-elf
 MODE        := debug
 MODE_FLAG	:= 
 KERNEL_FILE := target/$(TARGET)/$(MODE)/os
