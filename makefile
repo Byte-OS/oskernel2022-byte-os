@@ -1,6 +1,6 @@
 TARGET      := riscv64imac-unknown-none-elf
-MODE        := debug
-MODE_FLAG	:= 
+MODE        := release
+MODE_FLAG	:= --release --target=riscv64imac-unknown-none-elf
 KERNEL_FILE := target/$(TARGET)/$(MODE)/os
 BIN_FILE    := target/$(TARGET)/$(MODE)/kernel.bin
 
