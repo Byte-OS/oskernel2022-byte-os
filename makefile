@@ -81,7 +81,7 @@ run: qemu
 
 k210: 
 	@cp src/linker-k210.ld src/linker.ld
-	@cargo build $(MODE_FLAG) --features "board_k210"
+	@cargo build $(MODE_FLAG) --features "board_k210" --offline
 	@rm src/linker.ld
 	$(OBJCOPY) $(KERNEL_FILE) --strip-all -O binary $(BIN_FILE)
 	@cp $(BOOTLOADER_K210) $(BOOTLOADER_K210).copy
