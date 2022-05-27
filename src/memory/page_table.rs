@@ -44,50 +44,60 @@ impl PageTableEntry {
     }
 }
 
+#[derive(Clone)]
 pub enum PagingMode {
     Bare = 0,
     Sv39 = 8,
     Sv48 = 9
 }
 
-pub fn change_satp(paging_mode: PagingMode, pte: usize) {
-    let satp_addr = (paging_mode as usize) << 60 | pte;
-    let satp_value = satp::read();
-    info!("satp value before set is 0x{:X}", satp_value.bits());
-    unsafe {
-        // asm!("csrw satp, a0", in("a0") satp_addr);
-        asm!("csrw satp, a0",
-        "sfence.vma",
-        "addi a0, x0, 1", in("a0") satp_addr)
+pub struct PageMappingManager {
+    paging_mode: PagingMode,
+    pte: PhysAddr
+}
+
+impl PageMappingManager {
+
+    pub fn init_pte(&self, start_addr: usize) {
+        if let Some(page) = PAGE_ALLOCATOR.lock().alloc() {
+            let pte = unsafe {
+                &mut *((usize::from(PhysAddr::from(page)))as *mut [PageTableEntry; PAGE_SIZE/size_of::<PageTableEntry>()])
+            };
+            
+            for i in 0..16 {
+                pte[i] = PageTableEntry {
+                    bits: ((i << 18) << 10)  | 0x0f
+                };
+            }
+        }
     }
-    let satp_value = satp::read();
-    info!("satp value after set is 0x{:X}", satp_value.bits());
+
+    // 更改pte
+    pub fn change_satp(&self) {
+        let satp_addr = (self.paging_mode.clone() as usize) << 60 | usize::from(self.pte);
+        let satp_value = satp::read();
+        unsafe {
+            asm!("csrw satp, a0",
+            "sfence.vma", in("a0") satp_addr)
+        }
+        let satp_value = satp::read();
+    }
+    
 }
 
 pub fn init() {
     if let Some(page) = PAGE_ALLOCATOR.lock().alloc() {
-        let pte = unsafe {
-            &mut *((usize::from(PhysAddr::from(page)))as *mut [PageTableEntry; PAGE_SIZE/size_of::<PageTableEntry>()])
-        };
         
-        info!("item size: {}", size_of::<PageTableEntry>());
-        info!("pte page: {:?}, addr: {:#x}", PhysAddr::from(page), pte.as_ptr() as usize);
-        for i in 0..16 {
-            // pte[i] = PhysicalPageTableEntry(((pti.as_ptr() as usize >> 12) << 10)  | 0x1f);
-            pte[i] = PageTableEntry {
-                bits: ((i << 18) << 10)  | 0x0f
-            };
-        }
-        let addr = pte.as_ptr() as usize;
-        info!("page entry address {:x}", addr);
+        // let addr = pte.as_ptr() as usize;
+        // info!("page entry address {:x}", addr);
 
-        info!("page number is {:x}", usize::from(pte[2].ppn()) << 12);
+        // info!("page number is {:x}", usize::from(pte[2].ppn()) << 12);
 
-        for i in 0..16 {
-            info!("Physical Page Table Entry {:#x}", pte[i].bits);
+        // for i in 0..16 {
+        //     info!("Physical Page Table Entry {:#x}", pte[i].bits);
 
-        }
+        // }
 
-        change_satp(PagingMode::Sv39, addr >> 12)
+        // change_satp(PagingMode::Sv39, addr >> 12)
     }
 }

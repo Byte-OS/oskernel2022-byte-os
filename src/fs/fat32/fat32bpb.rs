@@ -34,6 +34,7 @@ impl FAT32BPB {
     }
 
     // 输出fat32信息
+    #[allow(unused)]
     pub fn info(&self) {
         info!("扇区大小: {}", self.bytes_per_sector);
         info!("磁盘大小:{} bytes", self.large_sector * self.bytes_per_sector as u32);
