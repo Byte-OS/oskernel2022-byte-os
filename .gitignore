@@ -3,3 +3,4 @@ target/
 bootloader/rust-qemu.bin.copy
 os.bin
 Cargo.lock
+src/linker.ld
