@@ -57,9 +57,9 @@ fn clear_bss() {
 #[no_mangle]
 pub extern "C" fn rust_main(hartid: usize, device_tree_paddr: usize) -> ! {
     // 保证仅有一个核心工作
-    // if hartid != 0 {
-    //     sbi::hart_suspend(0x00000000, support_hart_resume as usize, 0);
-    // }
+    if hartid != 0 {
+        sbi::hart_suspend(0x00000000, support_hart_resume as usize, 0);
+    }
     // 清空bss段
     clear_bss();
 
@@ -73,11 +73,11 @@ pub extern "C" fn rust_main(hartid: usize, device_tree_paddr: usize) -> ! {
     // 初始化内存
     memory::init();
 
-    // 初始化设备
-    device::init();
+    // // 初始化设备
+    // device::init();
 
-    // 初始化文件系统
-    fs::init();
+    // // 初始化文件系统
+    // fs::init();
     
     // 提示信息
     info!("Welcome to test os!");
@@ -98,21 +98,21 @@ pub extern "C" fn rust_main(hartid: usize, device_tree_paddr: usize) -> ! {
     //     }
     // }
 
-    // 输出文件树
-    print_file_tree(FILETREE.lock().open("/").unwrap());
+    // // 输出文件树
+    // print_file_tree(FILETREE.lock().open("/").unwrap());
 
-    // 测试读取文件
-    match FILETREE.lock().open("text.txt") {
-        Ok(file_txt) => {
-            let file_txt = file_txt.to_file();
-            let file_txt_content = file_txt.read();
-            info!("读取到内容: {}", file_txt.size);
-            info!("文件内容：{}", String::from_utf8_lossy(&file_txt_content));
-        }
-        Err(err) => {
-            info!("读取文件错误: {}", &err);
-        }
-    };
+    // // 测试读取文件
+    // match FILETREE.lock().open("text.txt") {
+    //     Ok(file_txt) => {
+    //         let file_txt = file_txt.to_file();
+    //         let file_txt_content = file_txt.read();
+    //         info!("读取到内容: {}", file_txt.size);
+    //         info!("文件内容：{}", String::from_utf8_lossy(&file_txt_content));
+    //     }
+    //     Err(err) => {
+    //         info!("读取文件错误: {}", &err);
+    //     }
+    // };
 
 
     

@@ -1,6 +1,6 @@
 use alloc::vec::{Vec, self};
 
-use crate::{sync::mutex::Mutex, memory::addr::{PAGE_SIZE, PhysAddr}};
+use crate::{sync::mutex::Mutex, memory::{addr::{PAGE_SIZE, PhysAddr}, page_table::PageMappingManager}};
 
 use super::addr::PhysPageNum;
 
@@ -36,6 +36,7 @@ impl MemoryPageAllocator {
         for i in 0..self.pages.len() {
             if !self.pages[i] {
                 self.pages[i] = true;
+                // info!("申请页表: {:x}", ((self.start >> 12) + i) << 12);
                 return Some(PhysPageNum::from((self.start >> 12) + i));
             }
         }
@@ -53,6 +54,7 @@ impl MemoryPageAllocator {
 
 lazy_static! {
     pub static ref PAGE_ALLOCATOR: Mutex<MemoryPageAllocator> = Mutex::new(MemoryPageAllocator::new());
+    pub static ref PAGE_MAPPING_MANAGER: Mutex<PageMappingManager> = Mutex::new(PageMappingManager::new());
 }
 
 pub fn init() {
@@ -68,18 +70,18 @@ pub fn init() {
 }
 
 fn test_alloc() {
-    let mut allocator = PAGE_ALLOCATOR.lock();
-    if let Some(page) =  allocator.alloc() {
-        info!("申请到的页表为: {:?}, 地址为：{:?}", page, PhysAddr::from(page));
-        allocator.dealloc(page)
-    }
-    if let Some(page) =  allocator.alloc() {
-        info!("申请到的页表为: {:?}, 地址为：{:?}", page, PhysAddr::from(page));
-    }
-    if let Some(page) =  allocator.alloc() {
-        info!("申请到的页表为: {:?}, 地址为：{:?}", page, PhysAddr::from(page));
-    }
-    if let Some(page) =  allocator.alloc() {
-        info!("申请到的页表为: {:?}, 地址为：{:?}", page, PhysAddr::from(page));
-    }
+    // let mut allocator = PAGE_ALLOCATOR.lock();
+    // if let Some(page) =  allocator.alloc() {
+    //     info!("申请到的页表为: {:?}, 地址为：{:?}", page, PhysAddr::from(page));
+    //     allocator.dealloc(page)
+    // }
+    // if let Some(page) =  allocator.alloc() {
+    //     info!("申请到的页表为: {:?}, 地址为：{:?}", page, PhysAddr::from(page));
+    // }
+    // if let Some(page) =  allocator.alloc() {
+    //     info!("申请到的页表为: {:?}, 地址为：{:?}", page, PhysAddr::from(page));
+    // }
+    // if let Some(page) =  allocator.alloc() {
+    //     info!("申请到的页表为: {:?}, 地址为：{:?}", page, PhysAddr::from(page));
+    // }
 }

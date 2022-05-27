@@ -1,6 +1,7 @@
 use core::fmt::{self, Debug, Formatter};
 
 pub const PAGE_SIZE: usize = 4096;
+pub const PAGE_PTE_NUM: usize = 512;
 
 #[repr(C)]
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
@@ -64,7 +65,7 @@ impl From<VirtAddr> for usize  {
     }
 }
 
-//
+// 添加debug
 impl Debug for PhysPageNum {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.write_fmt(format_args!("PhysPageNum: {:#x}", self.0))
@@ -89,8 +90,76 @@ impl Debug for VirtAddr {
     }
 }
 
+// From
 impl From<PhysPageNum> for PhysAddr  {
     fn from(page: PhysPageNum) -> Self {
         PhysAddr(page.0 << 12)
+    }
+}
+
+impl From<PhysAddr> for PhysPageNum  {
+    fn from(page: PhysAddr) -> Self {
+        PhysPageNum(page.0 >> 12)
+    }
+}
+
+impl From<VirtPageNum> for VirtAddr  {
+    fn from(page: VirtPageNum) -> Self {
+        VirtAddr(page.0 << 12)
+    }
+}
+
+impl From<VirtAddr> for VirtPageNum  {
+    fn from(page: VirtAddr) -> Self {
+        VirtPageNum(page.0 >> 12)
+    }
+}
+// 获取原始指针
+impl VirtAddr {
+    pub fn as_ptr(&self) -> *const u8 {
+        self.0 as *const u8
+    }
+
+    pub fn as_mut_ptr(&mut self) -> *mut u8 {
+        self.0 as *mut u8
+    }
+}
+
+impl PhysAddr {
+    pub fn as_ptr(&self) -> *const u8 {
+        self.0 as *const u8
+    }
+
+    pub fn as_mut_ptr(&mut self) -> *mut u8 {
+        self.0 as *mut u8
+    }
+}
+
+impl PhysPageNum {
+    pub fn to_addr(&self) -> PhysAddr {
+        PhysAddr(self.0 << 12)
+    }
+}
+
+// 获取页表偏移
+impl VirtAddr{
+    // 页内偏移
+    pub fn page_offset(&self) -> usize {
+        self.0 & 0xfff
+    }
+
+    // 第一级页表偏移
+    pub fn l2(&self) -> usize {
+        (self.0 >> 30) & 0x1ff
+    }
+
+    // 第二级页表偏移
+    pub fn l1(&self) -> usize {
+        (self.0 >> 21) & 0x1ff
+    }
+
+    // 第三级页表偏移
+    pub fn l0(&self) -> usize {
+        (self.0 >> 12) & 0x1ff
     }
 }
