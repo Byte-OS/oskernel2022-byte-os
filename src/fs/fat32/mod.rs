@@ -1,4 +1,4 @@
-use core::{cell::RefCell, mem::size_of};
+use core::{cell::RefCell, mem::size_of, arch::asm};
 
 use alloc::{sync::Arc, rc::Rc, string::String, boxed::Box};
 
@@ -36,8 +36,8 @@ impl Partition for FAT32 {
     fn read_sector(&self, sector_offset: usize, buf: &mut [u8]) {
         let mut output = vec![0; SECTOR_SIZE];
         // let t = self.device.lock();
-        self.device.lock().read_block(sector_offset, &mut output);
-        
+        self.device.lock().read_block(sector_offset, &mut output);        
+
         buf.copy_from_slice(&output[..buf.len()]);
     }
 
@@ -154,7 +154,9 @@ impl FAT32 {
         let mut buf = vec![0u8; SECTOR_SIZE];
         let sector_offset = curr_cluster / (SECTOR_SIZE / 4);
         let byte_offset = (curr_cluster % (SECTOR_SIZE / 4)) * 4;
+
         self.read_sector(self.bpb.reserved_sector as usize + sector_offset, &mut buf);
+        
         u32::from_ne_bytes(buf[byte_offset..byte_offset + 4].try_into().unwrap()) as usize
     }
 
@@ -166,7 +168,6 @@ impl FAT32 {
         
         for i in (0..size).step_by(SECTOR_SIZE) {
             let end = if size < i + SECTOR_SIZE {size} else { i + SECTOR_SIZE};
-            info!("{}", i);
             self.read_cluster(cluster, &mut buf[i..end]);
             // 如果不是有效簇 则跳出循环
             if cluster >= 0x0fff_ffef { return; }

@@ -26,6 +26,7 @@
     .section .text
     .global int_callback_entry
 int_callback_entry:
+    csrrw   sp, sscratch, sp
     addi    sp, sp, CONTEXT_SIZE*-8
 
      # 保存通用寄存器，除了 x0（固定为 0）
@@ -73,5 +74,6 @@ int_callback_entry:
 
     # 恢复 sp（又名 x2）这里最后恢复是为了上面可以正常使用 LOAD 宏
     LOAD    x2, 2
-
+    csrrw sp, sscratch, sp
     sret
+

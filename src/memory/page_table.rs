@@ -81,6 +81,11 @@ impl PageMappingManager {
         }
     }
 
+    // 获取pte
+    pub fn get_pte(&self) -> usize {
+        self.pte.into()
+    }
+
     // 初始化页表
     pub fn alloc_pte(&self, level: usize) -> Option<PhysPageNum> {
         match PAGE_ALLOCATOR.lock().alloc() {
@@ -88,12 +93,6 @@ impl PageMappingManager {
                 let pte = unsafe {
                     &mut *((usize::from(PhysAddr::from(page)))as *mut [PageTableEntry; PAGE_PTE_NUM])
                 };
-
-                // let shift_left_bit = 9 * level;
-                
-                // for i in 0..PAGE_PTE_NUM {
-                //     pte[i] = PageTableEntry::new(PhysPageNum::from(i << shift_left_bit), PTEFlags::None);
-                // }
                 Some(page)
             }
             None=>None
@@ -192,13 +191,11 @@ impl PageMappingManager {
     // 更改pte
     pub fn change_satp(&self) {
         let satp_addr = (self.paging_mode.clone() as usize) << 60 | usize::from(PhysPageNum::from(self.pte));
-        let satp_value = satp::read();
         info!("");
         unsafe {
             asm!("csrw satp, a0",
             "sfence.vma", in("a0") satp_addr)
         }
-        let satp_value = satp::read();
     }
 }
 

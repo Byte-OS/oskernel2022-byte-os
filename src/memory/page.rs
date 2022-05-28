@@ -70,8 +70,8 @@ impl MemoryPageAllocator {
                 if is_ok {
                    for j in 0..pages {
                        self.pages[i+j] = true;
-                       return Some(PhysPageNum::from((self.start >> 12) + i));
                    } 
+                   return Some(PhysPageNum::from((self.start >> 12) + i));
                 }
             }
 

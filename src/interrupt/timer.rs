@@ -24,13 +24,13 @@ fn set_next_timeout() {
 
 // 初始化定时器
 pub fn init() {
-    info!("初始化定时器");
-    unsafe {
-        // 开启时钟中断
-        sie::set_stimer();
-        // 允许中断产生
-        sstatus::set_sie();
-    }
-    // 设置下一次中断产生时间
-    set_next_timeout();
+    // info!("初始化定时器");
+    // unsafe {
+    //     // 开启时钟中断
+    //     sie::set_stimer();
+    //     // 允许中断产生
+    //     sstatus::set_sie();
+    // }
+    // // 设置下一次中断产生时间
+    // set_next_timeout();
 }
