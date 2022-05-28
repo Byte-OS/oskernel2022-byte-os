@@ -7,4 +7,5 @@ pub use partition::Partition;
 
 pub fn init() {
     fat32::init();
+    info!("初始化文件系统");
 }

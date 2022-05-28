@@ -731,7 +731,6 @@ fn init_sdcard() -> SDCard<SPIImpl<SPI0>> {
     let clocks = k210_hal::clock::Clocks::new();
     peripherals.UARTHS.configure(115_200.bps(), &clocks);
     io_init();
-
     let spi = peripherals.SPI0.constrain();
     let sd = SDCard::new(spi, SD_CS, SD_CS_GPIONUM);
     let info = sd.init().unwrap();
@@ -746,7 +745,6 @@ pub struct SDCardWrapper(RefCell<SDCard<SPIImpl<SPI0>>>);
 
 impl SDCardWrapper {
     pub fn new() -> Self {
-
         unsafe { Self(RefCell::new(init_sdcard())) }
     }
 }

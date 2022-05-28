@@ -1,8 +1,8 @@
-use core::{slice::from_raw_parts_mut, arch::{global_asm, asm}};
+use core::{slice::{from_raw_parts_mut, self}, arch::{global_asm, asm}, mem::size_of};
 
 use alloc::vec::Vec;
 
-use crate::{memory::{page_table::{PageMappingManager, PTEFlags, KERNEL_PAGE_MAPPING}, addr::{PAGE_SIZE, VirtAddr, PhysAddr, PhysPageNum}, page::PAGE_ALLOCATOR}, fs::filetree::FILETREE};
+use crate::{memory::{page_table::{PageMappingManager, PTEFlags, KERNEL_PAGE_MAPPING, refresh_addr}, addr::{PAGE_SIZE, VirtAddr, PhysAddr, PhysPageNum}, page::PAGE_ALLOCATOR}, fs::filetree::FILETREE};
 
 pub const STDIN: usize = 0;
 pub const STDOUT: usize = 1;
@@ -23,6 +23,7 @@ pub fn exec() {
 global_asm!(include_str!("change_task.asm"));
 
 pub fn init() {
+    info!("多任务初始化");
     extern "C" {
         fn change_task(pte: usize, stack: usize);
     }
@@ -52,10 +53,15 @@ pub fn init() {
             KERNEL_PAGE_MAPPING.lock().add_mapping(PhysAddr::from(PhysPageNum::from(usize::from(phy_start) + pages)), 
                     VirtAddr::from(0xf0000000), PTEFlags::VRWX | PTEFlags::U);
 
+            refresh_addr(0x1000);
+            
             let ptr = unsafe { 0x1000 as *const u8};
 
+            let a = unsafe { ptr.read() };
+            info!("数据: {:#x}", a);
+
             // sp -> user stack top -2 add two arguments
-            unsafe { change_task(pmm.get_pte(), 0xf0000ff8) };
+            unsafe { change_task(pmm.get_pte(), 0xf0000ff7) };
             
             info!("读取到内容: {}", program.size);
         }

@@ -1,4 +1,4 @@
-use _core::{arch::asm, ops::Add};
+use _core::{arch::asm, ops::Add, slice::from_raw_parts_mut};
 use bitflags::*;
 use riscv::register::satp;
 
@@ -90,9 +90,17 @@ impl PageMappingManager {
     pub fn alloc_pte(&self, level: usize) -> Option<PhysPageNum> {
         match PAGE_ALLOCATOR.lock().alloc() {
             Some(page) => {
-                let pte = unsafe {
-                    &mut *((usize::from(PhysAddr::from(page)))as *mut [PageTableEntry; PAGE_PTE_NUM])
-                };
+                // let pte = unsafe {
+                //     &mut *((usize::from(PhysAddr::from(page)))as *mut [PageTableEntry; PAGE_PTE_NUM])
+                // };
+                // let pte = unsafe {
+                //     from_raw_parts_mut(usize::from(page.to_addr()) as *mut PageTableEntry, PAGE_PTE_NUM)
+                // };
+                // if level == 1 {
+                //     for i in 0..PAGE_PTE_NUM {
+                //         pte[i] = PageTableEntry::new(PhysPageNum::from(i << (level*9)), PTEFlags::VRWX);
+                //     }
+                // }
                 Some(page)
             }
             None=>None
@@ -211,12 +219,18 @@ pub fn init() {
     }
     mapping_manager.add_mapping(PhysAddr::from(0x10001070), VirtAddr::from(0x10001070), PTEFlags::VRWX);
 
+    #[cfg(feature = "board_k210")]
+    {
+        mapping_manager.add_mapping(PhysAddr::from(0x50440020), VirtAddr::from(0x50440020), PTEFlags::VRWX);
+        mapping_manager.add_mapping(PhysAddr::from(0x38001008), VirtAddr::from(0x38001008), PTEFlags::VRWX);
+    }
     // mapping_manager.add_mapping(PhysAddr::from(0x10001070), VirtAddr::from(0x10001070), PTEFlags::VRWX);
     if let Some(end_addr) = mapping_manager.get_phys_addr(VirtAddr::from(0x80000000)) {
         info!("物理地址: {:?} 虚拟地址:{:?}", end_addr, VirtAddr::from(0x80000000 as usize));
     } else {
         info!("未找到物理地址");
     }
+
 
     if let Some(end_addr) = mapping_manager.get_phys_addr(VirtAddr::from(0x80212321)) {
         info!("物理地址: {:?} 虚拟地址:{:?}", end_addr, VirtAddr::from(0x80212321 as usize));
@@ -232,9 +246,12 @@ pub fn init() {
     } else {
         info!("未找到物理地址");
     }
-
+    
     mapping_manager.change_satp();
-    let b = 0x1000 as *mut usize;
-    unsafe{info!("b is {}", b.read())}
+}
 
+pub fn refresh_addr(addr: usize) {
+    unsafe {
+        asm!("sfence.vma {x}", x = in(reg) addr)
+    }
 }

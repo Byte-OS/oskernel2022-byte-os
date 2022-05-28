@@ -80,6 +80,9 @@ pub extern "C" fn rust_main(hartid: usize, device_tree_paddr: usize) -> ! {
     // 初始化文件系统
     fs::init();
 
+    // 输出文件树
+    // print_file_tree(FILETREE.lock().open("/").unwrap());
+
     // 初始化多任务
     task::init();
 
@@ -101,9 +104,6 @@ pub extern "C" fn rust_main(hartid: usize, device_tree_paddr: usize) -> ! {
     //         }
     //     }
     // }
-
-    // // 输出文件树
-    // print_file_tree(FILETREE.lock().open("/").unwrap());
 
     // // 测试读取文件
     // match FILETREE.lock().open("text.txt") {

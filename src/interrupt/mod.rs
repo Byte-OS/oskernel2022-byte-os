@@ -46,6 +46,9 @@ fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) -> us
         Trap::Interrupt(Interrupt::SupervisorTimer) => timer::timer_handler(context),
         Trap::Exception(Exception::StorePageFault) => handle_page_fault(stval),
         Trap::Exception(Exception::UserEnvCall) => sys_call::sys_call(context),
+        // Trap::Exception(Exception::StoreMisaligned) => {
+        //     info!("内存未对齐: {:#x}", stval);
+        // },
         // 其他情况，终止当前线程
         _ => fault(context, scause, stval),
     }
