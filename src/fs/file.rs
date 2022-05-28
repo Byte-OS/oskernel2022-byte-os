@@ -36,4 +36,11 @@ impl File {
         }
         file_vec
     }
+
+    // 读取文件内容
+    pub fn read_to(&self, buf: &mut [u8])  {
+        unsafe {
+            BLK_CONTROL.get_partition(self.device_id).lock().read(self.start_cluster, self.size, buf);
+        }
+    }
 }

@@ -163,11 +163,11 @@ impl FAT32 {
         let mut cluster = start_cluster;
         // 文件需要读取的大小
         let size = if file_size < buf.len() {file_size} else {buf.len()};
-
+        
         for i in (0..size).step_by(SECTOR_SIZE) {
             let end = if size < i + SECTOR_SIZE {size} else { i + SECTOR_SIZE};
+            info!("{}", i);
             self.read_cluster(cluster, &mut buf[i..end]);
-
             // 如果不是有效簇 则跳出循环
             if cluster >= 0x0fff_ffef { return; }
             // 如果是有效簇 获取下一个簇地址
