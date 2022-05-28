@@ -39,7 +39,7 @@ fn handle_page_fault(stval: usize) {
 
 // 中断回调
 #[no_mangle]
-fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) {
+fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) -> usize {
     match scause.cause(){
         Trap::Exception(Exception::Breakpoint) => breakpoint(context),
         // 时钟中断
@@ -49,6 +49,7 @@ fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) {
         // 其他情况，终止当前线程
         _ => fault(context, scause, stval),
     }
+    context.x[2]
 }
 
 // 包含中断代码

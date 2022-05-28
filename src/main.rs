@@ -82,7 +82,7 @@ pub extern "C" fn rust_main(hartid: usize, device_tree_paddr: usize) -> ! {
 
     // 初始化多任务
     task::init();
-    
+
     // 提示信息
     info!("Welcome to test os!");
 
