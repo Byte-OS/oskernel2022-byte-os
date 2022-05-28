@@ -53,12 +53,8 @@ pub fn init() {
             KERNEL_PAGE_MAPPING.lock().add_mapping(PhysAddr::from(PhysPageNum::from(usize::from(phy_start) + pages)), 
                     VirtAddr::from(0xf0000000), PTEFlags::VRWX | PTEFlags::U);
 
+            KERNEL_PAGE_MAPPING.lock().change_satp();
             refresh_addr(0x1000);
-            
-            let ptr = unsafe { 0x1000 as *const u8};
-
-            let a = unsafe { ptr.read() };
-            info!("数据: {:#x}", a);
 
             // sp -> user stack top -2 add two arguments
             unsafe { change_task(pmm.get_pte(), 0xf0000ff7) };
