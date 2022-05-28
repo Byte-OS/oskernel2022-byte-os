@@ -1,4 +1,4 @@
-use core::{slice::from_raw_parts_mut, arch::global_asm};
+use core::{slice::from_raw_parts_mut, arch::{global_asm, asm}};
 
 use alloc::vec::Vec;
 
@@ -54,7 +54,8 @@ pub fn init() {
 
             let ptr = unsafe { 0x1000 as *const u8};
 
-            unsafe { change_task(pmm.get_pte(), 0xf0000000) };
+            // sp -> user stack top -2 add two arguments
+            unsafe { change_task(pmm.get_pte(), 0xf0000ff8) };
             
             info!("读取到内容: {}", program.size);
         }

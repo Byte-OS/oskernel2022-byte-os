@@ -209,6 +209,8 @@ pub fn init() {
     for i in (0x80000000..0x80800000).step_by(4096) {
         mapping_manager.add_mapping(PhysAddr::from(i), VirtAddr::from(i), PTEFlags::VRWX);
     }
+    mapping_manager.add_mapping(PhysAddr::from(0x10001070), VirtAddr::from(0x10001070), PTEFlags::VRWX);
+
     // mapping_manager.add_mapping(PhysAddr::from(0x10001070), VirtAddr::from(0x10001070), PTEFlags::VRWX);
     if let Some(end_addr) = mapping_manager.get_phys_addr(VirtAddr::from(0x80000000)) {
         info!("物理地址: {:?} 虚拟地址:{:?}", end_addr, VirtAddr::from(0x80000000 as usize));

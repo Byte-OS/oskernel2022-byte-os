@@ -1,7 +1,8 @@
 mod timer;
 
 use core::arch::{global_asm, asm};
-use riscv::register::{sstatus::Sstatus, scause::{Trap, Exception, Interrupt,Scause}, sepc};
+use riscv::register::{sstatus::Sstatus, scause::{Trap, Exception, Interrupt,Scause, self}, sepc};
+mod sys_call;
 
 pub use timer::TICKS;
 
@@ -28,7 +29,7 @@ fn fault(_context: &mut Context, scause: Scause, stval: usize) {
 }
 
 fn handle_page_fault(stval: usize) {
-    warn!("缺页中断触发 缺页地址: {:#x} 已同步映射", stval);
+    warn!("缺页中断触发 缺页地址: {:#x} 触发地址:{:#x} 已同步映射", stval, sepc::read());
     KERNEL_PAGE_MAPPING.lock().add_mapping(PhysAddr::from(stval), VirtAddr::from(stval), PTEFlags::VRWX);
     unsafe{
         asm!("sfence.vma {x}", x = in(reg) stval)
@@ -44,6 +45,7 @@ fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) {
         // 时钟中断
         Trap::Interrupt(Interrupt::SupervisorTimer) => timer::timer_handler(context),
         Trap::Exception(Exception::StorePageFault) => handle_page_fault(stval),
+        Trap::Exception(Exception::UserEnvCall) => sys_call::sys_call(context),
         // 其他情况，终止当前线程
         _ => fault(context, scause, stval),
     }

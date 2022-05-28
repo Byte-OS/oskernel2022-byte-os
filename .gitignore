@@ -5,3 +5,4 @@ os.bin
 Cargo.lock
 src/linker.ld
 write
+asm.S
