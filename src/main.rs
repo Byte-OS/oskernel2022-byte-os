@@ -31,7 +31,7 @@ use alloc::string::String;
 use fs::filetree::FileTreeNode;
 use interrupt::TICKS;
 
-use crate::{sbi::shutdown, fs::filetree::FILETREE, device::block::VIRTIO0, memory::{addr::{PhysAddr, VirtAddr}, page_table::PTEFlags}};
+use crate::{sbi::shutdown, fs::filetree::FILETREE, device::block::VIRTIO0, memory::{addr::{PhysAddr, VirtAddr}, page_table::{PTEFlags, KERNEL_PAGE_MAPPING}}};
 
 
 mod virtio_impl;
@@ -82,7 +82,7 @@ pub extern "C" fn rust_main(hartid: usize, device_tree_paddr: usize) -> ! {
     fs::init();
 
     // 输出文件树
-    // print_file_tree(FILETREE.lock().open("/").unwrap());
+    print_file_tree(FILETREE.lock().open("/").unwrap());
 
     // 初始化多任务
     task::init();

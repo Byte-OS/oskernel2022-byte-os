@@ -165,9 +165,10 @@ impl FAT32 {
         let mut cluster = start_cluster;
         // 文件需要读取的大小
         let size = if file_size < buf.len() {file_size} else {buf.len()};
+        let cluster_size = SECTOR_SIZE * self.bpb.sectors_per_cluster as usize;
         
-        for i in (0..size).step_by(SECTOR_SIZE) {
-            let end = if size < i + SECTOR_SIZE {size} else { i + SECTOR_SIZE};
+        for i in (0..size).step_by(cluster_size) {
+            let end = if size < i + cluster_size {size} else { i + cluster_size};
             self.read_cluster(cluster, &mut buf[i..end]);
             // 如果不是有效簇 则跳出循环
             if cluster >= 0x0fff_ffef { return; }
@@ -176,6 +177,12 @@ impl FAT32 {
         }
     }
 
+    // 输出文件系统信息
+    pub fn info(&self) {
+        info!("每簇扇区数: {}", self.bpb.sectors_per_cluster);
+    }
+
+    // 读取文件夹
     pub fn read_directory(&self, start_cluster: usize, filetree_node: &FileTreeNode) {
         let mut buf = vec![0u8; self.bpb.sectors_per_cluster as usize * SECTOR_SIZE];
             let mut cluster = start_cluster;
@@ -221,6 +228,7 @@ pub fn init() {
     unsafe {
         for partition in BLK_CONTROL.get_partitions() {
             let fat32 = partition.lock();
+            fat32.info();
             // info!("数据扇区地址: {:#x}", fat32.bpb.data_sector() << 9);
             // fat32.bpb.info();
             fat32.mount("/");

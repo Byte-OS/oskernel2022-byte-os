@@ -40,6 +40,7 @@ pub fn init() {
                 from_raw_parts_mut(usize::from(phy_start.to_addr()) as *mut u8, pages*PAGE_SIZE)
             };
             program.read_to(buf);
+
             let mut pmm = PageMappingManager::new();
 
             for i in 0..pages {
@@ -53,8 +54,16 @@ pub fn init() {
             KERNEL_PAGE_MAPPING.lock().add_mapping(PhysAddr::from(PhysPageNum::from(usize::from(phy_start) + pages)), 
                     VirtAddr::from(0xf0000000), PTEFlags::VRWX | PTEFlags::U);
 
-            KERNEL_PAGE_MAPPING.lock().change_satp();
-            refresh_addr(0x1000);
+            // KERNEL_PAGE_MAPPING.lock().change_satp();
+
+            // 打印内存
+            // for i in (0x1000..0x2000).step_by(16) {
+            //     info!("{:#05x}  {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x}", 
+            //     i, buf[i], buf[i+1],buf[i+2], buf[i+3],buf[i+4], buf[i+5],buf[i+6], buf[i+7], 
+            //     buf[i+8], buf[i+9],buf[i+10], buf[i+11],buf[i+12], buf[i+13],buf[i+14], buf[i+15]);
+            // }
+
+            // let ptr = unsafe { usize::from(PhysPageNum::from(usize::from(phy_start) + 1).to_addr()) as * const u8 };
             
             // let ptr = unsafe { 0x1000 as *const u8};
 
@@ -62,7 +71,7 @@ pub fn init() {
             // info!("数据: {:#x}", a);
 
             // sp -> user stack top -2 add two arguments
-            unsafe { change_task(pmm.get_pte(), 0xf0000ff7) };
+            unsafe { change_task(pmm.get_pte(), 0xf0000ff0) };
             
             info!("读取到内容: {}", program.size);
         }

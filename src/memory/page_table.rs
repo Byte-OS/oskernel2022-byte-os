@@ -214,11 +214,11 @@ pub fn init() {
     }
     mapping_manager.add_mapping(PhysAddr::from(0x10001070), VirtAddr::from(0x10001070), PTEFlags::VRWX);
 
-    #[cfg(feature = "board_k210")]
-    {
-        mapping_manager.add_mapping(PhysAddr::from(0x50440020), VirtAddr::from(0x50440020), PTEFlags::VRWX);
-        mapping_manager.add_mapping(PhysAddr::from(0x38001008), VirtAddr::from(0x38001008), PTEFlags::VRWX);
-    }
+    // #[cfg(feature = "board_k210")]
+    // {
+    //     mapping_manager.add_mapping(PhysAddr::from(0x50440020), VirtAddr::from(0x50440020), PTEFlags::VRWX);
+    //     mapping_manager.add_mapping(PhysAddr::from(0x38001008), VirtAddr::from(0x38001008), PTEFlags::VRWX);
+    // }
     // mapping_manager.add_mapping(PhysAddr::from(0x10001070), VirtAddr::from(0x10001070), PTEFlags::VRWX);
     if let Some(end_addr) = mapping_manager.get_phys_addr(VirtAddr::from(0x80000000)) {
         info!("物理地址: {:?} 虚拟地址:{:?}", end_addr, VirtAddr::from(0x80000000 as usize));
@@ -226,22 +226,6 @@ pub fn init() {
         info!("未找到物理地址");
     }
 
-
-    if let Some(end_addr) = mapping_manager.get_phys_addr(VirtAddr::from(0x80212321)) {
-        info!("物理地址: {:?} 虚拟地址:{:?}", end_addr, VirtAddr::from(0x80212321 as usize));
-    } else {
-        info!("未找到物理地址");
-    }
-
-    mapping_manager.add_mapping(PhysAddr::from(0x80500000), VirtAddr::from(0x1000), PTEFlags::VRWX);
-    let a = 0x80500000 as *mut usize;
-    unsafe {a.write(123)};
-    if let Some(end_addr) = mapping_manager.get_phys_addr(VirtAddr::from(0x1023)) {
-        info!("物理地址: {:?} 虚拟地址:{:?}", end_addr, VirtAddr::from(0x1023));
-    } else {
-        info!("未找到物理地址");
-    }
-    
     mapping_manager.change_satp();
 }
 
