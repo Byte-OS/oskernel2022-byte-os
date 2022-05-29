@@ -109,7 +109,8 @@ pub fn init() {
 
     // 初始化页表 Vector中每一个元素代表一个页表 通过这种方法来分配页表
     PAGE_ALLOCATOR.lock().init(end as usize, ADDR_END);
-    
+    // PAGE_ALLOCATOR.lock().init(0x80500000, ADDR_END);
+
     //测试页表分配
     test_alloc();
 }

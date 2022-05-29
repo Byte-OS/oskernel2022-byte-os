@@ -90,17 +90,12 @@ impl PageMappingManager {
     pub fn alloc_pte(&self, level: usize) -> Option<PhysPageNum> {
         match PAGE_ALLOCATOR.lock().alloc() {
             Some(page) => {
-                // let pte = unsafe {
-                //     &mut *((usize::from(PhysAddr::from(page)))as *mut [PageTableEntry; PAGE_PTE_NUM])
-                // };
-                // let pte = unsafe {
-                //     from_raw_parts_mut(usize::from(page.to_addr()) as *mut PageTableEntry, PAGE_PTE_NUM)
-                // };
-                // if level == 1 {
-                //     for i in 0..PAGE_PTE_NUM {
-                //         pte[i] = PageTableEntry::new(PhysPageNum::from(i << (level*9)), PTEFlags::VRWX);
-                //     }
-                // }
+                let pte = unsafe {
+                    from_raw_parts_mut(usize::from(page.to_addr()) as *mut PageTableEntry, PAGE_PTE_NUM)
+                };
+                for i in 0..PAGE_PTE_NUM {
+                    pte[i] = PageTableEntry::new(PhysPageNum::from(i << (level*9)), PTEFlags::VRWX);
+                }
                 Some(page)
             }
             None=>None

@@ -722,6 +722,8 @@ lazy_static! {
 }
 
 fn init_sdcard() -> SDCard<SPIImpl<SPI0>> {
+    info!("读取设备");
+
     // wait previous output
     usleep(100000);
     let peripherals = unsafe { Peripherals::steal() };

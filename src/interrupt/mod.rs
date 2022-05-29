@@ -49,6 +49,9 @@ fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) -> us
         Trap::Exception(Exception::LoadPageFault) => {
             panic!("加载权限异常 地址:{:#x}", stval)
         },
+        Trap::Exception(Exception::StoreMisaligned) => {
+            info!("页面未对齐");
+        }
         // Trap::Exception(Exception::StoreMisaligned) => {
         //     info!("内存未对齐: {:#x}", stval);
         // },
