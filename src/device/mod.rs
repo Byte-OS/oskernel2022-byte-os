@@ -42,7 +42,6 @@ impl BlockDeviceContainer {
     pub fn add_sdcard(&mut self) {
         // 创建存储设备
         let block_device:Arc<Mutex<Box<dyn BlockDevice>>> = Arc::new(Mutex::new(Box::new(SDCardWrapper::new())));
-        info!("读取设备");
         let mut buf = [0u8; 512];
         block_device.lock().read_block(0, &mut buf);
 
