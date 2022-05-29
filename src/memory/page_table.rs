@@ -86,6 +86,16 @@ impl PageMappingManager {
         self.pte.into()
     }
 
+    // 初始化pte
+    pub fn init_pte(&mut self) {
+        // 如果没有pte则申请pte
+        if usize::from(self.pte) != 0 {
+            PAGE_ALLOCATOR.lock().dealloc(PhysPageNum::from(self.pte));
+        }
+        info!("申请pte");
+        self.pte = PhysAddr::from(self.alloc_pte(2).unwrap());
+    }
+
     // 初始化页表
     pub fn alloc_pte(&self, level: usize) -> Option<PhysPageNum> {
         match PAGE_ALLOCATOR.lock().alloc() {
@@ -209,23 +219,7 @@ lazy_static! {
 // 初始化页面映射
 pub fn init() {
     let mut mapping_manager = KERNEL_PAGE_MAPPING.lock();
-    for i in (0x80000000..0x80800000).step_by(4096) {
-        mapping_manager.add_mapping(PhysAddr::from(i), VirtAddr::from(i), PTEFlags::VRWX);
-    }
-    mapping_manager.add_mapping(PhysAddr::from(0x10001070), VirtAddr::from(0x10001070), PTEFlags::VRWX);
-
-    // #[cfg(feature = "board_k210")]
-    // {
-    //     mapping_manager.add_mapping(PhysAddr::from(0x50440020), VirtAddr::from(0x50440020), PTEFlags::VRWX);
-    //     mapping_manager.add_mapping(PhysAddr::from(0x38001008), VirtAddr::from(0x38001008), PTEFlags::VRWX);
-    // }
-    // mapping_manager.add_mapping(PhysAddr::from(0x10001070), VirtAddr::from(0x10001070), PTEFlags::VRWX);
-    if let Some(end_addr) = mapping_manager.get_phys_addr(VirtAddr::from(0x80000000)) {
-        info!("物理地址: {:?} 虚拟地址:{:?}", end_addr, VirtAddr::from(0x80000000 as usize));
-    } else {
-        info!("未找到物理地址");
-    }
-
+    mapping_manager.init_pte();
     mapping_manager.change_satp();
 }
 

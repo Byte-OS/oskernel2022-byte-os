@@ -68,11 +68,11 @@ global_asm!(include_str!("interrupt.asm"));
 // 设置中断
 pub fn init() {
     extern "C" {
-        fn int_callback_entry();
+        fn kernel_callback_entry();
     }
 
     unsafe {
-        asm!("csrw stvec, a0", in("a0") int_callback_entry as usize);
+        asm!("csrw stvec, a0", in("a0") kernel_callback_entry as usize);
     }
 
     // 初始化定时器

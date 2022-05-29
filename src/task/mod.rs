@@ -43,25 +43,31 @@ pub fn init() {
 
             let mut pmm = PageMappingManager::new();
 
+            pmm.init_pte();
+
             for i in 0..pages {
-                KERNEL_PAGE_MAPPING.lock().add_mapping(PhysAddr::from(PhysPageNum::from(usize::from(phy_start) + i)), 
+                pmm.add_mapping(PhysAddr::from(PhysPageNum::from(usize::from(phy_start) + i)), 
                     VirtAddr::from(i*0x1000), PTEFlags::VRWX | PTEFlags::U);
-                // pmm.add_mapping(PhysAddr::from(PhysPageNum::from(usize::from(phy_start) + i)), 
-                    // VirtAddr::from(i*0x1000), PTEFlags::VRWX);
             }
 
+            pmm.get_pte();
+
             // 映射栈 
-            KERNEL_PAGE_MAPPING.lock().add_mapping(PhysAddr::from(PhysPageNum::from(usize::from(phy_start) + pages)), 
+            pmm.add_mapping(PhysAddr::from(PhysPageNum::from(usize::from(phy_start) + pages)), 
                     VirtAddr::from(0xf0000000), PTEFlags::VRWX | PTEFlags::U);
 
             // KERNEL_PAGE_MAPPING.lock().change_satp();
 
             // 打印内存
-            // for i in (0x1000..0x2000).step_by(16) {
-            //     info!("{:#05x}  {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x}", 
-            //     i, buf[i], buf[i+1],buf[i+2], buf[i+3],buf[i+4], buf[i+5],buf[i+6], buf[i+7], 
-            //     buf[i+8], buf[i+9],buf[i+10], buf[i+11],buf[i+12], buf[i+13],buf[i+14], buf[i+15]);
-            // }
+            for i in (0..0x200).step_by(16) {
+                info!("{:#05x}  {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x}", 
+                i, buf[i], buf[i+1],buf[i+2], buf[i+3],buf[i+4], buf[i+5],buf[i+6], buf[i+7], 
+                buf[i+8], buf[i+9],buf[i+10], buf[i+11],buf[i+12], buf[i+13],buf[i+14], buf[i+15]);
+            }
+
+            pmm.change_satp();
+
+            info!("pte: {:#x}", pmm.get_pte());
 
             // let ptr = unsafe { usize::from(PhysPageNum::from(usize::from(phy_start) + 1).to_addr()) as * const u8 };
             
