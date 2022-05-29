@@ -7,6 +7,8 @@ use super::Context;
 pub const SYS_WRITE: usize = 64;
 
 pub fn sys_write(fd: usize, buf: usize, count: usize) -> usize {
+    // 寻找物理地址
+    todo!();
     let buf = KERNEL_PAGE_MAPPING.lock().get_phys_addr(VirtAddr::from(buf)).unwrap();
     let buf = unsafe {slice::from_raw_parts_mut(usize::from(buf) as *mut u8, count)};
     match fd {
