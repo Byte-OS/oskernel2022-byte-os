@@ -1,7 +1,7 @@
 mod timer;
 
 use core::arch::{global_asm, asm};
-use riscv::register::{sstatus::Sstatus, scause::{Trap, Exception, Interrupt,Scause, self}, sepc};
+use riscv::register::{sstatus::Sstatus, scause::{Trap, Exception, Interrupt,Scause}, sepc};
 mod sys_call;
 
 pub use timer::TICKS;

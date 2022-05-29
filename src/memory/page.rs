@@ -1,11 +1,10 @@
-use alloc::vec::{Vec, self};
+use alloc::vec::Vec;
 
-use crate::{sync::mutex::Mutex, memory::{addr::{PAGE_SIZE, PhysAddr}, page_table::PageMappingManager}};
+use crate::{sync::mutex::Mutex, memory::addr::PAGE_SIZE};
 
 use super::addr::PhysPageNum;
 
 const ADDR_END: usize = 0x80800000;
-const ADDR_START: usize = 0x80000000;
 
 // 内存页分配器
 pub struct MemoryPageAllocator {
@@ -109,25 +108,4 @@ pub fn init() {
 
     // 初始化页表 Vector中每一个元素代表一个页表 通过这种方法来分配页表
     PAGE_ALLOCATOR.lock().init(end as usize, ADDR_END);
-    // PAGE_ALLOCATOR.lock().init(0x80500000, ADDR_END);
-
-    //测试页表分配
-    test_alloc();
-}
-
-fn test_alloc() {
-    // let mut allocator = PAGE_ALLOCATOR.lock();
-    // if let Some(page) =  allocator.alloc() {
-    //     info!("申请到的页表为: {:?}, 地址为：{:?}", page, PhysAddr::from(page));
-    //     allocator.dealloc(page)
-    // }
-    // if let Some(page) =  allocator.alloc() {
-    //     info!("申请到的页表为: {:?}, 地址为：{:?}", page, PhysAddr::from(page));
-    // }
-    // if let Some(page) =  allocator.alloc() {
-    //     info!("申请到的页表为: {:?}, 地址为：{:?}", page, PhysAddr::from(page));
-    // }
-    // if let Some(page) =  allocator.alloc() {
-    //     info!("申请到的页表为: {:?}, 地址为：{:?}", page, PhysAddr::from(page));
-    // }
 }

@@ -50,8 +50,6 @@ pub fn init() {
                     VirtAddr::from(i*0x1000), PTEFlags::VRWX | PTEFlags::U);
             }
 
-            pmm.get_pte();
-
             // 映射栈 
             pmm.add_mapping(PhysAddr::from(PhysPageNum::from(usize::from(phy_start) + pages)), 
                     VirtAddr::from(0xf0000000), PTEFlags::VRWX | PTEFlags::U);
@@ -59,24 +57,14 @@ pub fn init() {
             // KERNEL_PAGE_MAPPING.lock().change_satp();
 
             // 打印内存
-            for i in (0..0x200).step_by(16) {
-                info!("{:#05x}  {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x}", 
-                i, buf[i], buf[i+1],buf[i+2], buf[i+3],buf[i+4], buf[i+5],buf[i+6], buf[i+7], 
-                buf[i+8], buf[i+9],buf[i+10], buf[i+11],buf[i+12], buf[i+13],buf[i+14], buf[i+15]);
-            }
+            // for i in (0..0x200).step_by(16) {
+            //     info!("{:#05x}  {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x}", 
+            //     i, buf[i], buf[i+1],buf[i+2], buf[i+3],buf[i+4], buf[i+5],buf[i+6], buf[i+7], 
+            //     buf[i+8], buf[i+9],buf[i+10], buf[i+11],buf[i+12], buf[i+13],buf[i+14], buf[i+15]);
+            // }
 
             pmm.change_satp();
 
-            info!("pte: {:#x}", pmm.get_pte());
-
-            // let ptr = unsafe { usize::from(PhysPageNum::from(usize::from(phy_start) + 1).to_addr()) as * const u8 };
-            
-            // let ptr = unsafe { 0x1000 as *const u8};
-
-            // let a = unsafe { ptr.read() };
-            // info!("数据: {:#x}", a);
-
-            // sp -> user stack top -2 add two arguments
             unsafe { change_task(pmm.get_pte(), 0xf0000ff0) };
             
             info!("读取到内容: {}", program.size);

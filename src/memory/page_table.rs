@@ -1,8 +1,7 @@
-use _core::{arch::asm, ops::Add, slice::from_raw_parts_mut};
+use _core::{arch::asm, slice::from_raw_parts_mut};
 use bitflags::*;
-use riscv::register::satp;
 
-use crate::{memory::{addr::PhysAddr}, sync::mutex::Mutex};
+use crate::{memory::addr::PhysAddr, sync::mutex::Mutex};
 
 use super::{addr::{PhysPageNum,  VirtAddr, PAGE_PTE_NUM}, page::PAGE_ALLOCATOR};
 
@@ -16,7 +15,7 @@ bitflags! {
         const G = 1 << 5;       // 
         const A = 1 << 6;       // 是否被访问过
         const D = 1 << 7;       // 是否被修改过
-        const None = 0;
+        const NONE = 0;
         const VRWX = 0xf;
     }
 }
@@ -55,7 +54,7 @@ impl PageTableEntry {
         self.flags().contains(PTEFlags::V) && self.flags() & PTEFlags::VRWX == PTEFlags::V
     }
 
-    pub unsafe fn get_mut_ptr_from_Phys(addr:PhysAddr) -> *mut Self {
+    pub unsafe fn get_mut_ptr_from_phys(addr:PhysAddr) -> *mut Self {
         usize::from(addr) as *mut Self
     }
 }
@@ -69,31 +68,40 @@ pub enum PagingMode {
 
 pub struct PageMappingManager {
     paging_mode: PagingMode,
-    pte: PhysAddr
+    pte: PageMapping
 }
 
-impl PageMappingManager {
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub struct PageMapping(usize);
 
-    pub fn new() -> Self {
-        PageMappingManager { 
-            paging_mode: PagingMode::Sv39, 
-            pte: PhysAddr::from(0)
-        }
+impl From<usize> for PageMapping {
+    fn from(addr: usize) -> Self {
+        PageMapping(addr)
     }
+}
 
-    // 获取pte
-    pub fn get_pte(&self) -> usize {
-        self.pte.into()
+impl From<PhysAddr> for PageMapping {
+    fn from(addr: PhysAddr) -> Self {
+        PageMapping(addr.0)
     }
+}
 
-    // 初始化pte
-    pub fn init_pte(&mut self) {
-        // 如果没有pte则申请pte
-        if usize::from(self.pte) != 0 {
-            PAGE_ALLOCATOR.lock().dealloc(PhysPageNum::from(self.pte));
-        }
-        info!("申请pte");
-        self.pte = PhysAddr::from(self.alloc_pte(2).unwrap());
+impl From<PageMapping> for PhysPageNum {
+    fn from(addr: PageMapping) -> Self {
+        PhysPageNum::from(PhysAddr::from(addr.0))
+    }
+}
+
+impl From<PageMapping> for usize {
+    fn from(addr: PageMapping) -> Self {
+        addr.0
+    }
+}
+
+impl PageMapping {
+    pub fn new(addr: PhysAddr) -> PageMapping {
+        PageMapping(addr.0)
     }
 
     // 初始化页表
@@ -116,14 +124,14 @@ impl PageMappingManager {
     // 添加mapping
     pub fn add_mapping(&mut self, phy_addr: PhysAddr, virt_addr: VirtAddr, flags:PTEFlags) {
         // 如果没有pte则申请pte
-        if usize::from(self.pte) == 0 {
+        if usize::from(self.0) == 0 {
             info!("申请pte");
-            self.pte = PhysAddr::from(self.alloc_pte(2).unwrap());
+            self.0 = PhysAddr::from(self.alloc_pte(2).unwrap()).into();
         }
 
         // 得到 列表中的项
         let l2_pte_ptr = unsafe {
-            PageTableEntry::get_mut_ptr_from_Phys(self.pte).add(virt_addr.l2())
+            PageTableEntry::get_mut_ptr_from_phys(PhysAddr::from(self.0)).add(virt_addr.l2())
         };
         let mut l2_pte = unsafe { l2_pte_ptr.read() };
 
@@ -137,7 +145,7 @@ impl PageMappingManager {
         }
 
         let l1_pte_ptr = unsafe {
-            PageTableEntry::get_mut_ptr_from_Phys(PhysAddr::from(l2_pte.ppn())).add(virt_addr.l1())
+            PageTableEntry::get_mut_ptr_from_phys(PhysAddr::from(l2_pte.ppn())).add(virt_addr.l1())
         };
         let mut l1_pte = unsafe {l1_pte_ptr.read()};
 
@@ -149,7 +157,7 @@ impl PageMappingManager {
         
         // 写入映射项
         unsafe {
-            PageTableEntry::get_mut_ptr_from_Phys(PhysAddr::from(l1_pte.ppn()))
+            PageTableEntry::get_mut_ptr_from_phys(PhysAddr::from(l1_pte.ppn()))
                 .add(virt_addr.l0()).write(PageTableEntry::new(PhysPageNum::from(phy_addr), flags));
         }
     }
@@ -157,13 +165,13 @@ impl PageMappingManager {
     // 获取物理地址
     pub fn get_phys_addr(&self, virt_addr: VirtAddr) -> Option<PhysAddr> {
         // 如果没有pte则申请pte
-        if usize::from(self.pte) == 0 {
+        if usize::from(self.0) == 0 {
             return None;
         }
 
         // 得到 列表中的项
         let l2_pte_ptr = unsafe {
-            PageTableEntry::get_mut_ptr_from_Phys(self.pte).add(virt_addr.l2())
+            PageTableEntry::get_mut_ptr_from_phys(PhysAddr::from(self.0)).add(virt_addr.l2())
         };
         let l2_pte = unsafe { l2_pte_ptr.read() };
 
@@ -177,7 +185,7 @@ impl PageMappingManager {
         }
 
         let l1_pte_ptr = unsafe {
-            PageTableEntry::get_mut_ptr_from_Phys(PhysAddr::from(l2_pte.ppn())).add(virt_addr.l1())
+            PageTableEntry::get_mut_ptr_from_phys(PhysAddr::from(l2_pte.ppn())).add(virt_addr.l1())
         };
         let l1_pte = unsafe { l1_pte_ptr.read() };
 
@@ -192,13 +200,49 @@ impl PageMappingManager {
 
         // 获取pte项
         let l0_pte_ptr = unsafe {
-            PageTableEntry::get_mut_ptr_from_Phys(PhysAddr::from(l1_pte.ppn())).add(virt_addr.l0())
+            PageTableEntry::get_mut_ptr_from_phys(PhysAddr::from(l1_pte.ppn())).add(virt_addr.l0())
         };
         let l0_pte = unsafe { l0_pte_ptr.read() };
         if !l0_pte.flags().contains(PTEFlags::V) {
             return None;
         }
         Some(PhysAddr::from(usize::from(PhysAddr::from(l0_pte.ppn())) + virt_addr.page_offset()))
+    }
+}
+
+
+impl PageMappingManager {
+
+    pub fn new() -> Self {
+        PageMappingManager { 
+            paging_mode: PagingMode::Sv39, 
+            pte: PageMapping::from(0)
+        }
+    }
+
+    // 获取pte
+    pub fn get_pte(&self) -> usize {
+        self.pte.into()
+    }
+
+    // 初始化pte
+    pub fn init_pte(&mut self) {
+        // 如果没有pte则申请pte
+        if usize::from(self.pte) != 0 {
+            PAGE_ALLOCATOR.lock().dealloc(PhysPageNum::from(self.pte));
+        }
+        info!("申请pte");
+        self.pte = PhysAddr::from(self.pte.alloc_pte(2).unwrap()).into();
+    }
+
+    // 添加mapping
+    pub fn add_mapping(&mut self, phy_addr: PhysAddr, virt_addr: VirtAddr, flags:PTEFlags) {
+        self.pte.add_mapping(phy_addr, virt_addr, flags);
+    }
+
+    // 获取物理地址
+    pub fn get_phys_addr(&self, virt_addr: VirtAddr) -> Option<PhysAddr> {
+        self.pte.get_phys_addr(virt_addr)
     }
 
     // 更改pte

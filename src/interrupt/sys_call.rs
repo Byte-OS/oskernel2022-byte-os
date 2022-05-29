@@ -1,15 +1,20 @@
 use core::slice;
 
-use crate::{console::puts, task::{STDOUT, STDIN, STDERR}, memory::{page_table::KERNEL_PAGE_MAPPING, addr::VirtAddr}, sbi::shutdown};
+use riscv::register::satp;
+
+use crate::{console::puts, task::{STDOUT, STDIN, STDERR}, memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum}}, sbi::shutdown};
 
 use super::Context;
 
-pub const SYS_WRITE: usize = 64;
+pub const SYS_WRITE: usize  = 64;
+pub const SYS_EXIT:  usize  = 93;
 
 pub fn sys_write(fd: usize, buf: usize, count: usize) -> usize {
+    // 根据satp中的地址构建PageMapping 获取当前的映射方式
+    let pmm = PageMapping::from(PhysPageNum(satp::read().bits()).to_addr());
+    let buf = pmm.get_phys_addr(VirtAddr::from(buf)).unwrap();
+
     // 寻找物理地址
-    todo!();
-    let buf = KERNEL_PAGE_MAPPING.lock().get_phys_addr(VirtAddr::from(buf)).unwrap();
     let buf = unsafe {slice::from_raw_parts_mut(usize::from(buf) as *mut u8, count)};
     match fd {
         STDIN => {
@@ -44,5 +49,4 @@ pub fn sys_call(context: &mut Context) {
         }
     }
     context.sepc = context.sepc + 4;
-    // info!("用户请求 请求号:{}", context.x[17]);
 }
