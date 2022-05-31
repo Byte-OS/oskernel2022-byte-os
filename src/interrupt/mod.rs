@@ -11,8 +11,18 @@ use crate::memory::{addr::{VirtAddr, PhysAddr},  page_table::{PTEFlags, KERNEL_P
 #[repr(C)]
 pub struct Context {
     pub x: [usize; 32],     // 32 个通用寄存器
-    pub sstatus: Sstatus,
+    pub sstatus: usize,
     pub sepc: usize
+}
+
+impl Context {
+    pub fn new() -> Self {
+        Context {
+            x: [0usize; 32],
+            sstatus: 0,
+            sepc: 0
+        }
+    }
 }
 
 // break中断
@@ -62,16 +72,18 @@ fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) -> us
 }
 
 // 包含中断代码
-global_asm!(include_str!("interrupt.asm"));
-
+global_asm!(include_str!("interrupt-kernel.asm"));
+global_asm!(include_str!("interrupt-user.asm"));
 
 // 设置中断
 pub fn init() {
     extern "C" {
         fn kernel_callback_entry();
+        fn int_callback_entry();
     }
 
     info!("kernel_callback_entry addr: {:#x}", kernel_callback_entry as usize);
+    info!("int_callback_entry addr: {:#x}", int_callback_entry as usize);
 
     unsafe {
         asm!("csrw stvec, a0", in("a0") kernel_callback_entry as usize);
@@ -79,5 +91,9 @@ pub fn init() {
 
     // 初始化定时器
     timer::init();
+    test();
+}
 
+pub fn test() {
+    unsafe {asm!("ebreak")};
 }

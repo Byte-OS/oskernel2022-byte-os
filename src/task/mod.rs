@@ -1,6 +1,7 @@
 use core::{slice::{from_raw_parts_mut, self}, arch::{global_asm, asm}, mem::size_of};
 
 use alloc::vec::Vec;
+use crate::interrupt::Context;
 
 use crate::{memory::{page_table::{PageMappingManager, PTEFlags, KERNEL_PAGE_MAPPING, refresh_addr}, addr::{PAGE_SIZE, VirtAddr, PhysAddr, PhysPageNum}, page::PAGE_ALLOCATOR}, fs::filetree::FILETREE};
 
@@ -8,20 +9,76 @@ pub const STDIN: usize = 0;
 pub const STDOUT: usize = 1;
 pub const STDERR: usize = 2;
 
+#[derive(Clone, Copy)]
+pub enum TaskStatus {
+    READY   = 0,
+    RUNNING = 1,
+    PAUSE   = 2,
+    STOP    = 3,
+}
+
+pub struct UserHeap {
+    start: PhysPageNum, 
+    pointer: usize,
+    size: usize
+}
+
+impl UserHeap {
+    pub fn new() -> Self {
+        if let Some(phy_start) = PAGE_ALLOCATOR.lock().alloc() { 
+            UserHeap {
+                start: phy_start,
+                pointer: 0,
+                size: PAGE_SIZE
+            }
+        } else {
+            UserHeap {
+                start: PhysPageNum::from(0),
+                pointer: 0,
+                size: PAGE_SIZE
+            }
+        }
+    }
+}
 
 struct TaskController {
     pid: usize,
     pmm: PageMappingManager,
+    status: TaskStatus,
+    heap: UserHeap,
+    context: Context,
     pipline: Vec<usize>
 }
 
-pub fn exec() {
+impl TaskController {
+    pub fn new(pid: usize) -> Self {
+        TaskController {
+            pid,
+            pmm: PageMappingManager::new(),
+            status: TaskStatus::READY,
+            heap: UserHeap::new(),
+            context: Context::new(),
+            pipline: vec![
+                STDIN,
+                STDOUT,
+                STDERR
+            ]
+        }
+    }
+
+    pub fn run_current(&mut self) {
+        // self.status = 
+    }
+}
+
+pub fn exec(path: &str) {
     
 }
 
 // 包含更换任务代码
 global_asm!(include_str!("change_task.asm"));
 
+// 初始化多任务系统
 pub fn init() {
     info!("多任务初始化");
     extern "C" {

@@ -24,12 +24,12 @@
 .endm
 
     .section .text
-    .global int_callback_entry
-int_callback_entry:
-    # csrrw   sp, sscratch, sp
+    .global kernel_callback_entry
+# 内核中断调用入口 无论从哪个函数进入 都会保存结果 不影响结果
+kernel_callback_entry:
     addi    sp, sp, CONTEXT_SIZE*-8
 
-     # 保存通用寄存器，除了 x0（固定为 0）
+    # 保存通用寄存器，除了 x0（固定为 0）
     SAVE    x1, 1
     # 将原来的 sp（sp 又名 x2）写入 2 位置
     addi    x1, sp, 34*8
@@ -74,6 +74,4 @@ int_callback_entry:
 
     # 恢复 sp（又名 x2）这里最后恢复是为了上面可以正常使用 LOAD 宏
     LOAD    x2, 2
-    csrrw sp, sscratch, sp
     sret
-
