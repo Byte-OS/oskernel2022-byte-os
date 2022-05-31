@@ -25,13 +25,11 @@ extern crate bitflags;
 extern crate lazy_static; 
 #[macro_use]
 extern crate alloc;
-use core::arch::{global_asm, asm};
+use core::arch::global_asm;
 
-use alloc::string::String;
 use fs::filetree::FileTreeNode;
-use interrupt::TICKS;
 
-use crate::{sbi::shutdown, fs::filetree::FILETREE, device::block::VIRTIO0, memory::{addr::{PhysAddr, VirtAddr}, page_table::{PTEFlags, KERNEL_PAGE_MAPPING}}};
+use crate::{sbi::shutdown, fs::filetree::FILETREE};
 
 
 mod virtio_impl;

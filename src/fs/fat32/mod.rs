@@ -1,4 +1,4 @@
-use core::{cell::RefCell, mem::size_of, arch::asm};
+use core::{cell::RefCell, mem::size_of};
 
 use alloc::{sync::Arc, rc::Rc, string::String, boxed::Box};
 

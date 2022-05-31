@@ -1,7 +1,7 @@
 mod timer;
 
 use core::arch::{global_asm, asm};
-use riscv::register::{sstatus::Sstatus, scause::{Trap, Exception, Interrupt,Scause}, sepc};
+use riscv::register::{scause::{Trap, Exception, Interrupt,Scause}, sepc};
 mod sys_call;
 
 pub use timer::TICKS;
@@ -68,7 +68,7 @@ fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) -> us
         // 其他情况，终止当前线程
         _ => fault(context, scause, stval),
     }
-    context.x[2]
+    context as *const Context as usize
 }
 
 // 包含中断代码

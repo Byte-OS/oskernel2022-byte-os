@@ -1,7 +1,6 @@
 
 
-use core::{fmt::{Write, Result, Arguments}, char};
-use alloc::string::String;
+use core::{fmt::{Write, Result, Arguments}};
 
 use crate::sbi::*;
 
