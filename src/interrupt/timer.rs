@@ -10,9 +10,9 @@ pub fn timer_handler(_context: &mut Context) {
     set_next_timeout();
     unsafe {
         TICKS=TICKS+1;
-        // if TICKS % 100 == 0 {
-        //     info!("{} TICKS", TICKS);
-        // }
+        if TICKS % 100 == 0 {
+            info!("{} TICKS", TICKS);
+        }
     }
 }
 
@@ -24,13 +24,13 @@ fn set_next_timeout() {
 
 // 初始化定时器
 pub fn init() {
-    // info!("初始化定时器");
-    // unsafe {
-    //     // 开启时钟中断
-    //     sie::set_stimer();
-    //     // 允许中断产生
-    //     sstatus::set_sie();
-    // }
-    // // 设置下一次中断产生时间
-    // set_next_timeout();
+    info!("初始化定时器");
+    unsafe {
+        // 开启时钟中断
+        sie::set_stimer();
+        // 允许中断产生
+        sstatus::set_sie();
+    }
+    // 设置下一次中断产生时间
+    set_next_timeout();
 }

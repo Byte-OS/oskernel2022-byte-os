@@ -71,6 +71,8 @@ pub fn init() {
         fn kernel_callback_entry();
     }
 
+    info!("kernel_callback_entry addr: {:#x}", kernel_callback_entry as usize);
+
     unsafe {
         asm!("csrw stvec, a0", in("a0") kernel_callback_entry as usize);
     }
