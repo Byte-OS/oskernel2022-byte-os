@@ -2,12 +2,14 @@ use core::slice;
 
 use riscv::register::satp;
 
-use crate::{console::puts, task::{STDOUT, STDIN, STDERR}, memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum}}, sbi::shutdown};
+use crate::{console::puts, task::{STDOUT, STDIN, STDERR, kill_current_task}, memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum}}, sbi::shutdown};
 
 use super::Context;
 
 pub const SYS_WRITE: usize  = 64;
 pub const SYS_EXIT:  usize  = 93;
+pub const SYS_BRK:   usize  = 214;
+
 
 pub fn sys_write(fd: usize, buf: usize, count: usize) -> usize {
     // 根据satp中的地址构建PageMapping 获取当前的映射方式
@@ -41,9 +43,11 @@ pub fn sys_call(context: &mut Context) {
             context.x[10] = context.x[12];
         },
         SYS_EXIT => {
-            info!("退出程序");
-            shutdown();
+            kill_current_task();
         },
+        SYS_BRK => {
+
+        }
         _ => {
             info!("未识别调用号 {}", context.x[17]);
         }

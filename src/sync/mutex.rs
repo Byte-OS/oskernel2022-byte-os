@@ -75,6 +75,14 @@ impl<T: ?Sized> Mutex<T> {
         self.lock.store(false, Ordering::Release)
     }
 
+    #[allow(unused)]
+    pub fn force_get(&self)->MutexGuard<T> {
+        MutexGuard {
+            lock: &self.lock,
+            data: unsafe { &mut *self.data.get() },
+        }
+    }
+
 
     #[allow(unused)]
     pub fn try_lock(&self) -> Option<MutexGuard<T>> {

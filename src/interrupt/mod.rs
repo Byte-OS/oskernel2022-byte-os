@@ -23,6 +23,15 @@ impl Context {
             sepc: 0
         }
     }
+
+    pub fn clone_from(&mut self, target: &mut Self) {
+        for i in 0..32 {
+            self.x[i] = target.x[i];
+        }
+
+        self.sstatus = target.sstatus;
+        self.sepc = target.sepc;
+    }
 }
 
 // break中断

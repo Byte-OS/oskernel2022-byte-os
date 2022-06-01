@@ -35,7 +35,6 @@ impl MemoryPageAllocator {
         for i in 0..self.pages.len() {
             if !self.pages[i] {
                 self.pages[i] = true;
-                // info!("申请页表: {:x}", ((self.start >> 12) + i) << 12);
                 return Some(PhysPageNum::from((self.start >> 12) + i));
             }
         }
@@ -45,7 +44,6 @@ impl MemoryPageAllocator {
     pub fn dealloc(&mut self, page: PhysPageNum) {
         let index = usize::from(page) - (self.start >> 12); 
         if let Some(_) = self.pages.get(index) {
-            info!("释放页: {:?}", page);
             self.pages[index] = false;
         }
     }
@@ -89,7 +87,6 @@ impl MemoryPageAllocator {
     pub fn dealloc_more(&mut self, page: PhysPageNum, pages: usize) {
         let index = usize::from(page) - (self.start >> 12); 
         if let Some(_) = self.pages.get(index) {
-            info!("释放页: {:?}", page);
             for i in 0..pages {
                 self.pages[index + i] = false;
             }

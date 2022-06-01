@@ -1,8 +1,5 @@
-use core::sync::atomic::*;
-use alloc::alloc::dealloc;
-use lazy_static::lazy_static;
 
-use crate::memory::{page::{PAGE_ALLOCATOR, self}, addr::{PhysPageNum, PhysAddr, VirtAddr}};
+use crate::memory::{page::PAGE_ALLOCATOR, addr::{PhysPageNum, PhysAddr, VirtAddr}};
 
 
 #[no_mangle]

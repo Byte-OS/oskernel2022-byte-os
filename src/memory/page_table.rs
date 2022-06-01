@@ -125,7 +125,6 @@ impl PageMapping {
     pub fn add_mapping(&mut self, phy_addr: PhysAddr, virt_addr: VirtAddr, flags:PTEFlags) {
         // 如果没有pte则申请pte
         if usize::from(self.0) == 0 {
-            info!("申请pte");
             self.0 = PhysAddr::from(self.alloc_pte(2).unwrap()).into();
         }
 
@@ -137,7 +136,6 @@ impl PageMapping {
 
         // 判断 是否是页表项 如果是则申请一个页防止其内容
         if !l2_pte.is_valid_pd() {
-            info!("申请二级页表");
             // 创建一个页表放置二级页目录 并写入一级页目录的项中
             l2_pte = PageTableEntry::new(PhysPageNum::from(PhysAddr::from(self.alloc_pte(1).unwrap())), PTEFlags::V);
             // 写入列表
@@ -194,7 +192,6 @@ impl PageMapping {
             return None;
         }
         if l1_pte.flags() & PTEFlags::VRWX != PTEFlags::V {
-            info!("页表地址: {:?}", PhysAddr::from(l1_pte.ppn()));
             return Some(PhysAddr::from(virt_addr.page_offset() | (virt_addr.l0() << 12) | (usize::from(l1_pte.ppn()) << 12)));
         }
 
@@ -231,7 +228,6 @@ impl PageMappingManager {
         if usize::from(self.pte) != 0 {
             PAGE_ALLOCATOR.lock().dealloc(PhysPageNum::from(self.pte));
         }
-        info!("申请pte");
         self.pte = PhysAddr::from(self.pte.alloc_pte(2).unwrap()).into();
     }
 
@@ -248,7 +244,6 @@ impl PageMappingManager {
     // 更改pte
     pub fn change_satp(&self) {
         let satp_addr = (self.paging_mode.clone() as usize) << 60 | usize::from(PhysPageNum::from(self.pte));
-        info!("");
         unsafe {
             asm!("csrw satp, a0",
             "sfence.vma", in("a0") satp_addr)

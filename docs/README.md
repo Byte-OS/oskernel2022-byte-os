@@ -623,3 +623,16 @@ impl File {
 }
 ```
 
+# 辅助函数
+
+## 1.打印内存
+
+```rust
+// 打印内存
+for i in (0..0x200).step_by(16) {
+    info!("{:#05x}  {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x} {:02x}", 
+        i, buf[i], buf[i+1],buf[i+2], buf[i+3],buf[i+4], buf[i+5],buf[i+6], buf[i+7], 
+        buf[i+8], buf[i+9],buf[i+10], buf[i+11],buf[i+12], buf[i+13],buf[i+14], buf[i+15]);
+}
+```
+

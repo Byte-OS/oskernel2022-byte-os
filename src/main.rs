@@ -17,7 +17,7 @@ mod fs;
 mod sbi;
 mod panic;
 mod sync;
-mod task;
+pub mod task;
 
 #[macro_use]
 extern crate bitflags;
@@ -68,11 +68,11 @@ pub extern "C" fn rust_main(hartid: usize, device_tree_paddr: usize) -> ! {
     info!("当前核心 {}", hartid);
     info!("设备树地址 {:#x}", device_tree_paddr);
 
-    // 初始化中断
-    interrupt::init();
-
     // 初始化内存
     memory::init();
+
+    // 初始化中断
+    interrupt::init();
 
     // 初始化设备
     device::init();

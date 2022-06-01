@@ -1,4 +1,5 @@
-use crate::sbi::set_timer;
+use crate::task::get_current_task;
+use crate::{sbi::set_timer, task::suspend_and_run_next};
 use crate::interrupt::Context;
 use riscv::register::{sie, sstatus, time};
 
@@ -6,14 +7,13 @@ const INTERVAL: usize = 10000;     // 定时器周期
 
 pub static mut TICKS: usize = 0;
 /// 时钟中断处理器
-pub fn timer_handler(_context: &mut Context) {
+pub fn timer_handler(context: &mut Context) {
     set_next_timeout();
     unsafe {
         TICKS=TICKS+1;
-        if TICKS % 100 == 0 {
-            info!("{} TICKS", TICKS);
-        }
     }
+    // 储存当前指针内容
+    suspend_and_run_next(context);
 }
 
 // 设置下一次时钟中断触发时间
