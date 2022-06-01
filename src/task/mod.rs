@@ -140,6 +140,7 @@ pub struct TaskController {
     pub stack: VirtAddr,
     pub heap: UserHeap,
     pub context: Context,
+    pub home_dir: FileTreeNode,
     pub fd_table: Vec<Option<FileTreeNode>>
 }
 
@@ -152,6 +153,7 @@ impl TaskController {
             status: TaskStatus::READY,
             heap: UserHeap::new(),
             stack: VirtAddr::from(0),
+            home_dir: FILETREE.force_get().open("/").unwrap().clone(),
             context: Context::new(),
             fd_table: vec![
                 Some(FileTreeNode::new_device("STDIN")),

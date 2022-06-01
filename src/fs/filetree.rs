@@ -100,7 +100,12 @@ impl FileTreeNode {
         // 如果不为根目录 则一直添加路径
         while !self.is_root() {
             path = path + "/" + &tree_node.get_filename();
-            tree_node = tree_node.get_parent().unwrap();
+            if let Some(parent) = tree_node.get_parent() {
+                tree_node = parent;
+            } else {
+                break;
+            }
+            // tree_node = tree_node.get_parent().unwrap();
         }
         path
     }
@@ -173,5 +178,19 @@ impl FileTreeNode {
             size: self.get_file_size(), 
             flag: self.get_file_type()
         }
+    }
+
+    pub fn mkdir(&mut self, filename: &str, flags: u16) {
+        let node = FileTreeNode(Rc::new(RefCell::new(FileTreeNodeRaw {
+            filename:String::from(filename),        // 文件名
+            file_type: FileType::Directory,         // 文件数类型
+            parent: None,                           // 父节点
+            children: vec![],                       // 子节点
+            cluster: 0,                             // 开始簇
+            size: 0                                 // 文件大小
+        })));
+        let mut curr_node = self.0.borrow_mut();
+        curr_node.children.push(node);
+        curr_node.parent = Some(self.clone());
     }
 }

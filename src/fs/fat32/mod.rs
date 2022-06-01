@@ -186,40 +186,40 @@ impl FAT32 {
     // 读取文件夹
     pub fn read_directory(&self, start_cluster: usize, filetree_node: &FileTreeNode) {
         let mut buf = vec![0u8; self.bpb.sectors_per_cluster as usize * SECTOR_SIZE];
-            let mut cluster = start_cluster;
+        let mut cluster = start_cluster;
+        
+        // 0x0 - 0x0fffffef 为有效簇
+        while cluster < 0x0fff_ffef {
+            self.read_cluster(cluster, &mut buf);
             
-            // 0x0 - 0x0fffffef 为有效簇
-            while cluster < 0x0fff_ffef {
-                self.read_cluster(cluster, &mut buf);
-                
-                let mut start;
-                let mut end = 0;
-                loop {
-                    start = end;
+            let mut start;
+            let mut end = 0;
+            loop {
+                start = end;
 
-                    while buf[end + 11] == 0x0f {
-                        end = end + 0x20;
-                    }
+                while buf[end + 11] == 0x0f {
                     end = end + 0x20;
-
-                    let new_node = self.read_file_from(&buf[start..end]);
-                    if let Some(new_node) = new_node {
-                        if !(new_node.get_filename() == "." || new_node.get_filename() == "..") {
-                            if new_node.is_dir() {                            
-                                self.read_directory(new_node.get_cluster(), &new_node);
-                            }
-                            // 添加到节点
-                            filetree_node.add(new_node.clone());
-                        }
-                        
-                    }
-
-                    if end >= self.bpb.sectors_per_cluster as usize * SECTOR_SIZE {
-                        break;
-                    }
                 }
-                cluster = self.get_next_cluster(cluster);
+                end = end + 0x20;
+
+                let new_node = self.read_file_from(&buf[start..end]);
+                if let Some(new_node) = new_node {
+                    if !(new_node.get_filename() == "." || new_node.get_filename() == "..") {
+                        if new_node.is_dir() {                            
+                            self.read_directory(new_node.get_cluster(), &new_node);
+                        }
+                        // 添加到节点
+                        filetree_node.add(new_node.clone());
+                    }
+                    
+                }
+
+                if end >= self.bpb.sectors_per_cluster as usize * SECTOR_SIZE {
+                    break;
+                }
             }
+            cluster = self.get_next_cluster(cluster);
+        }
     }
 }
 

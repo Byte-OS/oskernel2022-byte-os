@@ -6,7 +6,7 @@ use super::exec;
 
 lazy_static! {
     pub static ref TASK_QUEUE: Mutex<Vec<&'static str>> = Mutex::new(vec![
-        "openat","read","open","write", "brk"
+        "getcwd","chdir","mkdir_","execve","openat","read","open","write", "brk"
     ]);
 }
 
