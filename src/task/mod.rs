@@ -4,6 +4,7 @@ use core::panic;
 use core::{slice::from_raw_parts_mut, arch::global_asm};
 
 use alloc::collections::VecDeque;
+use alloc::slice;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 use crate::fs::filetree::FileTreeNode;
@@ -35,12 +36,26 @@ pub struct UserHeap {
     size: usize
 }
 
+pub struct PidGenerater(usize);
+
+impl PidGenerater {
+    pub fn new() -> Self {
+        PidGenerater(1000)
+    }
+    pub fn next(&mut self) -> usize {
+        let n = self.0;
+        self.0 = n + 1;
+        n
+    }
+}
+
 extern "C" {
     fn change_task(pte: usize, stack: usize);
 }
 
 lazy_static! {
     pub static ref TASK_CONTROLLER_MANAGER: Mutex<TaskControllerManager> = Mutex::new(TaskControllerManager::new());
+    pub static ref NEXT_PID: Mutex<PidGenerater> = Mutex::new(PidGenerater::new());
 }
 
 pub struct TaskControllerManager {
@@ -134,6 +149,7 @@ impl UserHeap {
 #[allow(dead_code)]
 pub struct TaskController {
     pub pid: usize,
+    pub ppid: usize,
     pub entry_point: VirtAddr,
     pub pmm: PageMappingManager,
     pub status: TaskStatus,
@@ -148,6 +164,7 @@ impl TaskController {
     pub fn new(pid: usize) -> Self {
         TaskController {
             pid,
+            ppid: 1,
             entry_point: VirtAddr::from(0),
             pmm: PageMappingManager::new(),
             status: TaskStatus::READY,
@@ -208,7 +225,7 @@ impl TaskController {
 }
 
 pub fn get_new_pid() -> usize {
-    1
+    NEXT_PID.lock().next()
 }
 
 // 执行一个程序 path: 文件名 思路：加入程序准备池  等待执行  每过一个时钟周期就执行一次
@@ -276,6 +293,31 @@ pub fn kill_current_task() {
     TASK_CONTROLLER_MANAGER.force_get().current = None;
     TASK_CONTROLLER_MANAGER.force_get().switch_to_next();
 }
+
+pub fn clone_task(task_controller: &mut TaskController) -> TaskController {
+    let mut task = TaskController::new(get_new_pid());
+    let mut pmm = task.pmm.clone();
+    task.context.clone_from(&mut task_controller.context);
+    task.entry_point = task_controller.entry_point;
+    task.ppid = task_controller.pid;
+    
+    if let Some(phy_start) = PAGE_ALLOCATOR.force_get().alloc() {
+        if let Some(addr) = task_controller.pmm.get_phys_addr(VirtAddr::from(0xf0000000)) {
+            let size = 0xf0001000 - task.context.x[2];
+            let new_buf = unsafe { slice::from_raw_parts_mut(usize::from(PhysAddr::from(phy_start)) as *mut u8, size) };
+            let old_buf = unsafe { slice::from_raw_parts_mut(usize::from(PhysAddr::from(addr)) as *mut u8, size) };
+            new_buf.copy_from_slice(old_buf);
+        }
+        // 映射栈 
+        pmm.add_mapping(PhysAddr::from(phy_start), 
+        VirtAddr::from(0xf0000000), PTEFlags::VRWX | PTEFlags::U);
+
+        // 映射堆
+        pmm.add_mapping(task_controller.heap.get_addr(), VirtAddr::from(0xf0010000), PTEFlags::VRWX | PTEFlags::U);
+    }
+    task
+}
+
 
 // 包含更换任务代码
 global_asm!(include_str!("change_task.asm"));

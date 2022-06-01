@@ -66,6 +66,7 @@ pub enum PagingMode {
     Sv48 = 9
 }
 
+#[derive(Clone)]
 pub struct PageMappingManager {
     paging_mode: PagingMode,
     pte: PageMapping

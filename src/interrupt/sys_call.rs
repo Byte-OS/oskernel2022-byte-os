@@ -3,7 +3,7 @@ use core::slice;
 use alloc::string::String;
 use riscv::register::satp;
 
-use crate::{console::puts, task::{STDOUT, STDIN, STDERR, kill_current_task, get_current_task, exec}, memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum, PhysAddr}}, sbi::shutdown, fs::filetree::FILETREE};
+use crate::{console::puts, task::{STDOUT, STDIN, STDERR, kill_current_task, get_current_task, exec, clone_task, TASK_CONTROLLER_MANAGER}, memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum, PhysAddr}}, sbi::shutdown, fs::filetree::FILETREE};
 
 use super::Context;
 
@@ -15,8 +15,12 @@ pub const SYS_CLOSE: usize  = 57;
 pub const SYS_READ:  usize  = 63;
 pub const SYS_WRITE: usize  = 64;
 pub const SYS_EXIT:  usize  = 93;
+pub const SYS_GETPID:usize  = 172;
+pub const SYS_GETPPID:usize = 173;
 pub const SYS_BRK:   usize  = 214;
+pub const SYS_CLONE: usize  = 220;
 pub const SYS_EXECVE:usize  = 221;
+pub const SYS_WAIT4: usize  = 260;
 
 
 pub fn sys_write(fd: usize, buf: usize, count: usize) -> usize {
@@ -205,6 +209,17 @@ pub fn sys_call(context: &mut Context) {
         SYS_EXIT => {
             kill_current_task();
         },
+        SYS_GETPID => {
+            // 当前任务
+            let current_task_wrap = get_current_task().unwrap();
+            let current_task = current_task_wrap.force_get();
+            context.x[10] = current_task.pid;
+        },
+        SYS_GETPPID => {
+            let current_task_wrap = get_current_task().unwrap();
+            let current_task = current_task_wrap.force_get();
+            context.x[10] = current_task.ppid;
+        },
         SYS_BRK => {
             let top_pos = context.x[10];
             // 如果是0 返回堆顶 否则设置为新的堆顶
@@ -215,12 +230,31 @@ pub fn sys_call(context: &mut Context) {
                 context.x[10] = top;
             }
         }
+        SYS_CLONE =>{
+            let current_task_wrap = get_current_task().unwrap();
+            let mut current_task = current_task_wrap.force_get();
+            let stack_addr = context.x[10];
+            let ptid = context.x[11];
+            let tls = context.x[12];
+            let ctid = context.x[13];
+            current_task.context.clone_from(context);
+
+            let mut task = clone_task(&mut current_task);
+            let res: isize = -1;
+            task.context.x[10] = res as usize;
+            context.x[10] = task.pid;
+            TASK_CONTROLLER_MANAGER.lock().add(task);
+            // info!("stack_addr:{:#x}, ptid:{}, tls:{}, ctid:{:#x}", stack_addr, ptid, tls, ctid);
+        }
         SYS_EXECVE => {
             let pmm = PageMapping::from(PhysPageNum(satp::read().bits()).to_addr());
             let filename = pmm.get_phys_addr(VirtAddr::from(context.x[10])).unwrap();
             let filename = get_string_from_raw(filename);
             exec(&filename);
             kill_current_task();
+        }
+        SYS_WAIT4 => {
+            
         }
         _ => {
             info!("未识别调用号 {}", context.x[17]);
