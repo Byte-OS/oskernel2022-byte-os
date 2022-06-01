@@ -1,6 +1,3 @@
-use core::borrow::BorrowMut;
-use core::cell::{RefCell, Ref};
-use core::panic;
 use core::{slice::from_raw_parts_mut, arch::global_asm};
 
 use alloc::collections::VecDeque;
@@ -297,20 +294,34 @@ pub fn kill_current_task() {
 pub fn clone_task(task_controller: &mut TaskController) -> TaskController {
     let mut task = TaskController::new(get_new_pid());
     let mut pmm = task.pmm.clone();
+    pmm.init_pte();
     task.context.clone_from(&mut task_controller.context);
     task.entry_point = task_controller.entry_point;
     task.ppid = task_controller.pid;
-    
-    if let Some(phy_start) = PAGE_ALLOCATOR.force_get().alloc() {
-        if let Some(addr) = task_controller.pmm.get_phys_addr(VirtAddr::from(0xf0000000)) {
-            let size = 0xf0001000 - task.context.x[2];
-            let new_buf = unsafe { slice::from_raw_parts_mut(usize::from(PhysAddr::from(phy_start)) as *mut u8, size) };
-            let old_buf = unsafe { slice::from_raw_parts_mut(usize::from(PhysAddr::from(addr)) as *mut u8, size) };
-            new_buf.copy_from_slice(old_buf);
+
+    let start_addr: PhysAddr = task_controller.pmm.get_phys_addr(VirtAddr::from(0x1000)).unwrap();
+    let stack_addr: PhysAddr = task_controller.pmm.get_phys_addr(VirtAddr::from(0xf0000000)).unwrap();
+
+    let size = usize::from(stack_addr) - usize::from(start_addr);
+    info!("size: {}", size);
+
+    // info!("addr: {}", usize::from(stack_addr) - usize::from(start_addr));
+    let pages = (usize::from(stack_addr) - usize::from(start_addr)) / PAGE_SIZE;
+    info!("pages: {}", pages);
+
+    if let Some(phy_start) = PAGE_ALLOCATOR.force_get().alloc_more(pages + 1) {
+        let new_buf = unsafe { slice::from_raw_parts_mut(usize::from(PhysAddr::from(phy_start)) as *mut u8,pages * PAGE_SIZE) };
+        let old_buf = unsafe { slice::from_raw_parts_mut(usize::from(PhysAddr::from(start_addr)) as *mut u8, pages * PAGE_SIZE) };
+        new_buf.copy_from_slice(old_buf);
+
+        for i in 0..pages {
+            pmm.add_mapping(PhysAddr::from(PhysPageNum::from(usize::from(phy_start) + i)), 
+                VirtAddr::from(i*0x1000), PTEFlags::VRWX | PTEFlags::U);
         }
+
         // 映射栈 
-        pmm.add_mapping(PhysAddr::from(phy_start), 
-        VirtAddr::from(0xf0000000), PTEFlags::VRWX | PTEFlags::U);
+        pmm.add_mapping(PhysAddr::from(PhysPageNum::from(usize::from(phy_start) + pages)), 
+                VirtAddr::from(0xf0000000), PTEFlags::VRWX | PTEFlags::U);
 
         // 映射堆
         pmm.add_mapping(task_controller.heap.get_addr(), VirtAddr::from(0xf0010000), PTEFlags::VRWX | PTEFlags::U);

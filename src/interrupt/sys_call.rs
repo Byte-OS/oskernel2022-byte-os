@@ -240,10 +240,9 @@ pub fn sys_call(context: &mut Context) {
             current_task.context.clone_from(context);
 
             let mut task = clone_task(&mut current_task);
-            let res: isize = -1;
-            task.context.x[10] = res as usize;
+            task.context.x[10] = 0;
             context.x[10] = task.pid;
-            TASK_CONTROLLER_MANAGER.lock().add(task);
+            TASK_CONTROLLER_MANAGER.force_get().add(task);
             // info!("stack_addr:{:#x}, ptid:{}, tls:{}, ctid:{:#x}", stack_addr, ptid, tls, ctid);
         }
         SYS_EXECVE => {
@@ -254,7 +253,7 @@ pub fn sys_call(context: &mut Context) {
             kill_current_task();
         }
         SYS_WAIT4 => {
-            
+
         }
         _ => {
             info!("未识别调用号 {}", context.x[17]);
