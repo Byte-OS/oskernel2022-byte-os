@@ -2,7 +2,7 @@ use core::slice;
 
 use riscv::register::satp;
 
-use crate::{console::puts, task::{STDOUT, STDIN, STDERR, kill_current_task}, memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum}}, sbi::shutdown};
+use crate::{console::puts, task::{STDOUT, STDIN, STDERR, kill_current_task, get_current_task}, memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum}}, sbi::shutdown};
 
 use super::Context;
 
@@ -46,7 +46,14 @@ pub fn sys_call(context: &mut Context) {
             kill_current_task();
         },
         SYS_BRK => {
-
+            let size = context.x[0];
+            info!("申请内存 size: {:#x}", size);
+            if size == 0 {
+                context.x[10] = get_current_task().unwrap().lock().get_heap_size();
+            } else {
+                let top = get_current_task().unwrap().lock().alloc_heap(context.x[0]);
+                context.x[10] = 0;
+            }
         }
         _ => {
             info!("未识别调用号 {}", context.x[17]);

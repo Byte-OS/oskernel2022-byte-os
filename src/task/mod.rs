@@ -169,6 +169,17 @@ impl TaskController {
         self.context.x[2] = 0xf0000ff0;
     }
 
+    pub fn alloc_heap(&mut self, size: usize) -> usize {
+        let top = self.heap.pointer;
+        info!("申请内存");
+        self.heap.pointer = top + size;
+        top
+    }
+
+    pub fn get_heap_size(&self) -> usize {
+        self.heap.pointer
+    }
+
     pub fn run_current(&mut self) {
         // 切换satp
         self.pmm.change_satp();
