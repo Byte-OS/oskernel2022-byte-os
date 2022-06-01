@@ -161,7 +161,7 @@ impl FAT32 {
     }
 
     // 读取文件
-    pub fn read(&self, start_cluster: usize, file_size: usize, buf: &mut [u8]) {
+    pub fn read(&self, start_cluster: usize, file_size: usize, buf: &mut [u8]) -> usize {
         let mut cluster = start_cluster;
         // 文件需要读取的大小
         let size = if file_size < buf.len() {file_size} else {buf.len()};
@@ -171,10 +171,11 @@ impl FAT32 {
             let end = if size < i + cluster_size {size} else { i + cluster_size};
             self.read_cluster(cluster, &mut buf[i..end]);
             // 如果不是有效簇 则跳出循环
-            if cluster >= 0x0fff_ffef { return; }
+            if cluster >= 0x0fff_ffef { return size; }
             // 如果是有效簇 获取下一个簇地址
             cluster = self.get_next_cluster(cluster);
         }
+        size
     }
 
     // 输出文件系统信息

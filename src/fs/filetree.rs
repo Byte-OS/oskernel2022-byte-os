@@ -1,5 +1,5 @@
 
-use core::{cell::RefCell};
+use core::cell::RefCell;
 
 use alloc::{string::{String, ToString}, vec::Vec, sync::Arc, rc::Rc};
 
@@ -8,33 +8,6 @@ use crate::sync::mutex::Mutex;
 use super::file::{FileItem, FileType};
 
 pub struct FileTree(FileTreeNode);
-pub const STDIN_DEFAULT: FileTreeNode = FileTreeNode(Rc::new(RefCell::new(FileTreeNodeRaw {
-    filename:"STDIN".to_string(),
-    file_type: FileType::Device,            // 文件数类型
-    parent: None,   // 父节点
-    children: vec![],    // 子节点
-    cluster: 0,                 // 开始簇
-    size: 0                     // 文件大小
-})));
-
-pub const STDOUT_DEFAULT: FileTreeNode = FileTreeNode(Rc::new(RefCell::new(FileTreeNodeRaw {
-    filename:"STDOUT".to_string(),
-    file_type: FileType::Device,            // 文件数类型
-    parent: None,   // 父节点
-    children: vec![],    // 子节点
-    cluster: 0,                 // 开始簇
-    size: 0                     // 文件大小
-})));
-
-pub const STDERR_DEFAULT: FileTreeNode = FileTreeNode(Rc::new(RefCell::new(FileTreeNodeRaw {
-    filename:"STDERR".to_string(),
-    file_type: FileType::Device,            // 文件数类型
-    parent: None,   // 父节点
-    children: vec![],    // 子节点
-    cluster: 0,                 // 开始簇
-    size: 0                     // 文件大小
-})));
-
 
 lazy_static! {
     // 文件树初始化
@@ -72,6 +45,16 @@ pub struct FileTreeNodeRaw {
 pub struct FileTreeNode(pub Rc<RefCell<FileTreeNodeRaw>>);
 
 impl FileTreeNode {
+    pub fn new_device(filename: &str) -> Self {
+        FileTreeNode(Rc::new(RefCell::new(FileTreeNodeRaw {
+            filename:String::from(filename),        // 文件名
+            file_type: FileType::Device,            // 文件数类型
+            parent: None,                           // 父节点
+            children: vec![],                       // 子节点
+            cluster: 0,                             // 开始簇
+            size: 0                                 // 文件大小
+        })))
+    }
     // 根据路径 获取文件节点
     pub fn open(&self, path: &str) -> Result<FileTreeNode, &str> {
         let mut tree_node = self.clone();

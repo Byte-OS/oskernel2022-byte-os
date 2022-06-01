@@ -6,7 +6,7 @@ use core::{slice::from_raw_parts_mut, arch::global_asm};
 use alloc::collections::VecDeque;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
-use crate::fs::filetree::{FileTreeNode, STDIN_DEFAULT, STDOUT_DEFAULT, STDERR_DEFAULT};
+use crate::fs::filetree::FileTreeNode;
 use crate::interrupt::Context;
 
 use crate::sync::mutex::Mutex;
@@ -154,9 +154,9 @@ impl TaskController {
             stack: VirtAddr::from(0),
             context: Context::new(),
             fd_table: vec![
-                Some(STDIN_DEFAULT),
-                Some(STDOUT_DEFAULT),
-                Some(STDERR_DEFAULT)
+                Some(FileTreeNode::new_device("STDIN")),
+                Some(FileTreeNode::new_device("STDOUT")),
+                Some(FileTreeNode::new_device("STDERR"))
             ]
         }
     }

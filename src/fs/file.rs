@@ -38,9 +38,9 @@ impl FileItem {
     }
 
     // 读取文件内容
-    pub fn read_to(&self, buf: &mut [u8])  {
+    pub fn read_to(&self, buf: &mut [u8]) -> usize  {
         unsafe {
-            BLK_CONTROL.get_partition(self.device_id).lock().read(self.start_cluster, self.size, buf);
+            BLK_CONTROL.get_partition(self.device_id).lock().read(self.start_cluster, self.size, buf)
         }
     }
 }
