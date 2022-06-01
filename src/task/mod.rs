@@ -11,6 +11,10 @@ use crate::interrupt::Context;
 use crate::sync::mutex::Mutex;
 use crate::{memory::{page_table::{PageMappingManager, PTEFlags}, addr::{PAGE_SIZE, VirtAddr, PhysAddr, PhysPageNum}, page::PAGE_ALLOCATOR}, fs::filetree::FILETREE};
 
+use self::task_queue::load_next_task;
+
+pub mod task_queue;
+
 pub const STDIN: usize = 0;
 pub const STDOUT: usize = 1;
 pub const STDERR: usize = 2;
@@ -23,6 +27,7 @@ pub enum TaskStatus {
     STOP    = 3,
 }
 
+#[allow(dead_code)]
 pub struct UserHeap {
     start: PhysPageNum, 
     pointer: usize,
@@ -74,7 +79,10 @@ impl TaskControllerManager {
             // 运行任务
             next_task.force_get().run_current();
         } else {
-            panic!("当前无任务");
+            // 当无任务时加载下一个任务
+            load_next_task();
+            self.switch_to_next();
+            // panic!("无任务");
         }
     }
 
@@ -85,11 +93,16 @@ impl TaskControllerManager {
 
     // 开始运行任务
     pub fn run(&mut self) {
-        self.is_run = true;
-        if let Some(current_task) = self.current.clone() {
-            current_task.force_get().run_current();
-        } else {
-            panic!("无任务可执行");
+        loop {
+            if let Some(current_task) = self.current.clone() {
+                self.is_run = true;
+                current_task.force_get().run_current();
+                break;
+            } else {
+                // 当无任务时加载下一个任务
+                load_next_task();
+                // panic!("无任务可执行");
+            }
         }
     }
 }
@@ -242,7 +255,7 @@ global_asm!(include_str!("change_task.asm"));
 // 初始化多任务系统
 pub fn init() {
     info!("多任务初始化");
-    exec("brk");
-    exec("write");
+    // exec("brk");
+    // exec("write");
     run_first();
 }
