@@ -14,7 +14,7 @@ pub enum FileType {
     None            // 空
 }
 
-pub struct File {
+pub struct FileItem {
     pub device_id: usize,       // 设备id
     pub filename : String,      // 文件名
     pub start_cluster : usize,  // 开始簇
@@ -22,7 +22,7 @@ pub struct File {
     pub flag : FileType,        // 文件标志
 }
 
-impl File {
+impl FileItem {
     #[allow(unused)]
     fn read_string(&self) -> String {
         todo!()

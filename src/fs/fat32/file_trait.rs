@@ -1,6 +1,6 @@
 use alloc::string::String;
 
-use crate::fs::file::File;
+use crate::fs::file::FileItem;
 
 use super::FAT32FileItemAttr;
 
@@ -14,6 +14,6 @@ pub trait FilesystemItemOperator {
 
 // 文件系统操作接口
 pub trait FilesystemOperator {
-    fn open(&self, filename: &str) -> File;
-    fn write(&self, file: &File);
+    fn open(&self, filename: &str) -> FileItem;
+    fn write(&self, file: &FileItem);
 }

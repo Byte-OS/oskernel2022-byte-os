@@ -6,6 +6,7 @@ use core::{slice::from_raw_parts_mut, arch::global_asm};
 use alloc::collections::VecDeque;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
+use crate::fs::filetree::{FileTreeNode, STDIN_DEFAULT, STDOUT_DEFAULT, STDERR_DEFAULT};
 use crate::interrupt::Context;
 
 use crate::sync::mutex::Mutex;
@@ -132,14 +133,14 @@ impl UserHeap {
 
 #[allow(dead_code)]
 pub struct TaskController {
-    pid: usize,
-    entry_point: VirtAddr,
-    pmm: PageMappingManager,
-    status: TaskStatus,
-    stack: VirtAddr,
-    heap: UserHeap,
-    context: Context,
-    pipline: Vec<usize>
+    pub pid: usize,
+    pub entry_point: VirtAddr,
+    pub pmm: PageMappingManager,
+    pub status: TaskStatus,
+    pub stack: VirtAddr,
+    pub heap: UserHeap,
+    pub context: Context,
+    pub fd_table: Vec<Option<FileTreeNode>>
 }
 
 impl TaskController {
@@ -152,10 +153,10 @@ impl TaskController {
             heap: UserHeap::new(),
             stack: VirtAddr::from(0),
             context: Context::new(),
-            pipline: vec![
-                STDIN,
-                STDOUT,
-                STDERR
+            fd_table: vec![
+                Some(STDIN_DEFAULT),
+                Some(STDOUT_DEFAULT),
+                Some(STDERR_DEFAULT)
             ]
         }
     }
@@ -183,6 +184,15 @@ impl TaskController {
 
     pub fn get_heap_size(&self) -> usize {
         self.heap.pointer
+    }
+
+    pub fn alloc_fd(&mut self) -> usize {
+        if let Some(fd) = (0..self.fd_table.len()).find(|fd| self.fd_table[*fd].is_none()) {
+            fd
+        } else {
+            self.fd_table.push(None);
+            self.fd_table.len() - 1
+        }
     }
 
     pub fn run_current(&mut self) {

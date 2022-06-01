@@ -5,9 +5,36 @@ use alloc::{string::{String, ToString}, vec::Vec, sync::Arc, rc::Rc};
 
 use crate::sync::mutex::Mutex;
 
-use super::file::{File, FileType};
+use super::file::{FileItem, FileType};
 
 pub struct FileTree(FileTreeNode);
+pub const STDIN_DEFAULT: FileTreeNode = FileTreeNode(Rc::new(RefCell::new(FileTreeNodeRaw {
+    filename:"STDIN".to_string(),
+    file_type: FileType::Device,            // 文件数类型
+    parent: None,   // 父节点
+    children: vec![],    // 子节点
+    cluster: 0,                 // 开始簇
+    size: 0                     // 文件大小
+})));
+
+pub const STDOUT_DEFAULT: FileTreeNode = FileTreeNode(Rc::new(RefCell::new(FileTreeNodeRaw {
+    filename:"STDOUT".to_string(),
+    file_type: FileType::Device,            // 文件数类型
+    parent: None,   // 父节点
+    children: vec![],    // 子节点
+    cluster: 0,                 // 开始簇
+    size: 0                     // 文件大小
+})));
+
+pub const STDERR_DEFAULT: FileTreeNode = FileTreeNode(Rc::new(RefCell::new(FileTreeNodeRaw {
+    filename:"STDERR".to_string(),
+    file_type: FileType::Device,            // 文件数类型
+    parent: None,   // 父节点
+    children: vec![],    // 子节点
+    cluster: 0,                 // 开始簇
+    size: 0                     // 文件大小
+})));
+
 
 lazy_static! {
     // 文件树初始化
@@ -155,8 +182,8 @@ impl FileTreeNode {
     }
 
     // 到文件
-    pub fn to_file(&self) -> File {
-        File { 
+    pub fn to_file(&self) -> FileItem {
+        FileItem { 
             device_id: 0,
             filename: self.get_filename(), 
             start_cluster: self.get_cluster(), 

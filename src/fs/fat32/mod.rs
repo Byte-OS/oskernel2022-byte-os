@@ -6,7 +6,7 @@ use crate::{sync::mutex::Mutex, device::{SECTOR_SIZE, BLK_CONTROL, BlockDevice},
 
 use self::{fat32bpb::FAT32BPB, file_trait::FilesystemItemOperator};
 
-use super::{Partition, file::{File, FileType}, filetree::{FILETREE, FileTreeNode}};
+use super::{Partition, file::{FileItem, FileType}, filetree::{FILETREE, FileTreeNode}};
 
 pub mod fat32bpb;
 pub mod short_file;
@@ -47,15 +47,15 @@ impl Partition for FAT32 {
         self.device.lock().write_block(sector_offset, &mut input);
     }
 
-    fn open_file(&self, _filename: &str) -> Result<File, core::fmt::Error> {
+    fn open_file(&self, _filename: &str) -> Result<FileItem, core::fmt::Error> {
         todo!()
     }
 
-    fn read_file(&self, _file: File, _buf: &mut [u8]) -> Result<(), core::fmt::Error> {
+    fn read_file(&self, _file: FileItem, _buf: &mut [u8]) -> Result<(), core::fmt::Error> {
         todo!()
     }
 
-    fn write_file(&self, _filename: &str, _file: &File) -> Result<(), core::fmt::Error> {
+    fn write_file(&self, _filename: &str, _file: &FileItem) -> Result<(), core::fmt::Error> {
         todo!()
     }
 

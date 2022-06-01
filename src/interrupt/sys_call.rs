@@ -2,10 +2,11 @@ use core::slice;
 
 use riscv::register::satp;
 
-use crate::{console::puts, task::{STDOUT, STDIN, STDERR, kill_current_task, get_current_task}, memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum}}, sbi::shutdown};
+use crate::{console::puts, task::{STDOUT, STDIN, STDERR, kill_current_task, get_current_task}, memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum}}, sbi::shutdown, fs::filetree::FILETREE};
 
 use super::Context;
 
+pub const SYS_OPENAT:usize  = 56;
 pub const SYS_WRITE: usize  = 64;
 pub const SYS_EXIT:  usize  = 93;
 pub const SYS_BRK:   usize  = 214;
@@ -38,6 +39,20 @@ pub fn sys_write(fd: usize, buf: usize, count: usize) -> usize {
 pub fn sys_call(context: &mut Context) {
     // a7(x17) 作为调用号
     match context.x[17] {
+        SYS_OPENAT => {
+            let current_task = get_current_task().unwrap();
+            let pmm = PageMapping::from(PhysPageNum(satp::read().bits()).to_addr());
+            let fd = context.x[10];
+            let filename = pmm.get_phys_addr(VirtAddr::from(context.x[11])).unwrap();
+            let flags = context.x[12];
+            let open_mod = context.x[13];
+            if let Ok(file) = FILETREE.lock().open("filename") {
+                let file = file.to_file();
+                // let 
+            }
+            let result_code: isize = -1;
+            context.x[10] = result_code as usize;
+        }
         SYS_WRITE => {
             sys_write(context.x[10],context.x[11],context.x[12]);
             context.x[10] = context.x[12];
