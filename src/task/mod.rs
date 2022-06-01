@@ -88,11 +88,9 @@ impl TaskControllerManager {
             self.ready_queue.push_back(current_task);
         }
         if let Some(next_task) = self.ready_queue.pop_front() {
-            info!("sp: {:#x}", next_task.force_get().context.x[2]);
             next_task.force_get().update_status(TaskStatus::RUNNING);
+            next_task.force_get().pmm.change_satp();
             self.current = Some(next_task.clone());
-            // 运行任务
-            next_task.force_get().run_current();
         } else {
             // 当无任务时加载下一个任务
             load_next_task();
@@ -273,11 +271,10 @@ pub fn exec(path: &str) {
     }
 }
 
-pub fn suspend_and_run_next(current_context: &mut Context) {
+pub fn suspend_and_run_next() {
     if !TASK_CONTROLLER_MANAGER.force_get().is_run {
         return;
     }
-    TASK_CONTROLLER_MANAGER.force_get().get_current_processor().unwrap().lock().context.clone_from(current_context);
     TASK_CONTROLLER_MANAGER.force_get().switch_to_next();
 }
 
@@ -298,7 +295,6 @@ pub fn clone_task(task_controller: &mut TaskController) -> TaskController {
     let mut task = TaskController::new(get_new_pid());
     task.init();
     let mut pmm = task.pmm.clone();
-    pmm.init_pte();
     task.context.clone_from(&mut task_controller.context);
     task.entry_point = task_controller.entry_point;
     task.ppid = task_controller.pid;
@@ -306,7 +302,6 @@ pub fn clone_task(task_controller: &mut TaskController) -> TaskController {
     let start_addr: PhysAddr = task_controller.pmm.get_phys_addr(VirtAddr::from(0x0)).unwrap();
     let stack_addr: PhysAddr = task_controller.pmm.get_phys_addr(VirtAddr::from(0xf0000000)).unwrap();
 
-    // info!("addr: {}", usize::from(stack_addr) - usize::from(start_addr));
     let pages = (usize::from(stack_addr) - usize::from(start_addr)) / PAGE_SIZE;
     
     if let Some(phy_start) = PAGE_ALLOCATOR.force_get().alloc_more(pages + 1) {

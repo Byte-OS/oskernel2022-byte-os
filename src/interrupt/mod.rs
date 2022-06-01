@@ -6,7 +6,7 @@ mod sys_call;
 
 pub use timer::TICKS;
 
-use crate::memory::{addr::{VirtAddr, PhysAddr},  page_table::{PTEFlags, KERNEL_PAGE_MAPPING}};
+use crate::{memory::{addr::{VirtAddr, PhysAddr},  page_table::{PTEFlags, KERNEL_PAGE_MAPPING}}, task::get_current_task};
 
 #[repr(C)]
 pub struct Context {
@@ -59,6 +59,10 @@ fn handle_page_fault(stval: usize) {
 // 中断回调
 #[no_mangle]
 fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) -> usize {
+    // 如果当前有任务则选择任务复制到context
+    if let Some(current_task) = get_current_task() {
+        current_task.force_get().context.clone_from(context);
+    }
     match scause.cause(){
         Trap::Exception(Exception::Breakpoint) => breakpoint(context),
         // 时钟中断
@@ -71,11 +75,12 @@ fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) -> us
         Trap::Exception(Exception::StoreMisaligned) => {
             info!("页面未对齐");
         }
-        // Trap::Exception(Exception::StoreMisaligned) => {
-        //     info!("内存未对齐: {:#x}", stval);
-        // },
         // 其他情况，终止当前线程
         _ => fault(context, scause, stval),
+    }
+    // // 如果当前有任务则选择任务复制到context
+    if let Some(current_task) = get_current_task() {
+        context.clone_from(&mut current_task.force_get().context);
     }
     context as *const Context as usize
 }

@@ -62,6 +62,9 @@ pub fn get_string_from_raw(addr: PhysAddr) -> String {
 }
 
 pub fn sys_call(context: &mut Context) {
+    let current_task_wrap = get_current_task().unwrap();
+    let mut current_task = current_task_wrap.force_get();
+    let context: &mut Context = &mut current_task.context;
     // a7(x17) 作为调用号
     match context.x[17] {
         SYS_GETCWD => {
@@ -231,29 +234,19 @@ pub fn sys_call(context: &mut Context) {
             }
         }
         SYS_CLONE =>{
-            if let Some(ctw) = get_current_task() {
-                info!("读取任务: {:#x} pid: {}", usize::from(ctw.force_get().pmm.pte), ctw.force_get().pid);
-            }
             let current_task_wrap = get_current_task().unwrap();
             let mut current_task = current_task_wrap.force_get();
             let stack_addr = context.x[10];
             let ptid = context.x[11];
             let tls = context.x[12];
             let ctid = context.x[13];
-            current_task.context.clone_from(context);
-            info!("读取任务 :{:#x}", current_task.pmm.get_pte());
 
             let mut task = clone_task(&mut current_task);
 
-            // task.context.x[10] = 0;
-            // context.x[10] = task.pid;
-            context.x[10] = 0;
-            // info!("spec: {:#x}", task.context.sepc);
-            // task.context.x[2] = 0xf0000ff0;
-            // task.context.sepc = 0x1000;
-            // TASK_CONTROLLER_MANAGER.force_get().add(task);
-            // suspend_and_run_next(context);
-            // info!("stack_addr:{:#x}, ptid:{}, tls:{}, ctid:{:#x}", stack_addr, ptid, tls, ctid);
+            task.context.x[10] = 0;
+            context.x[10] = task.pid;
+            TASK_CONTROLLER_MANAGER.force_get().add(task);
+            // suspend_and_run_next();
         }
         SYS_EXECVE => {
             let pmm = PageMapping::from(PhysPageNum(satp::read().bits()).to_addr());
@@ -263,7 +256,7 @@ pub fn sys_call(context: &mut Context) {
             kill_current_task();
         }
         SYS_WAIT4 => {
-
+            context.x[10] = 0;
         }
         _ => {
             info!("未识别调用号 {}", context.x[17]);
