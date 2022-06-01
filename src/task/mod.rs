@@ -171,9 +171,14 @@ impl TaskController {
 
     pub fn alloc_heap(&mut self, size: usize) -> usize {
         let top = self.heap.pointer;
-        info!("申请内存");
         self.heap.pointer = top + size;
         top
+    }
+
+    pub fn set_heap_top(&mut self, top: usize) -> usize {
+        let origin_top = self.heap.pointer;
+        self.heap.pointer = top;
+        origin_top
     }
 
     pub fn get_heap_size(&self) -> usize {

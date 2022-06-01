@@ -46,13 +46,13 @@ pub fn sys_call(context: &mut Context) {
             kill_current_task();
         },
         SYS_BRK => {
-            let size = context.x[0];
-            info!("申请内存 size: {:#x}", size);
-            if size == 0 {
+            let top_pos = context.x[10];
+            // 如果是0 返回堆顶 否则设置为新的堆顶
+            if top_pos == 0 {
                 context.x[10] = get_current_task().unwrap().lock().get_heap_size();
             } else {
-                let top = get_current_task().unwrap().lock().alloc_heap(context.x[0]);
-                context.x[10] = 0;
+                let top = get_current_task().unwrap().lock().set_heap_top(top_pos);
+                context.x[10] = top;
             }
         }
         _ => {
