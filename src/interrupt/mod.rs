@@ -1,4 +1,4 @@
-mod timer;
+pub mod timer;
 
 use core::arch::{global_asm, asm};
 use riscv::register::{scause::{Trap, Exception, Interrupt,Scause}, sepc};
@@ -58,6 +58,27 @@ fn handle_page_fault(stval: usize) {
 
 // 中断回调
 #[no_mangle]
+fn kernel_callback(context: &mut Context, scause: Scause, stval: usize) -> usize {
+    match scause.cause(){
+        Trap::Exception(Exception::Breakpoint) => breakpoint(context),
+        // 时钟中断
+        Trap::Interrupt(Interrupt::SupervisorTimer) => timer::timer_handler(context),
+        Trap::Exception(Exception::StorePageFault) => handle_page_fault(stval),
+        Trap::Exception(Exception::LoadPageFault) => {
+            panic!("加载权限异常 地址:{:#x}", stval)
+        },
+        Trap::Exception(Exception::StoreMisaligned) => {
+            info!("页面未对齐");
+        }
+        // 其他情况，终止当前线程
+        _ => fault(context, scause, stval),
+    }
+    context as *const Context as usize
+}
+
+
+// 中断回调
+#[no_mangle]
 fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) -> usize {
     // 如果当前有任务则选择任务复制到context
     if let Some(current_task) = get_current_task() {
@@ -78,7 +99,7 @@ fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) -> us
         // 其他情况，终止当前线程
         _ => fault(context, scause, stval),
     }
-    // // 如果当前有任务则选择任务复制到context
+    // 如果当前有任务则选择任务复制到context
     if let Some(current_task) = get_current_task() {
         context.clone_from(&mut current_task.force_get().context);
     }

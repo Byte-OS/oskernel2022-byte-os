@@ -7,6 +7,7 @@ use alloc::vec::Vec;
 use crate::fs::filetree::FileTreeNode;
 use crate::interrupt::Context;
 
+use crate::interrupt::timer::NEXT_TICKS;
 use crate::memory::page_table::PagingMode;
 use crate::sync::mutex::Mutex;
 use crate::{memory::{page_table::{PageMappingManager, PTEFlags}, addr::{PAGE_SIZE, VirtAddr, PhysAddr, PhysPageNum}, page::PAGE_ALLOCATOR}, fs::filetree::FILETREE};
@@ -80,10 +81,14 @@ impl TaskControllerManager {
         }
     }
 
+    pub fn kill_current(&mut self) {
+        self.current = None;
+    }
+
     // 切换到下一个任务
     pub fn switch_to_next(&mut self) {
         if let Some(current_task) = self.current.clone() {
-            current_task.lock().update_status(TaskStatus::READY);
+            current_task.force_get().update_status(TaskStatus::READY);
             self.current = None;
             self.ready_queue.push_back(current_task);
         }
@@ -94,7 +99,6 @@ impl TaskControllerManager {
         } else {
             // 当无任务时加载下一个任务
             load_next_task();
-            self.switch_to_next();
             // panic!("无任务");
         }
     }
@@ -275,6 +279,8 @@ pub fn suspend_and_run_next() {
     if !TASK_CONTROLLER_MANAGER.force_get().is_run {
         return;
     }
+    // 刷新下一个调度的时间
+    NEXT_TICKS.force_get().refresh();
     TASK_CONTROLLER_MANAGER.force_get().switch_to_next();
 }
 
@@ -287,13 +293,12 @@ pub fn get_current_task() ->Option<Arc<Mutex<TaskController>>> {
 }
 
 pub fn kill_current_task() {
-    TASK_CONTROLLER_MANAGER.force_get().current = None;
+    TASK_CONTROLLER_MANAGER.force_get().kill_current();
     TASK_CONTROLLER_MANAGER.force_get().switch_to_next();
 }
 
 pub fn clone_task(task_controller: &mut TaskController) -> TaskController {
     let mut task = TaskController::new(get_new_pid());
-    task.init();
     let mut pmm = task.pmm.clone();
     task.context.clone_from(&mut task_controller.context);
     task.entry_point = task_controller.entry_point;

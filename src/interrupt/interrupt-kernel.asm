@@ -54,7 +54,7 @@ kernel_callback_entry:
     csrr a2, stval
 
     # 调用中断回调函数
-    call interrupt_callback
+    call kernel_callback
 
     # 恢复 CSR
     LOAD    s1, 32

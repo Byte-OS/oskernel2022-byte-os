@@ -15,6 +15,7 @@ pub const SYS_CLOSE: usize  = 57;
 pub const SYS_READ:  usize  = 63;
 pub const SYS_WRITE: usize  = 64;
 pub const SYS_EXIT:  usize  = 93;
+pub const SYS_SCHED_YIELD: usize = 124;
 pub const SYS_GETPID:usize  = 172;
 pub const SYS_GETPPID:usize = 173;
 pub const SYS_BRK:   usize  = 214;
@@ -65,6 +66,7 @@ pub fn sys_call(context: &mut Context) {
     let current_task_wrap = get_current_task().unwrap();
     let mut current_task = current_task_wrap.force_get();
     let context: &mut Context = &mut current_task.context;
+    context.sepc = context.sepc + 4;
     // a7(x17) 作为调用号
     match context.x[17] {
         SYS_GETCWD => {
@@ -212,6 +214,9 @@ pub fn sys_call(context: &mut Context) {
         SYS_EXIT => {
             kill_current_task();
         },
+        SYS_SCHED_YIELD => {
+            suspend_and_run_next();
+        },
         SYS_GETPID => {
             // 当前任务
             let current_task_wrap = get_current_task().unwrap();
@@ -243,10 +248,10 @@ pub fn sys_call(context: &mut Context) {
 
             let mut task = clone_task(&mut current_task);
 
+            // context.x[10] = 0;
             task.context.x[10] = 0;
             context.x[10] = task.pid;
             TASK_CONTROLLER_MANAGER.force_get().add(task);
-            // suspend_and_run_next();
         }
         SYS_EXECVE => {
             let pmm = PageMapping::from(PhysPageNum(satp::read().bits()).to_addr());
@@ -262,5 +267,4 @@ pub fn sys_call(context: &mut Context) {
             info!("未识别调用号 {}", context.x[17]);
         }
     }
-    context.sepc = context.sepc + 4;
 }
