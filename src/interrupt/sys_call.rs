@@ -3,9 +3,9 @@ use core::slice;
 use alloc::string::String;
 use riscv::register::satp;
 
-use crate::{console::puts, task::{STDOUT, STDIN, STDERR, kill_current_task, get_current_task, exec, clone_task, TASK_CONTROLLER_MANAGER, suspend_and_run_next, wait_task}, memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum, PhysAddr}}, sbi::shutdown, fs::{filetree::{FILETREE, FileTreeNode}, file, self}, print_file_tree};
+use crate::{console::puts, task::{STDOUT, STDIN, STDERR, kill_current_task, get_current_task, exec, clone_task, TASK_CONTROLLER_MANAGER, suspend_and_run_next, wait_task}, memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum, PhysAddr}}, sbi::shutdown, fs::{filetree::{FILETREE, FileTreeNode}, file, self}, print_file_tree, interrupt::timer::get_time_ms};
 
-use super::Context;
+use super::{Context, TICKS, timer::TimeSpec};
 
 pub const SYS_GETCWD:usize  = 17;
 pub const SYS_DUP: usize    = 23;
@@ -20,6 +20,7 @@ pub const SYS_READ:  usize  = 63;
 pub const SYS_WRITE: usize  = 64;
 pub const SYS_EXIT:  usize  = 93;
 pub const SYS_SCHED_YIELD: usize = 124;
+pub const SYS_GETTIMEOFDAY: usize= 169;
 pub const SYS_GETPID:usize  = 172;
 pub const SYS_GETPPID:usize = 173;
 pub const SYS_BRK:   usize  = 214;
@@ -283,6 +284,12 @@ pub fn sys_call(context: &mut Context) {
         },
         SYS_SCHED_YIELD => {
             suspend_and_run_next();
+        },
+        SYS_GETTIMEOFDAY => {
+            let timespec = usize::from(pmm.get_phys_addr(VirtAddr::from(context.x[10])).unwrap()) as *mut TimeSpec;
+            unsafe { timespec.as_mut().unwrap().get_now() };
+            // info!("ms: {}", get_time_ms());
+            context.x[10] = 0;
         },
         SYS_GETPID => {
             // 当前任务

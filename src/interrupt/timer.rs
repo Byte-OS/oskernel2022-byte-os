@@ -4,8 +4,35 @@ use crate::{sbi::set_timer, task::suspend_and_run_next};
 use crate::interrupt::Context;
 use riscv::register::{sie, sstatus, time};
 
-const INTERVAL: usize = 12500000 / 100;     // 定时器周期
+#[cfg(not(feature = "board_k210"))]
+const CLOCK_FREQ: usize = 12500000;
+
+
+#[cfg(feature = "board_k210")]
+const CLOCK_FREQ: usize = 403000000 / 62;
 const CHANGE_TASK_TICKS: usize = 10;
+
+const INTERVAL: usize = CLOCK_FREQ / 100;
+const MSEC_PER_SEC: usize = 1000;
+
+#[repr(C)]
+pub struct TimeSpec {
+	tv_sec: u64,       /* 秒 */
+    tv_nsec: u64       /* 纳秒, 范围在0~999999999 */
+}
+
+impl TimeSpec {
+    pub fn get_now(&mut self) {
+        let ms = get_time_ms();
+        self.tv_sec = (ms / 1000) as u64;
+        self.tv_nsec = ((ms % 1000) * 1000) as u64;
+    }
+}
+
+pub fn get_time_ms() -> usize {
+    time::read() / (CLOCK_FREQ / MSEC_PER_SEC)
+}
+
 
 pub struct NextTaskTicks(usize);
 
