@@ -7,6 +7,7 @@ use alloc::vec::Vec;
 use crate::fs::filetree::FileTreeNode;
 use crate::interrupt::Context;
 
+use crate::memory::page_table::PagingMode;
 use crate::sync::mutex::Mutex;
 use crate::{memory::{page_table::{PageMappingManager, PTEFlags}, addr::{PAGE_SIZE, VirtAddr, PhysAddr, PhysPageNum}, page::PAGE_ALLOCATOR}, fs::filetree::FILETREE};
 
@@ -87,6 +88,7 @@ impl TaskControllerManager {
             self.ready_queue.push_back(current_task);
         }
         if let Some(next_task) = self.ready_queue.pop_front() {
+            info!("sp: {:#x}", next_task.force_get().context.x[2]);
             next_task.force_get().update_status(TaskStatus::RUNNING);
             self.current = Some(next_task.clone());
             // 运行任务
@@ -159,7 +161,7 @@ pub struct TaskController {
 
 impl TaskController {
     pub fn new(pid: usize) -> Self {
-        TaskController {
+        let mut task = TaskController {
             pid,
             ppid: 1,
             entry_point: VirtAddr::from(0),
@@ -174,7 +176,9 @@ impl TaskController {
                 Some(FileTreeNode::new_device("STDOUT")),
                 Some(FileTreeNode::new_device("STDERR"))
             ]
-        }
+        };
+        task.pmm.init_pte();
+        task
     }
 
     pub fn update_status(&mut self, status: TaskStatus) {
@@ -216,8 +220,9 @@ impl TaskController {
         self.pmm.change_satp();
         // 切换为运行状态
         self.status = TaskStatus::RUNNING;
+        
         // 恢复自身状态
-        unsafe { change_task(self.pmm.get_pte(), &self.context as *const Context as usize) };
+        unsafe { change_task((PagingMode::Sv39 as usize) << 60 | usize::from(PhysPageNum::from(PhysAddr::from(self.pmm.get_pte()))), &self.context as *const Context as usize) };
     }
 }
 
@@ -248,8 +253,6 @@ pub fn exec(path: &str) {
             program.read_to(buf);
             
             let pmm = &mut task_controller.pmm;
-
-            pmm.init_pte();
 
             for i in 0..pages {
                 pmm.add_mapping(PhysAddr::from(PhysPageNum::from(usize::from(phy_start) + i)), 
@@ -293,25 +296,22 @@ pub fn kill_current_task() {
 
 pub fn clone_task(task_controller: &mut TaskController) -> TaskController {
     let mut task = TaskController::new(get_new_pid());
+    task.init();
     let mut pmm = task.pmm.clone();
     pmm.init_pte();
     task.context.clone_from(&mut task_controller.context);
     task.entry_point = task_controller.entry_point;
     task.ppid = task_controller.pid;
 
-    let start_addr: PhysAddr = task_controller.pmm.get_phys_addr(VirtAddr::from(0x1000)).unwrap();
+    let start_addr: PhysAddr = task_controller.pmm.get_phys_addr(VirtAddr::from(0x0)).unwrap();
     let stack_addr: PhysAddr = task_controller.pmm.get_phys_addr(VirtAddr::from(0xf0000000)).unwrap();
-
-    let size = usize::from(stack_addr) - usize::from(start_addr);
-    info!("size: {}", size);
 
     // info!("addr: {}", usize::from(stack_addr) - usize::from(start_addr));
     let pages = (usize::from(stack_addr) - usize::from(start_addr)) / PAGE_SIZE;
-    info!("pages: {}", pages);
-
+    
     if let Some(phy_start) = PAGE_ALLOCATOR.force_get().alloc_more(pages + 1) {
-        let new_buf = unsafe { slice::from_raw_parts_mut(usize::from(PhysAddr::from(phy_start)) as *mut u8,pages * PAGE_SIZE) };
-        let old_buf = unsafe { slice::from_raw_parts_mut(usize::from(PhysAddr::from(start_addr)) as *mut u8, pages * PAGE_SIZE) };
+        let new_buf = unsafe { slice::from_raw_parts_mut(usize::from(PhysAddr::from(phy_start)) as *mut u8,(pages + 1) * PAGE_SIZE) };
+        let old_buf = unsafe { slice::from_raw_parts_mut(usize::from(PhysAddr::from(start_addr)) as *mut u8, (pages + 1) * PAGE_SIZE) };
         new_buf.copy_from_slice(old_buf);
 
         for i in 0..pages {

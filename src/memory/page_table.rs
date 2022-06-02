@@ -68,8 +68,8 @@ pub enum PagingMode {
 
 #[derive(Clone)]
 pub struct PageMappingManager {
-    paging_mode: PagingMode,
-    pte: PageMapping
+    pub paging_mode: PagingMode,
+    pub pte: PageMapping
 }
 
 #[repr(C)]

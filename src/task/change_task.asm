@@ -26,7 +26,7 @@
     .section .text
     .global change_task
 change_task:
-    # csrw satp, a0
+    csrw satp, a0
     sfence.vma
 
     la a0, int_callback_entry
@@ -36,10 +36,13 @@ change_task:
     mv sp, a1
 
     # 恢复 CSR
-    LOAD    s1, 32
-    LOAD    s2, 33
-    csrw    sstatus, s1
-    csrw    sepc, s2
+    LOAD    t0, 32
+    LOAD    t1, 33
+    # LOAD    t2, 2
+
+    csrw sstatus, t0
+    csrw sepc, t1
+    # csrw sscratch, t2
 
     # 恢复通用寄存器
     LOAD    x1, 1
@@ -53,4 +56,5 @@ change_task:
 
     # 恢复 sp（又名 x2）这里最后恢复是为了上面可以正常使用 LOAD 宏
     LOAD    x2, 2
+    # csrrw sp, sscratch, sp
     sret

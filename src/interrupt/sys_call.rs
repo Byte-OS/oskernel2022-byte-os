@@ -3,7 +3,7 @@ use core::slice;
 use alloc::string::String;
 use riscv::register::satp;
 
-use crate::{console::puts, task::{STDOUT, STDIN, STDERR, kill_current_task, get_current_task, exec, clone_task, TASK_CONTROLLER_MANAGER}, memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum, PhysAddr}}, sbi::shutdown, fs::filetree::FILETREE};
+use crate::{console::puts, task::{STDOUT, STDIN, STDERR, kill_current_task, get_current_task, exec, clone_task, TASK_CONTROLLER_MANAGER, suspend_and_run_next}, memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum, PhysAddr}}, sbi::shutdown, fs::filetree::FILETREE};
 
 use super::Context;
 
@@ -231,6 +231,9 @@ pub fn sys_call(context: &mut Context) {
             }
         }
         SYS_CLONE =>{
+            if let Some(ctw) = get_current_task() {
+                info!("读取任务: {:#x} pid: {}", usize::from(ctw.force_get().pmm.pte), ctw.force_get().pid);
+            }
             let current_task_wrap = get_current_task().unwrap();
             let mut current_task = current_task_wrap.force_get();
             let stack_addr = context.x[10];
@@ -238,11 +241,18 @@ pub fn sys_call(context: &mut Context) {
             let tls = context.x[12];
             let ctid = context.x[13];
             current_task.context.clone_from(context);
+            info!("读取任务 :{:#x}", current_task.pmm.get_pte());
 
             let mut task = clone_task(&mut current_task);
-            task.context.x[10] = 0;
-            context.x[10] = task.pid;
-            TASK_CONTROLLER_MANAGER.force_get().add(task);
+
+            // task.context.x[10] = 0;
+            // context.x[10] = task.pid;
+            context.x[10] = 0;
+            // info!("spec: {:#x}", task.context.sepc);
+            // task.context.x[2] = 0xf0000ff0;
+            // task.context.sepc = 0x1000;
+            // TASK_CONTROLLER_MANAGER.force_get().add(task);
+            // suspend_and_run_next(context);
             // info!("stack_addr:{:#x}, ptid:{}, tls:{}, ctid:{:#x}", stack_addr, ptid, tls, ctid);
         }
         SYS_EXECVE => {

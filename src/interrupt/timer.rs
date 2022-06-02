@@ -13,7 +13,7 @@ pub fn timer_handler(context: &mut Context) {
         TICKS=TICKS+1;
     }
     // 储存当前指针内容
-    suspend_and_run_next(context);
+    // suspend_and_run_next(context);
 }
 
 // 设置下一次时钟中断触发时间
