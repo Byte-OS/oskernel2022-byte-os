@@ -179,6 +179,11 @@ impl FileTreeNode {
         self.0.borrow_mut().file_type
     }
 
+    // 判断是否为设备文件
+    pub fn is_device(&self) -> bool {
+        self.0.borrow().file_type == FileType::Device
+    }
+
     // 到文件
     pub fn to_file(&self) -> FileItem {
         FileItem { 

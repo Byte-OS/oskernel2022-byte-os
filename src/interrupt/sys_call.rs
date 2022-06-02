@@ -3,11 +3,13 @@ use core::slice;
 use alloc::string::String;
 use riscv::register::satp;
 
-use crate::{console::puts, task::{STDOUT, STDIN, STDERR, kill_current_task, get_current_task, exec, clone_task, TASK_CONTROLLER_MANAGER, suspend_and_run_next, wait_task}, memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum, PhysAddr}}, sbi::shutdown, fs::filetree::FILETREE};
+use crate::{console::puts, task::{STDOUT, STDIN, STDERR, kill_current_task, get_current_task, exec, clone_task, TASK_CONTROLLER_MANAGER, suspend_and_run_next, wait_task}, memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum, PhysAddr}}, sbi::shutdown, fs::{filetree::{FILETREE, FileTreeNode}, file}};
 
 use super::Context;
 
 pub const SYS_GETCWD:usize  = 17;
+pub const SYS_DUP: usize    = 23;
+pub const SYS_DUP3: usize   = 24;
 pub const SYS_MKDIRAT:usize = 34;
 pub const SYS_UMOUNT2: usize= 39;
 pub const SYS_MOUNT: usize  = 40;
@@ -26,27 +28,28 @@ pub const SYS_EXECVE:usize  = 221;
 pub const SYS_WAIT4: usize  = 260;
 
 
-pub fn sys_write(fd: usize, buf: usize, count: usize) -> usize {
+pub fn sys_write(fd: FileTreeNode, buf: usize, count: usize) -> usize {
     // 根据satp中的地址构建PageMapping 获取当前的映射方式
     let pmm = PageMapping::from(PhysPageNum(satp::read().bits()).to_addr());
     let buf = pmm.get_phys_addr(VirtAddr::from(buf)).unwrap();
 
     // 寻找物理地址
     let buf = unsafe {slice::from_raw_parts_mut(usize::from(buf) as *mut u8, count)};
-    match fd {
-        STDIN => {
+    
+    if fd.is_device() {
+        let device_name = fd.get_filename();
+        if device_name == "STDIN" {
 
-        },
-        STDOUT => {
+        } else if device_name == "STDOUT" {
             puts(buf);
-        },
-        STDERR => {
+        } else if device_name == "STDERR" {
 
-        },
-        _=>{
-            info!("暂未找到中断地址");
+        } else {
+            info!("未找到设备!");
         }
-    };
+    } else {
+        info!("暂未找到中断地址");
+    }
     count
 }
 
@@ -87,8 +90,34 @@ pub fn sys_call(context: &mut Context) {
             buf[..pwd_buf.len()].copy_from_slice(pwd_buf);
             context.x[10] = buf.as_ptr() as usize;
         }
+        SYS_DUP => {
+            let fd = context.x[10];
+            let mut current_task = current_task_wrap.force_get();
+            let new_fd = current_task.alloc_fd();
+            if let Some(tree_node) = current_task.fd_table[fd].clone() {
+                current_task.fd_table[new_fd] = Some(tree_node);
+                context.x[10] = new_fd;
+            } else {
+                context.x[10] = -1 as isize as usize;
+            }
+        }
+        SYS_DUP3 => {
+            let fd = context.x[10];
+            let new_fd = context.x[11];
+            let mut current_task = current_task_wrap.force_get();
+            if let Some(tree_node) = current_task.fd_table[fd].clone() {
+                // 申请空间
+                if current_task.alloc_fd_with_size(new_fd) == -1 as isize as usize {
+                    context.x[10] = -1 as isize as usize;
+                } else {
+                    current_task.fd_table[new_fd] = Some(tree_node);
+                    context.x[10] = new_fd;
+                }
+            } else {
+                context.x[10] = -1 as isize as usize;
+            }
+        }
         SYS_MKDIRAT => {
-            let current_task_wrap = get_current_task().unwrap();
             let current_task = current_task_wrap.force_get();
             let pmm = PageMapping::from(PhysPageNum(satp::read().bits()).to_addr());
             let dirfd = context.x[10];
@@ -217,8 +246,14 @@ pub fn sys_call(context: &mut Context) {
             
         }
         SYS_WRITE => {
-            sys_write(context.x[10],context.x[11],context.x[12]);
-            context.x[10] = context.x[12];
+            let fd = context.x[10];
+            let current_task = current_task_wrap.force_get();
+            if let Some(file_tree_node) = current_task.fd_table[fd].clone() {
+                sys_write(file_tree_node,context.x[11],context.x[12]);
+                context.x[10] = context.x[12];
+            } else {
+                context.x[10] = -1 as isize as usize;
+            }
         },
         SYS_EXIT => {
             kill_current_task();

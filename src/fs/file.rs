@@ -4,7 +4,7 @@ use crate::device::BLK_CONTROL;
 
 // 文件类型
 #[allow(dead_code)]
-#[derive(Default, Clone, Copy)]
+#[derive(Default, Clone, Copy, PartialEq)]
 pub enum FileType {
     File,           // 文件
     Directory,      // 文件夹

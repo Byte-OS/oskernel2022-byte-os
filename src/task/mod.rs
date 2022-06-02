@@ -301,6 +301,22 @@ impl TaskController {
         }
     }
 
+    pub fn alloc_fd_with_size(&mut self, new_size: usize) -> usize {
+        if self.fd_table.len() > new_size {
+            if self.fd_table[new_size].is_none() {
+                new_size
+            } else {
+                -1 as isize as usize
+            }
+        } else {
+            let alloc_size = new_size + 1 - self.fd_table.len();
+            for _ in 0..alloc_size {
+                self.fd_table.push(None);
+            }
+            new_size
+        }
+    }
+
     pub fn run_current(&mut self) {
         // 切换satp
         self.pmm.change_satp();
