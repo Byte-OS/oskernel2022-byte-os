@@ -5,6 +5,5 @@ mmap
 munmapunlink
 pipe
 
-gettimeofday
 sleep
 times
