@@ -106,7 +106,7 @@ impl TaskControllerManager {
                     ready_task.lock().context.x[10] = self_task.pid;
                     // info!("pid: {}", self_task.pid);
                     // info!("exit_code: {}", self_task.context.x[10]);
-                    // unsafe {x.callback.write(self_task.context.x[10])};
+                    unsafe {x.callback.write(self_task.context.x[10] << 8)};
                     self.ready_queue.push_back(ready_task);
                     wait_queue_index = i;
                     break;
@@ -171,7 +171,7 @@ impl TaskControllerManager {
             let killed_task = killed_task_wrap.lock();
             self.killed_queue.remove(killed_index);
             
-            unsafe {callback.write(killed_task.context.x[10])};
+            unsafe {callback.write(killed_task.context.x[10] << 8)};
         }
     }
 
