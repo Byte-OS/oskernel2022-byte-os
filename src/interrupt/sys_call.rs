@@ -300,9 +300,14 @@ pub fn sys_call(context: &mut Context) {
             let tls = context.x[13];
             let ctid = context.x[14];
 
+
             let mut task = clone_task(&mut current_task_wrap.force_get());
-            task.context.x[2] = stack_addr;
-            // context.x[10] = 0;
+            
+            // 如果指定了栈 则设置栈
+            if stack_addr > 0 {
+                task.context.x[2] = stack_addr;
+            }
+
             task.context.x[10] = 0;
             context.x[10] = task.pid;
             TASK_CONTROLLER_MANAGER.force_get().add(task);
