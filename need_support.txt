@@ -8,6 +8,3 @@ pipe
 gettimeofday
 sleep
 times
-
-mount
-umount
