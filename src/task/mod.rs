@@ -81,7 +81,9 @@ impl TaskControllerManager {
         if let Some(_) = self.current {
             self.ready_queue.push_back(Arc::new(Mutex::new(task)));
         } else {
-            self.current = Some(Arc::new(Mutex::new(task)));
+            let task = Arc::new(Mutex::new(task));
+            task.force_get().pmm.change_satp();
+            self.current = Some(task);
         }
     }
 
