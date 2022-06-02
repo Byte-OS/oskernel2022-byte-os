@@ -3,7 +3,7 @@ use core::slice;
 use alloc::string::String;
 use riscv::register::satp;
 
-use crate::{console::puts, task::{STDOUT, STDIN, STDERR, kill_current_task, get_current_task, exec, clone_task, TASK_CONTROLLER_MANAGER, suspend_and_run_next}, memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum, PhysAddr}}, sbi::shutdown, fs::filetree::FILETREE};
+use crate::{console::puts, task::{STDOUT, STDIN, STDERR, kill_current_task, get_current_task, exec, clone_task, TASK_CONTROLLER_MANAGER, suspend_and_run_next, wait_task}, memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum, PhysAddr}}, sbi::shutdown, fs::filetree::FILETREE};
 
 use super::Context;
 
@@ -63,9 +63,12 @@ pub fn get_string_from_raw(addr: PhysAddr) -> String {
 }
 
 pub fn sys_call(context: &mut Context) {
+    info!("未识别调用号 {}", context.x[17]);
     let current_task_wrap = get_current_task().unwrap();
+    info!("debug info");
     let mut current_task = current_task_wrap.force_get();
     let context: &mut Context = &mut current_task.context;
+    let pmm = PageMapping::from(PhysPageNum(satp::read().bits()).to_addr());
     context.sepc = context.sepc + 4;
     // a7(x17) 作为调用号
     match context.x[17] {
@@ -212,6 +215,7 @@ pub fn sys_call(context: &mut Context) {
             context.x[10] = context.x[12];
         },
         SYS_EXIT => {
+            info!("终止任务");
             kill_current_task();
         },
         SYS_SCHED_YIELD => {
@@ -238,15 +242,13 @@ pub fn sys_call(context: &mut Context) {
                 context.x[10] = top;
             }
         }
-        SYS_CLONE =>{
-            let current_task_wrap = get_current_task().unwrap();
-            let mut current_task = current_task_wrap.force_get();
+        SYS_CLONE => {
             let stack_addr = context.x[10];
             let ptid = context.x[11];
             let tls = context.x[12];
             let ctid = context.x[13];
 
-            let mut task = clone_task(&mut current_task);
+            let mut task = clone_task(&mut current_task_wrap.force_get());
 
             // context.x[10] = 0;
             task.context.x[10] = 0;
@@ -254,14 +256,17 @@ pub fn sys_call(context: &mut Context) {
             TASK_CONTROLLER_MANAGER.force_get().add(task);
         }
         SYS_EXECVE => {
-            let pmm = PageMapping::from(PhysPageNum(satp::read().bits()).to_addr());
             let filename = pmm.get_phys_addr(VirtAddr::from(context.x[10])).unwrap();
             let filename = get_string_from_raw(filename);
             exec(&filename);
             kill_current_task();
         }
         SYS_WAIT4 => {
-            context.x[10] = 0;
+            let pid = context.x[10];
+            let a = pmm.get_phys_addr(VirtAddr::from(context.x[11]));
+            let ptr = usize::from(pmm.get_phys_addr(VirtAddr::from(context.x[11])).unwrap()) as *mut u32;
+            let options = context.x[12];
+            wait_task(pid, ptr, options);
         }
         _ => {
             info!("未识别调用号 {}", context.x[17]);

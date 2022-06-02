@@ -60,6 +60,7 @@ lazy_static! {
 pub struct TaskControllerManager {
     current: Option<Arc<Mutex<TaskController>>>,
     ready_queue: VecDeque<Arc<Mutex<TaskController>>>,
+    wait_queue: Vec<WaitQueueItem>,
     is_run: bool
 }
 
@@ -68,6 +69,7 @@ impl TaskControllerManager {
         TaskControllerManager {
             current: None,
             ready_queue: VecDeque::new(),
+            wait_queue: vec![],
             is_run: false
         }
     }
@@ -81,7 +83,26 @@ impl TaskControllerManager {
         }
     }
 
+    // 删除当前任务
     pub fn kill_current(&mut self) {
+        let self_wrap = self.current.clone().unwrap();
+        let self_task = self_wrap.force_get();
+        let ppid = self_task.ppid;
+        let pid = self_task.pid;
+        // 如果当前任务的父进程不是内核 则考虑唤醒进程
+        if ppid != 1 {
+            self.wait_queue.retain(|x| {
+                if x.task.force_get().pid == ppid && (x.wait == 0xffffffff || x.wait == pid) {
+                    // 加入等待进程
+                    let ready_task = x.task.clone();
+                    ready_task.force_get().context.x[10] = self_task.context.x[10];
+                    self.ready_queue.push_back(ready_task);
+                    true
+                } else {
+                    false
+                }
+            })
+        }
         self.current = None;
     }
 
@@ -106,6 +127,16 @@ impl TaskControllerManager {
     // 获取当前的进程
     pub fn get_current_processor(&self) -> Option<Arc<Mutex<TaskController>>> {
         self.current.clone()
+    }
+
+    // 当前进程等待运行
+    pub fn wait_pid(&mut self, callback: *mut u32,pid: usize) {
+        // 将 当前任务加入等待队列
+        let task = self.current.clone().unwrap();
+        let wait_item = WaitQueueItem::new(task.clone(), callback, pid);
+        self.wait_queue.push(wait_item);
+        // 清除当前任务
+        self.current = None;
     }
 
     // 开始运行任务
@@ -147,6 +178,22 @@ impl UserHeap {
     }
 }
 
+pub struct WaitQueueItem {
+    pub task: Arc<Mutex<TaskController>>,
+    pub callback: *const u32,
+    pub wait: usize
+}
+
+impl WaitQueueItem {
+    pub fn new(task: Arc<Mutex<TaskController>>, callback: *const u32,wait: usize) -> Self {
+        WaitQueueItem {
+            task,
+            callback,
+            wait
+        }
+    }
+}
+
 #[allow(dead_code)]
 pub struct TaskController {
     pub pid: usize,
@@ -158,7 +205,7 @@ pub struct TaskController {
     pub heap: UserHeap,
     pub context: Context,
     pub home_dir: FileTreeNode,
-    pub fd_table: Vec<Option<FileTreeNode>>
+    pub fd_table: Vec<Option<FileTreeNode>>,
 }
 
 impl TaskController {
@@ -290,6 +337,11 @@ pub fn run_first() {
 
 pub fn get_current_task() ->Option<Arc<Mutex<TaskController>>> {
     TASK_CONTROLLER_MANAGER.force_get().current.clone()
+}
+
+pub fn wait_task(pid: usize, status: *mut u32, options: usize) {
+    TASK_CONTROLLER_MANAGER.force_get().wait_pid(status, pid );
+    // TASK_CONTROLLER_MANAGER.force_get().switch_to_next();
 }
 
 pub fn kill_current_task() {
