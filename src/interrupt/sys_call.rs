@@ -314,7 +314,7 @@ pub fn sys_call(context: &mut Context) {
         }
         SYS_WAIT4 => {
             let pid = context.x[10];
-            let ptr = usize::from(pmm.get_phys_addr(VirtAddr::from(context.x[11])).unwrap()) as *mut usize;
+            let ptr = usize::from(pmm.get_phys_addr(VirtAddr::from(context.x[11])).unwrap()) as *mut u16;
             let options = context.x[12];
             wait_task(pid, ptr, options);
         }

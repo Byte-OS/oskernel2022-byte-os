@@ -106,7 +106,7 @@ impl TaskControllerManager {
                     ready_task.lock().context.x[10] = self_task.pid;
                     // info!("pid: {}", self_task.pid);
                     // info!("exit_code: {}", self_task.context.x[10]);
-                    unsafe {x.callback.write(self_task.context.x[10] << 8)};
+                    unsafe {x.callback.write((self_task.context.x[10] << 8) as u16)};
                     self.ready_queue.push_back(ready_task);
                     wait_queue_index = i;
                     break;
@@ -148,7 +148,7 @@ impl TaskControllerManager {
     }
 
     // 当前进程等待运行
-    pub fn wait_pid(&mut self, callback: *mut usize,pid: usize) {
+    pub fn wait_pid(&mut self, callback: *mut u16,pid: usize) {
         // 将 当前任务加入等待队列
         let task = self.current.clone().unwrap();
         // 判断killed_queue中是否存在任务
@@ -171,7 +171,7 @@ impl TaskControllerManager {
             let killed_task = killed_task_wrap.lock();
             self.killed_queue.remove(killed_index);
             
-            unsafe {callback.write(killed_task.context.x[10] << 8)};
+            unsafe {callback.write((killed_task.context.x[10] << 8) as u16)};
         }
     }
 
@@ -217,12 +217,12 @@ impl UserHeap {
 #[derive(Clone)]
 pub struct WaitQueueItem {
     pub task: Arc<Mutex<TaskController>>,
-    pub callback: *mut usize,
+    pub callback: *mut u16,
     pub wait: usize
 }
 
 impl WaitQueueItem {
-    pub fn new(task: Arc<Mutex<TaskController>>, callback: *mut usize,wait: usize) -> Self {
+    pub fn new(task: Arc<Mutex<TaskController>>, callback: *mut u16,wait: usize) -> Self {
         WaitQueueItem {
             task,
             callback,
@@ -392,7 +392,7 @@ pub fn get_current_task() ->Option<Arc<Mutex<TaskController>>> {
     TASK_CONTROLLER_MANAGER.force_get().current.clone()
 }
 
-pub fn wait_task(pid: usize, status: *mut usize, options: usize) {
+pub fn wait_task(pid: usize, status: *mut u16, options: usize) {
     TASK_CONTROLLER_MANAGER.force_get().wait_pid(status, pid );
     TASK_CONTROLLER_MANAGER.force_get().switch_to_next();
 }
