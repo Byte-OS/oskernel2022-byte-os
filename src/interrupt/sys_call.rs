@@ -3,9 +3,9 @@ use core::slice;
 use alloc::string::String;
 use riscv::register::satp;
 
-use crate::{console::puts, task::{STDOUT, STDIN, STDERR, kill_current_task, get_current_task, exec, clone_task, TASK_CONTROLLER_MANAGER, suspend_and_run_next, wait_task}, memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum, PhysAddr}}, sbi::shutdown, fs::{filetree::{FILETREE, FileTreeNode}, file, self}, print_file_tree, interrupt::timer::get_time_ms};
+use crate::{console::puts, task::{kill_current_task, get_current_task, exec, clone_task, TASK_CONTROLLER_MANAGER, suspend_and_run_next, wait_task}, memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum, PhysAddr}}, sbi::shutdown, fs::{filetree::{FILETREE, FileTreeNode}, file, self}, print_file_tree, interrupt::timer::get_time_ms};
 
-use super::{Context, TICKS, timer::TimeSpec};
+use super::{Context,  timer::TimeSpec};
 
 pub const SYS_GETCWD:usize  = 17;
 pub const SYS_DUP: usize    = 23;
@@ -20,6 +20,7 @@ pub const SYS_READ:  usize  = 63;
 pub const SYS_WRITE: usize  = 64;
 pub const SYS_EXIT:  usize  = 93;
 pub const SYS_SCHED_YIELD: usize = 124;
+pub const SYS_UNAME: usize  = 160;
 pub const SYS_GETTIMEOFDAY: usize= 169;
 pub const SYS_GETPID:usize  = 172;
 pub const SYS_GETPPID:usize = 173;
@@ -37,6 +38,15 @@ bitflags! {
         const TRUNC = 1 << 10;
         const O_DIRECTORY = 1 << 21;
     }
+}
+
+pub struct UTSname  {
+    sysname: [u8;65],
+    nodename: [u8;65],
+    release: [u8;65],
+    version: [u8;65],
+    machine: [u8;65],
+    domainname: [u8;65],
 }
 
 pub fn sys_write(fd: FileTreeNode, buf: usize, count: usize) -> usize {
@@ -76,6 +86,15 @@ pub fn get_string_from_raw(addr: PhysAddr) -> String {
         unsafe { ptr = ptr.add(1) };
     }
     str
+}
+
+pub fn write_string_to_raw(target: &mut [u8], str: &str) {
+    let mut index = 0;
+    for c in str.chars() {
+        target[index] = c as u8;
+        index = index + 1;
+    }
+    target[index] = 0;
 }
 
 pub fn sys_call(context: &mut Context) {
@@ -284,6 +303,17 @@ pub fn sys_call(context: &mut Context) {
         },
         SYS_SCHED_YIELD => {
             suspend_and_run_next();
+        },
+        SYS_UNAME => {
+            let sys_info = usize::from(pmm.get_phys_addr(VirtAddr::from(context.x[10])).unwrap()) as *mut UTSname;
+            let sys_info = unsafe { sys_info.as_mut().unwrap() };
+            write_string_to_raw(&mut sys_info.sysname, "ByteOS");
+            write_string_to_raw(&mut sys_info.nodename, "ByteOS");
+            write_string_to_raw(&mut sys_info.release, "release");
+            write_string_to_raw(&mut sys_info.version, "alpha 1.1");
+            write_string_to_raw(&mut sys_info.machine, "riscv k210");
+            write_string_to_raw(&mut sys_info.domainname, "alexbd.cn");
+            context.x[10] = 0;
         },
         SYS_GETTIMEOFDAY => {
             let timespec = usize::from(pmm.get_phys_addr(VirtAddr::from(context.x[10])).unwrap()) as *mut TimeSpec;
