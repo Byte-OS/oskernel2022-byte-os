@@ -101,12 +101,6 @@ fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) -> us
     }
     // 如果当前有任务则选择任务复制到context
     if let Some(current_task) = get_current_task() {
-        // 输出剩下空间
-        // let mut last = 0;
-        // for i in PAGE_ALLOCATOR.lock().pages.clone() {
-        //     last = last + 1;
-        // }
-        // info!("剩下空间: {}", last);
         context.clone_from(&mut current_task.force_get().context);
     }
     context as *const Context as usize

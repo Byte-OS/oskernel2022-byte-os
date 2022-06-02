@@ -95,6 +95,7 @@ impl TaskControllerManager {
         let pid = self_task.pid;
         // 如果当前任务的父进程不是内核 则考虑唤醒进程
         if ppid != 1 {
+            // 子进程处理
             let mut wait_queue_index = -1 as isize as usize;
             // 判断是否在等待任务中存在
             for i in 0..self.wait_queue.len() {
@@ -102,7 +103,10 @@ impl TaskControllerManager {
                 if x.task.force_get().pid == ppid && (x.wait == (-1 as isize as usize) || x.wait == pid) {
                     // 加入等待进程
                     let ready_task = x.task.clone();
-                    ready_task.force_get().context.x[10] = self_task.context.x[10];
+                    ready_task.lock().context.x[10] = self_task.pid;
+                    // info!("pid: {}", self_task.pid);
+                    // info!("exit_code: {}", self_task.context.x[10]);
+                    // unsafe {x.callback.write(self_task.context.x[10])};
                     self.ready_queue.push_back(ready_task);
                     wait_queue_index = i;
                     break;
@@ -144,7 +148,7 @@ impl TaskControllerManager {
     }
 
     // 当前进程等待运行
-    pub fn wait_pid(&mut self, callback: *mut u32,pid: usize) {
+    pub fn wait_pid(&mut self, callback: *mut usize,pid: usize) {
         // 将 当前任务加入等待队列
         let task = self.current.clone().unwrap();
         // 判断killed_queue中是否存在任务
@@ -167,7 +171,7 @@ impl TaskControllerManager {
             let killed_task = killed_task_wrap.lock();
             self.killed_queue.remove(killed_index);
             
-            unsafe {callback.write(killed_task.context.x[10] as u32)};
+            unsafe {callback.write(killed_task.context.x[10])};
         }
     }
 
@@ -213,12 +217,12 @@ impl UserHeap {
 #[derive(Clone)]
 pub struct WaitQueueItem {
     pub task: Arc<Mutex<TaskController>>,
-    pub callback: *const u32,
+    pub callback: *mut usize,
     pub wait: usize
 }
 
 impl WaitQueueItem {
-    pub fn new(task: Arc<Mutex<TaskController>>, callback: *const u32,wait: usize) -> Self {
+    pub fn new(task: Arc<Mutex<TaskController>>, callback: *mut usize,wait: usize) -> Self {
         WaitQueueItem {
             task,
             callback,
@@ -372,7 +376,7 @@ pub fn get_current_task() ->Option<Arc<Mutex<TaskController>>> {
     TASK_CONTROLLER_MANAGER.force_get().current.clone()
 }
 
-pub fn wait_task(pid: usize, status: *mut u32, options: usize) {
+pub fn wait_task(pid: usize, status: *mut usize, options: usize) {
     TASK_CONTROLLER_MANAGER.force_get().wait_pid(status, pid );
     TASK_CONTROLLER_MANAGER.force_get().switch_to_next();
 }

@@ -28,6 +28,16 @@ impl FileTree {
     pub fn open(&self, path: &str) -> Result<FileTreeNode, &str> {
         self.0.open(path)
     }
+
+    // 卸载设备
+    pub fn umount(&self, device: &str, _flags: usize) {
+
+    }
+
+    // 挂载设备
+    pub fn mount(&self, device: &str, dir: &str, fs_type: usize, flags: usize, data: usize) {
+
+    }
 }
 
 // 文件树原始树

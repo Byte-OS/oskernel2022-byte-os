@@ -9,6 +9,8 @@ use super::Context;
 
 pub const SYS_GETCWD:usize  = 17;
 pub const SYS_MKDIRAT:usize = 34;
+pub const SYS_UMOUNT2: usize= 39;
+pub const SYS_MOUNT: usize  = 40;
 pub const SYS_CHDIR: usize  = 49;
 pub const SYS_OPENAT:usize  = 56;
 pub const SYS_CLOSE: usize  = 57;
@@ -106,7 +108,13 @@ pub fn sys_call(context: &mut Context) {
                     context.x[10] = result_code as usize;
                 }
             };
-        }
+        },
+        SYS_UMOUNT2 => {
+
+        },
+        SYS_MOUNT => {
+
+        },
         SYS_CHDIR => {
             let current_task_wrap = get_current_task().unwrap();
             let mut current_task = current_task_wrap.force_get();
@@ -260,7 +268,7 @@ pub fn sys_call(context: &mut Context) {
         }
         SYS_WAIT4 => {
             let pid = context.x[10];
-            let ptr = usize::from(pmm.get_phys_addr(VirtAddr::from(context.x[11])).unwrap()) as *mut u32;
+            let ptr = usize::from(pmm.get_phys_addr(VirtAddr::from(context.x[11])).unwrap()) as *mut usize;
             let options = context.x[12];
             wait_task(pid, ptr, options);
         }
