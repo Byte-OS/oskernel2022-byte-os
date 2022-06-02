@@ -82,7 +82,6 @@ fn kernel_callback(context: &mut Context, scause: Scause, stval: usize) -> usize
 fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) -> usize {
     // 如果当前有任务则选择任务复制到context
     if let Some(current_task) = get_current_task() {
-        info!("进入中断");
         current_task.force_get().context.clone_from(context);
     }
     match scause.cause(){
@@ -102,7 +101,6 @@ fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) -> us
     }
     // 如果当前有任务则选择任务复制到context
     if let Some(current_task) = get_current_task() {
-        info!("复制任务");
         // 输出剩下空间
         // let mut last = 0;
         // for i in PAGE_ALLOCATOR.lock().pages.clone() {

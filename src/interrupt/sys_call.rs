@@ -63,9 +63,7 @@ pub fn get_string_from_raw(addr: PhysAddr) -> String {
 }
 
 pub fn sys_call(context: &mut Context) {
-    info!("未识别调用号 {}", context.x[17]);
     let current_task_wrap = get_current_task().unwrap();
-    info!("debug info");
     let mut current_task = current_task_wrap.force_get();
     let context: &mut Context = &mut current_task.context;
     let pmm = PageMapping::from(PhysPageNum(satp::read().bits()).to_addr());
@@ -215,7 +213,6 @@ pub fn sys_call(context: &mut Context) {
             context.x[10] = context.x[12];
         },
         SYS_EXIT => {
-            info!("终止任务");
             kill_current_task();
         },
         SYS_SCHED_YIELD => {
@@ -263,7 +260,6 @@ pub fn sys_call(context: &mut Context) {
         }
         SYS_WAIT4 => {
             let pid = context.x[10];
-            let a = pmm.get_phys_addr(VirtAddr::from(context.x[11]));
             let ptr = usize::from(pmm.get_phys_addr(VirtAddr::from(context.x[11])).unwrap()) as *mut u32;
             let options = context.x[12];
             wait_task(pid, ptr, options);

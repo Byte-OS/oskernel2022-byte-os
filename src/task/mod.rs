@@ -61,6 +61,7 @@ pub struct TaskControllerManager {
     current: Option<Arc<Mutex<TaskController>>>,
     ready_queue: VecDeque<Arc<Mutex<TaskController>>>,
     wait_queue: Vec<WaitQueueItem>,
+    killed_queue: Vec<Arc<Mutex<TaskController>>>,
     is_run: bool
 }
 
@@ -70,6 +71,7 @@ impl TaskControllerManager {
             current: None,
             ready_queue: VecDeque::new(),
             wait_queue: vec![],
+            killed_queue: vec![],
             is_run: false
         }
     }
@@ -91,17 +93,27 @@ impl TaskControllerManager {
         let pid = self_task.pid;
         // 如果当前任务的父进程不是内核 则考虑唤醒进程
         if ppid != 1 {
-            self.wait_queue.retain(|x| {
-                if x.task.force_get().pid == ppid && (x.wait == 0xffffffff || x.wait == pid) {
+            let mut wait_queue_index = -1 as isize as usize;
+            // 判断是否在等待任务中存在
+            for i in 0..self.wait_queue.len() {
+                let x = self.wait_queue[i].clone();
+                if x.task.force_get().pid == ppid && (x.wait == (-1 as isize as usize) || x.wait == pid) {
                     // 加入等待进程
                     let ready_task = x.task.clone();
                     ready_task.force_get().context.x[10] = self_task.context.x[10];
                     self.ready_queue.push_back(ready_task);
-                    true
-                } else {
-                    false
+                    wait_queue_index = i;
+                    break;
                 }
-            })
+            }
+            // 如果存在移出 不存在则加入killed_queue
+            if wait_queue_index == -1 as isize as usize {
+                self.killed_queue.push(self_wrap.clone())
+            } else {
+                self.wait_queue.remove(wait_queue_index);
+            }
+        } else {
+            // 如果是父进程是内核  则清空相关进程树
         }
         self.current = None;
     }
@@ -133,10 +145,28 @@ impl TaskControllerManager {
     pub fn wait_pid(&mut self, callback: *mut u32,pid: usize) {
         // 将 当前任务加入等待队列
         let task = self.current.clone().unwrap();
-        let wait_item = WaitQueueItem::new(task.clone(), callback, pid);
-        self.wait_queue.push(wait_item);
-        // 清除当前任务
-        self.current = None;
+        // 判断killed_queue中是否存在任务
+        let mut killed_index = -1 as isize as usize;
+        for i in 0..self.killed_queue.len() {
+            let ctask = self.killed_queue[i].force_get();
+            if ctask.ppid == task.lock().pid && (pid == -1 as isize as usize || ctask.pid == pid) {
+                killed_index = i;
+                break;
+            }
+        }
+        // 如果没有任务 则加入wait list
+        if killed_index == -1 as isize as usize {
+            let wait_item = WaitQueueItem::new(task.clone(), callback, pid);
+            self.wait_queue.push(wait_item);
+            // 清除当前任务
+            self.current = None;
+        } else {
+            let killed_task_wrap = self.killed_queue[killed_index].clone();
+            let killed_task = killed_task_wrap.lock();
+            self.killed_queue.remove(killed_index);
+            
+            unsafe {callback.write(killed_task.context.x[10] as u32)};
+        }
     }
 
     // 开始运行任务
@@ -178,6 +208,7 @@ impl UserHeap {
     }
 }
 
+#[derive(Clone)]
 pub struct WaitQueueItem {
     pub task: Arc<Mutex<TaskController>>,
     pub callback: *const u32,
@@ -341,7 +372,7 @@ pub fn get_current_task() ->Option<Arc<Mutex<TaskController>>> {
 
 pub fn wait_task(pid: usize, status: *mut u32, options: usize) {
     TASK_CONTROLLER_MANAGER.force_get().wait_pid(status, pid );
-    // TASK_CONTROLLER_MANAGER.force_get().switch_to_next();
+    TASK_CONTROLLER_MANAGER.force_get().switch_to_next();
 }
 
 pub fn kill_current_task() {
