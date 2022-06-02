@@ -1,0 +1,13 @@
+close
+fstat
+getdents
+mmap
+munmapunlink
+pipe
+
+gettimeofday
+sleep
+times
+
+mount
+umount
