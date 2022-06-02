@@ -3,7 +3,7 @@ use core::slice;
 use alloc::string::String;
 use riscv::register::satp;
 
-use crate::{console::puts, task::{STDOUT, STDIN, STDERR, kill_current_task, get_current_task, exec, clone_task, TASK_CONTROLLER_MANAGER, suspend_and_run_next, wait_task}, memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum, PhysAddr}}, sbi::shutdown, fs::{filetree::{FILETREE, FileTreeNode}, file}, print_file_tree};
+use crate::{console::puts, task::{STDOUT, STDIN, STDERR, kill_current_task, get_current_task, exec, clone_task, TASK_CONTROLLER_MANAGER, suspend_and_run_next, wait_task}, memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum, PhysAddr}}, sbi::shutdown, fs::{filetree::{FILETREE, FileTreeNode}, file, self}, print_file_tree};
 
 use super::Context;
 
@@ -149,10 +149,22 @@ pub fn sys_call(context: &mut Context) {
             };
         },
         SYS_UMOUNT2 => {
-
+            let special_ptr = pmm.get_phys_addr(VirtAddr::from(context.x[10])).unwrap();
+            let flag = context.x[11];
+            context.x[10] = 0;
         },
         SYS_MOUNT => {
-
+            let special_ptr = pmm.get_phys_addr(VirtAddr::from(context.x[10])).unwrap();
+            let dir_ptr = pmm.get_phys_addr(VirtAddr::from(context.x[11])).unwrap();
+            let fstype_ptr = pmm.get_phys_addr(VirtAddr::from(context.x[12])).unwrap();
+            let flag = context.x[13];
+            let data_ptr = context.x[14];
+            let special = get_string_from_raw(special_ptr);
+            let dir = get_string_from_raw(dir_ptr);
+            let fstype = get_string_from_raw(fstype_ptr);
+            // info!("special: {}, dir: {}, fstype: {}", special, dir, fstype);
+            // let special = get_string_from_raw(fstype_ptr);
+            context.x[10] = 0;
         },
         SYS_CHDIR => {
             let current_task_wrap = get_current_task().unwrap();
