@@ -3,7 +3,7 @@ use core::slice;
 use alloc::string::String;
 use riscv::register::satp;
 
-use crate::{console::puts, task::{STDOUT, STDIN, STDERR, kill_current_task, get_current_task, exec, clone_task, TASK_CONTROLLER_MANAGER, suspend_and_run_next, wait_task}, memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum, PhysAddr}}, sbi::shutdown, fs::{filetree::{FILETREE, FileTreeNode}, file}};
+use crate::{console::puts, task::{STDOUT, STDIN, STDERR, kill_current_task, get_current_task, exec, clone_task, TASK_CONTROLLER_MANAGER, suspend_and_run_next, wait_task}, memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum, PhysAddr}}, sbi::shutdown, fs::{filetree::{FILETREE, FileTreeNode}, file}, print_file_tree};
 
 use super::Context;
 
@@ -27,6 +27,16 @@ pub const SYS_CLONE: usize  = 220;
 pub const SYS_EXECVE:usize  = 221;
 pub const SYS_WAIT4: usize  = 260;
 
+bitflags! {
+    pub struct OpenFlags: u32 {
+        const RDONLY = 0;
+        const WRONLY = 1 << 0;
+        const RDWR = 1 << 1;
+        const CREATE = 1 << 6;
+        const TRUNC = 1 << 10;
+        const O_DIRECTORY = 1 << 21;
+    }
+}
 
 pub fn sys_write(fd: FileTreeNode, buf: usize, count: usize) -> usize {
     // 根据satp中的地址构建PageMapping 获取当前的映射方式
@@ -171,9 +181,9 @@ pub fn sys_call(context: &mut Context) {
             let flags = context.x[12];
             let open_mod = context.x[13];
 
+            let flags = OpenFlags::from_bits(flags as u32).unwrap();
+
             if let Ok(file) = FILETREE.lock().open(&filename) {
-                // let file = file.to_file();
-                // let 
                 let fd = current_task.alloc_fd();
                 current_task.fd_table[fd] = Some(file.clone());
                 context.x[10] = fd;
@@ -186,8 +196,6 @@ pub fn sys_call(context: &mut Context) {
             // 判断文件描述符是否存在
             if fd == 0xffffffffffffff9c {
                 if let Ok(file) = FILETREE.lock().open(&filename) {
-                    // let file = file.to_file();
-                    // let 
                     let fd = current_task.alloc_fd();
                     current_task.fd_table[fd] = Some(file.clone());
                     context.x[10] = fd;
@@ -196,7 +204,10 @@ pub fn sys_call(context: &mut Context) {
                     context.x[10] = result_code as usize;
                 }
             } else {
-                if let Some(tree_node) = current_task.fd_table[fd].clone() {
+                if let Some(mut tree_node) = current_task.fd_table[fd].clone() {
+                    if flags.contains(OpenFlags::CREATE) {
+                        tree_node.create(&filename);
+                    }
                     if let Ok(file) = tree_node.open(&filename) {
                         let fd = current_task.alloc_fd();
                         current_task.fd_table[fd] = Some(file.clone());

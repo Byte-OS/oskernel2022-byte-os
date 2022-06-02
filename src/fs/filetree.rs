@@ -29,6 +29,10 @@ impl FileTree {
         self.0.open(path)
     }
 
+    pub fn create(&mut self, filename: &str) {
+        self.0.create(filename)
+    }
+
     // 卸载设备
     pub fn umount(&self, device: &str, _flags: usize) {
 
@@ -65,6 +69,7 @@ impl FileTreeNode {
             size: 0                                 // 文件大小
         })))
     }
+    
     // 根据路径 获取文件节点
     pub fn open(&self, path: &str) -> Result<FileTreeNode, &str> {
         let mut tree_node = self.clone();
@@ -182,6 +187,19 @@ impl FileTreeNode {
     // 判断是否为设备文件
     pub fn is_device(&self) -> bool {
         self.0.borrow().file_type == FileType::Device
+    }
+
+    // 创建文件
+    pub fn create(&mut self, filename: &str) {
+        let new_node = FileTreeNode(Rc::new(RefCell::new(FileTreeNodeRaw {
+            filename:String::from(filename),        // 文件名
+            file_type: FileType::File,            // 文件数类型
+            parent: None,                           // 父节点
+            children: vec![],                       // 子节点
+            cluster: 0,                             // 开始簇
+            size: 0                                 // 文件大小
+        })));
+        self.add(new_node);
     }
 
     // 到文件
