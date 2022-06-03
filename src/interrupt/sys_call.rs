@@ -17,6 +17,7 @@ pub const SYS_MOUNT: usize  = 40;
 pub const SYS_CHDIR: usize  = 49;
 pub const SYS_OPENAT:usize  = 56;
 pub const SYS_CLOSE: usize  = 57;
+pub const SYS_PIPE2: usize  = 59;
 pub const SYS_READ:  usize  = 63;
 pub const SYS_WRITE: usize  = 64;
 pub const SYS_EXIT:  usize  = 93;
@@ -298,12 +299,22 @@ pub fn sys_call(context: &mut Context) {
                 context.x[10] = result_code as usize;
             }
         }
+        SYS_PIPE2 => {
+            let req_ptr = usize::from(pmm.get_phys_addr(VirtAddr::from(context.x[10])).unwrap()) as *mut u32;
+            let mut current_task = current_task_wrap.force_get();
+            let read_fd = current_task.alloc_fd();
+            let write_fd = current_task.alloc_fd();
+            unsafe {
+                req_ptr.write(read_fd as u32);
+                req_ptr.add(1).write(write_fd as u32);
+            };
+
+            // 创建成功
+            context.x[10] = 0;
+        },
         SYS_READ => {
             // 当前任务
-            let current_task_wrap = get_current_task().unwrap();
             let current_task = current_task_wrap.force_get();
-            // 内存映射管理器
-            let pmm = PageMapping::from(PhysPageNum(satp::read().bits()).to_addr());
             // 获取参数
             let fd = context.x[10];
             let mut buf = pmm.get_phys_addr(VirtAddr::from(context.x[11])).unwrap();

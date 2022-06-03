@@ -14,6 +14,7 @@ use crate::{memory::{page_table::{PageMappingManager, PTEFlags}, addr::{PAGE_SIZ
 
 use self::task_queue::load_next_task;
 
+pub mod pipe;
 pub mod task_queue;
 
 pub const STDIN: usize = 0;
