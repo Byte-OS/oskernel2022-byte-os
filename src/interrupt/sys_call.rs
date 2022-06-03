@@ -294,13 +294,14 @@ pub fn sys_call(context: &mut Context) {
             }
         }
         SYS_CLONE => {
-            let stack_addr = context.x[10];
-            let ptid = context.x[11];
-            let tls = context.x[12];
-            let ctid = context.x[13];
+            let flag = context.x[10];
+            let stack_addr = context.x[11];
+            let ptid = context.x[12];
+            let tls = context.x[13];
+            let ctid = context.x[14];
 
             let mut task = clone_task(&mut current_task_wrap.force_get());
-
+            task.context.x[2] = stack_addr;
             // context.x[10] = 0;
             task.context.x[10] = 0;
             context.x[10] = task.pid;
