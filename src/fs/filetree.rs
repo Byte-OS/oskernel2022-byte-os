@@ -74,7 +74,7 @@ impl FileTreeNode {
     pub fn new_pipe() -> Self {
         FileTreeNode(Rc::new(RefCell::new(FileTreeNodeRaw {
             filename:String::from("pipe"),        // 文件名
-            file_type: FileType::Device,            // 文件数类型
+            file_type: FileType::Pipline,            // 文件数类型
             parent: None,                           // 父节点
             children: vec![],                       // 子节点
             cluster: 0,                             // 作为pip buf index
