@@ -273,7 +273,7 @@ impl TaskController {
 
     pub fn init(&mut self) {
         self.context.sepc = 0x1000;
-        self.context.x[2] = 0xf0000ff0;
+        self.context.x[2] = 0xf0000fe0;
     }
 
     pub fn alloc_heap(&mut self, size: usize) -> usize {
@@ -361,9 +361,17 @@ pub fn exec(path: &str) {
                     VirtAddr::from(i*0x1000), PTEFlags::VRWX | PTEFlags::U);
             }
 
+            let stack_addr = PhysAddr::from(PhysPageNum::from(usize::from(phy_start) + pages));
+
+            // 添加参数
+            let argc_ptr = (usize::from(stack_addr) + 0xff0) as *mut usize;
+            unsafe {
+                argc_ptr.write(0);
+                argc_ptr.add(1).write(0);
+            };
+
             // 映射栈 
-            pmm.add_mapping(PhysAddr::from(PhysPageNum::from(usize::from(phy_start) + pages)), 
-                    VirtAddr::from(0xf0000000), PTEFlags::VRWX | PTEFlags::U);
+            pmm.add_mapping(stack_addr, VirtAddr::from(0xf0000000), PTEFlags::VRWX | PTEFlags::U);
 
             // 映射堆
             pmm.add_mapping(task_controller.heap.get_addr(), VirtAddr::from(0xf0010000), PTEFlags::VRWX | PTEFlags::U);
