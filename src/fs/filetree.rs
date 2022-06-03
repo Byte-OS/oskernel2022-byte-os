@@ -5,7 +5,7 @@ use alloc::{string::{String, ToString}, vec::Vec, sync::Arc, rc::Rc};
 
 use crate::sync::mutex::Mutex;
 
-use super::file::{FileItem, FileType};
+use super::file::{FileItem, FileType, self};
 
 pub struct FileTree(FileTreeNode);
 
@@ -166,8 +166,14 @@ impl FileTreeNode {
     // 添加节点
     pub fn add(&self, node: FileTreeNode) {
         let mut curr_node = self.0.borrow_mut();
+        // curr_node.parent = Some(self.clone()); //errcode
+        node.0.borrow_mut().parent = Some(self.clone());
         curr_node.children.push(node);
-        curr_node.parent = Some(self.clone());
+    }
+
+    // 删除子节点
+    pub fn delete(&self, filename: &str) {
+        self.0.borrow_mut().children.retain(|c| c.get_filename() != filename);
     }
 
     // 获取簇位置
@@ -191,6 +197,8 @@ impl FileTreeNode {
 
     // 创建文件
     pub fn create(&mut self, filename: &str) {
+        let str_split: Vec<&str> = filename.split("/").collect();
+        let filename = str_split[str_split.len() - 1];
         let new_node = FileTreeNode(Rc::new(RefCell::new(FileTreeNodeRaw {
             filename:String::from(filename),        // 文件名
             file_type: FileType::File,            // 文件数类型

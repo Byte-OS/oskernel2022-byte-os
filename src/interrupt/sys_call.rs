@@ -1,16 +1,17 @@
-use core::slice;
+use core::{slice, result};
 
-use alloc::string::String;
+use alloc::{string::String, vec::Vec};
 use riscv::register::satp;
 
 use crate::{console::puts, task::{kill_current_task, get_current_task, exec, clone_task, TASK_CONTROLLER_MANAGER, suspend_and_run_next, wait_task}, memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum, PhysAddr}}, sbi::shutdown, fs::{filetree::{FILETREE, FileTreeNode}, file, self}, print_file_tree, interrupt::{timer::get_time_ms, TICKS}};
 
-use super::{Context,  timer::TimeSpec};
+use super::{Context,  timer::{TimeSpec, TMS}};
 
 pub const SYS_GETCWD:usize  = 17;
 pub const SYS_DUP: usize    = 23;
 pub const SYS_DUP3: usize   = 24;
 pub const SYS_MKDIRAT:usize = 34;
+pub const SYS_UNLINKAT:usize= 35;
 pub const SYS_UMOUNT2: usize= 39;
 pub const SYS_MOUNT: usize  = 40;
 pub const SYS_CHDIR: usize  = 49;
@@ -21,6 +22,7 @@ pub const SYS_WRITE: usize  = 64;
 pub const SYS_EXIT:  usize  = 93;
 pub const SYS_NANOSLEEP: usize = 101;
 pub const SYS_SCHED_YIELD: usize = 124;
+pub const SYS_TIMES: usize  = 153;
 pub const SYS_UNAME: usize  = 160;
 pub const SYS_GETTIMEOFDAY: usize= 169;
 pub const SYS_GETPID:usize  = 172;
@@ -169,6 +171,42 @@ pub fn sys_call(context: &mut Context) {
                 }
             };
         },
+        SYS_UNLINKAT => {
+            let mut current_task = current_task_wrap.force_get();
+            let fd = context.x[10];
+            let filename = pmm.get_phys_addr(VirtAddr::from(context.x[11])).unwrap();
+            let filename = get_string_from_raw(filename);
+            let flags = context.x[12];
+
+            // 判断文件描述符是否存在
+            if fd == 0xffffffffffffff9c {
+                if let Ok(node) = FILETREE.force_get().open(&filename) {
+                    let node_name = node.get_filename();
+
+                    let parent = node.get_parent().clone().unwrap();
+                    parent.delete(&node_name);
+                    context.x[10] = 0;
+                } else {
+                    context.x[10] = -1 as isize as usize;
+                }
+            } else {
+                if let Some(tree_node) = current_task.fd_table[fd].clone() {
+                    if let Ok(node) = tree_node.open(&filename) {
+                        let node_name = node.get_filename();
+    
+                        let parent = node.get_parent().clone().unwrap();
+                        parent.delete(&node_name);
+                        context.x[10] = 0;
+                    } else {
+                        context.x[10] = -1 as isize as usize;
+                    }
+                } else {
+                    context.x[10] = -1 as isize as usize;
+                }
+            };
+
+            
+        },
         SYS_UMOUNT2 => {
             let special_ptr = pmm.get_phys_addr(VirtAddr::from(context.x[10])).unwrap();
             let flag = context.x[11];
@@ -216,18 +254,11 @@ pub fn sys_call(context: &mut Context) {
 
             let flags = OpenFlags::from_bits(flags as u32).unwrap();
 
-            if let Ok(file) = FILETREE.lock().open(&filename) {
-                let fd = current_task.alloc_fd();
-                current_task.fd_table[fd] = Some(file.clone());
-                context.x[10] = fd;
-            } else {
-                let result_code: isize = -1;
-                context.x[10] = result_code as usize;
-            }
-
-
             // 判断文件描述符是否存在
             if fd == 0xffffffffffffff9c {
+                if flags.contains(OpenFlags::CREATE) {
+                    FILETREE.lock().open("/").unwrap().create(&filename);
+                }
                 if let Ok(file) = FILETREE.lock().open(&filename) {
                     let fd = current_task.alloc_fd();
                     current_task.fd_table[fd] = Some(file.clone());
@@ -313,6 +344,7 @@ pub fn sys_call(context: &mut Context) {
                 if remain_ticks <= unsafe {TICKS} {
                     context.x[10] = 0;
                 } else {
+                    // 减少spec进行重复请求 然后切换任务
                     context.sepc = context.sepc - 4;
                     suspend_and_run_next();
                 }
@@ -322,13 +354,17 @@ pub fn sys_call(context: &mut Context) {
                 let remain_ticks = wake_ticks + unsafe {TICKS as u64};
 
                 rem.tv_nsec = - (remain_ticks as i64);
-                // 减少spec进行重复请求
+                // 减少spec进行重复请求 然后切换任务
                 context.sepc = context.sepc - 4;
                 suspend_and_run_next();
             }
         },
         SYS_SCHED_YIELD => {
             suspend_and_run_next();
+        },
+        SYS_TIMES => {
+            let tms = usize::from(pmm.get_phys_addr(VirtAddr::from(context.x[10])).unwrap()) as *mut TMS;
+            let tms = unsafe { tms.as_mut().unwrap() };
         },
         SYS_UNAME => {
             let sys_info = usize::from(pmm.get_phys_addr(VirtAddr::from(context.x[10])).unwrap()) as *mut UTSname;
@@ -344,7 +380,6 @@ pub fn sys_call(context: &mut Context) {
         SYS_GETTIMEOFDAY => {
             let timespec = usize::from(pmm.get_phys_addr(VirtAddr::from(context.x[10])).unwrap()) as *mut TimeSpec;
             unsafe { timespec.as_mut().unwrap().get_now() };
-            // info!("ms: {}", get_time_ms());
             context.x[10] = 0;
         },
         SYS_GETPID => {

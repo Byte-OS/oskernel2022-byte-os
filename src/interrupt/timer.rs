@@ -21,6 +21,18 @@ pub struct TimeSpec {
     pub tv_nsec: i64       /* 纳秒, 范围在0~999999999 */
 }
 
+// tms_utime记录的是进程执行用户代码的时间.
+// tms_stime记录的是进程执行内核代码的时间.
+// tms_cutime记录的是子进程执行用户代码的时间.
+// tms_ustime记录的是子进程执行内核代码的时间.
+pub struct TMS
+{                     
+	tms_utime: u64, 
+	tms_stime: u64,
+	tms_cutime: u64,
+	tms_cstime: u64
+}
+
 impl TimeSpec {
     pub fn get_now(&mut self) {
         let ms = get_time_ms();
