@@ -3,7 +3,7 @@ use core::slice;
 use alloc::string::String;
 use riscv::register::satp;
 
-use crate::{console::puts, task::{kill_current_task, get_current_task, exec, clone_task, TASK_CONTROLLER_MANAGER, suspend_and_run_next, wait_task}, memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum, PhysAddr}}, sbi::shutdown, fs::{filetree::{FILETREE, FileTreeNode}, file, self}, print_file_tree, interrupt::timer::get_time_ms};
+use crate::{console::puts, task::{kill_current_task, get_current_task, exec, clone_task, TASK_CONTROLLER_MANAGER, suspend_and_run_next, wait_task}, memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum, PhysAddr}}, sbi::shutdown, fs::{filetree::{FILETREE, FileTreeNode}, file, self}, print_file_tree, interrupt::{timer::get_time_ms, TICKS}};
 
 use super::{Context,  timer::TimeSpec};
 
@@ -19,6 +19,7 @@ pub const SYS_CLOSE: usize  = 57;
 pub const SYS_READ:  usize  = 63;
 pub const SYS_WRITE: usize  = 64;
 pub const SYS_EXIT:  usize  = 93;
+pub const SYS_NANOSLEEP: usize = 101;
 pub const SYS_SCHED_YIELD: usize = 124;
 pub const SYS_UNAME: usize  = 160;
 pub const SYS_GETTIMEOFDAY: usize= 169;
@@ -300,6 +301,31 @@ pub fn sys_call(context: &mut Context) {
         },
         SYS_EXIT => {
             kill_current_task();
+        },
+        SYS_NANOSLEEP => {
+            let req_ptr = usize::from(pmm.get_phys_addr(VirtAddr::from(context.x[10])).unwrap()) as *mut TimeSpec;
+            let req = unsafe { req_ptr.as_mut().unwrap() };
+            let rem_ptr = usize::from(pmm.get_phys_addr(VirtAddr::from(context.x[10])).unwrap()) as *mut TimeSpec;
+            let rem = unsafe { rem_ptr.as_mut().unwrap() };
+            // 如果 nsec < 0则此任务已被处理 nsec = - remain_ticks
+            if rem.tv_nsec < 0 {
+                let remain_ticks = (-rem.tv_nsec) as usize;
+                if remain_ticks <= unsafe {TICKS} {
+                    context.x[10] = 0;
+                } else {
+                    context.sepc = context.sepc - 4;
+                    suspend_and_run_next();
+                }
+            } else {
+                // 1秒100个TICKS  1ns = 1/1000ms = 1/10000TICKS
+                let wake_ticks = req.tv_sec * 100 + req.tv_nsec as u64 / 10000;
+                let remain_ticks = wake_ticks + unsafe {TICKS as u64};
+
+                rem.tv_nsec = - (remain_ticks as i64);
+                // 减少spec进行重复请求
+                context.sepc = context.sepc - 4;
+                suspend_and_run_next();
+            }
         },
         SYS_SCHED_YIELD => {
             suspend_and_run_next();
