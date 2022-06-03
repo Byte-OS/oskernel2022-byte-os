@@ -73,11 +73,11 @@ impl FileTreeNode {
     // 创建新的管道
     pub fn new_pipe() -> Self {
         FileTreeNode(Rc::new(RefCell::new(FileTreeNodeRaw {
-            filename:String::from("pip"),        // 文件名
+            filename:String::from("pipe"),        // 文件名
             file_type: FileType::Device,            // 文件数类型
             parent: None,                           // 父节点
             children: vec![],                       // 子节点
-            cluster: 0,                             // 开始簇
+            cluster: 0,                             // 作为pip buf index
             size: 0                                 // 文件大小
         })))
     }
