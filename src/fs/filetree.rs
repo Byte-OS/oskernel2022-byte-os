@@ -70,6 +70,18 @@ impl FileTreeNode {
         })))
     }
     
+    // 创建新的管道
+    pub fn new_pipe() -> Self {
+        FileTreeNode(Rc::new(RefCell::new(FileTreeNodeRaw {
+            filename:String::from("pip"),        // 文件名
+            file_type: FileType::Device,            // 文件数类型
+            parent: None,                           // 父节点
+            children: vec![],                       // 子节点
+            cluster: 0,                             // 开始簇
+            size: 0                                 // 文件大小
+        })))
+    }
+
     // 根据路径 获取文件节点
     pub fn open(&self, path: &str) -> Result<FileTreeNode, &str> {
         let mut tree_node = self.clone();

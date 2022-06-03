@@ -416,6 +416,7 @@ pub fn clone_task(task_controller: &mut TaskController) -> TaskController {
     task.context.clone_from(&mut task_controller.context);
     task.entry_point = task_controller.entry_point;
     task.ppid = task_controller.pid;
+    task.fd_table = task_controller.fd_table.clone();
 
     let start_addr: PhysAddr = task_controller.pmm.get_phys_addr(VirtAddr::from(0x0)).unwrap();
     let stack_addr: PhysAddr = task_controller.pmm.get_phys_addr(VirtAddr::from(0xf0000000)).unwrap();
