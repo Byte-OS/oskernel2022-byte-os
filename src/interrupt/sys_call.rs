@@ -358,14 +358,46 @@ pub fn sys_call() {
             if let Some(file_tree_node) = current_task.fd_table[fd].clone() {
                 match &mut file_tree_node.lock().target {
                     FileDescEnum::File(file_tree_node) => {
+                        // 添加 . 和 ..
+                        {
+                            let sub_node_name = ".";
+                            let dirent = unsafe { (buf_ptr as *mut Dirent).as_mut().unwrap() };
+                            // 计算大小保证内存对齐
+                            let node_size = ((18 + sub_node_name.len() as u16 + 1 + 15) / 16) * 16;
+                            dirent.d_ino = 0;
+                            dirent.d_off = 0;
+                            dirent.d_reclen = node_size;
+                            dirent.d_type = 0;
+                            let buf_str = unsafe {
+                                slice::from_raw_parts_mut(&mut dirent.d_name_start as *mut u8, (node_size - 18) as usize)
+                            };
+                            write_string_to_raw(buf_str, sub_node_name);
+                            buf_ptr = buf_ptr + dirent.d_reclen as usize;
+                        }
+                        {
+                            let sub_node_name = "..";
+                            let dirent = unsafe { (buf_ptr as *mut Dirent).as_mut().unwrap() };
+                            // 计算大小保证内存对齐
+                            let node_size = ((18 + sub_node_name.len() as u16 + 1 + 15) / 16) * 16;
+                            dirent.d_ino = 0;
+                            dirent.d_off = 0;
+                            dirent.d_reclen = node_size;
+                            dirent.d_type = 0;
+                            let buf_str = unsafe {
+                                slice::from_raw_parts_mut(&mut dirent.d_name_start as *mut u8, (node_size - 18) as usize)
+                            };
+                            write_string_to_raw(buf_str, sub_node_name);
+                            buf_ptr = buf_ptr + dirent.d_reclen as usize;
+                        }
+                        // 添加目录中的其他文件
                         let sub_nodes = file_tree_node.get_children();
                         for i in 0..sub_nodes.len() {
                             let sub_node_name = sub_nodes[i].get_filename();
                             let dirent = unsafe { (buf_ptr as *mut Dirent).as_mut().unwrap() };
                             // 计算大小保证内存对齐
                             let node_size = ((18 + sub_node_name.len() as u16 + 1 + 15) / 16) * 16;
-                            dirent.d_ino = i as u64;
-                            dirent.d_off = i as u64;
+                            dirent.d_ino = (i+2) as u64;
+                            dirent.d_off = (i+2) as u64;
                             dirent.d_reclen = node_size;
                             dirent.d_type = 0;
                             let buf_str = unsafe {
