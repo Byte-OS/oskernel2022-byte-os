@@ -18,6 +18,7 @@ pub const SYS_CHDIR: usize  = 49;
 pub const SYS_OPENAT:usize  = 56;
 pub const SYS_CLOSE: usize  = 57;
 pub const SYS_PIPE2: usize  = 59;
+pub const SYS_GETDENTS:usize= 61;
 pub const SYS_READ:  usize  = 63;
 pub const SYS_WRITE: usize  = 64;
 pub const SYS_EXIT:  usize  = 93;
@@ -51,6 +52,15 @@ pub struct UTSname  {
     version: [u8;65],
     machine: [u8;65],
     domainname: [u8;65],
+}
+
+#[repr(C)]
+struct Dirent {
+    d_ino: u64,	// 索引结点号
+    d_off: u64,	// 到下一个dirent的偏移
+    d_reclen: u16,	// 当前dirent的长度
+    d_type: u8,	// 文件类型
+    d_name_start: u8	//文件名
 }
 
 pub fn sys_write(fd: FileTreeNode, buf: usize, count: usize) -> usize {
@@ -105,6 +115,8 @@ pub fn sys_call(context: &mut Context) {
     let current_task_wrap = get_current_task().unwrap();
     let mut current_task = current_task_wrap.force_get();
     let context: &mut Context = &mut current_task.context;
+    // 重新设置current_task 前一个current_task所有权转移
+    let mut current_task = current_task_wrap.force_get();
     let pmm = PageMapping::from(PhysPageNum(satp::read().bits()).to_addr());
     context.sepc = context.sepc + 4;
     // a7(x17) 作为调用号
@@ -311,6 +323,32 @@ pub fn sys_call(context: &mut Context) {
 
             // 创建成功
             context.x[10] = 0;
+        },
+        SYS_GETDENTS => {
+            // 获取参数
+            let fd = context.x[10];
+            let mut buf_ptr = usize::from(pmm.get_phys_addr(VirtAddr::from(context.x[11])).unwrap());
+            if let Some(file_tree_node) = current_task.fd_table[fd].clone() {
+                let sub_nodes = file_tree_node.get_children();
+                for i in 0..sub_nodes.len() {
+                    let sub_node_name = sub_nodes[i].get_filename();
+                    let dirent = unsafe { (buf_ptr as *mut Dirent).as_mut().unwrap() };
+                    let node_size = ((18 + sub_node_name.len() as u16 + 1 + 15) / 16) * 16;
+                    dirent.d_ino = i as u64;
+                    dirent.d_off = i as u64;
+                    dirent.d_reclen = node_size;
+                    dirent.d_type = 0;
+                    let buf_str = unsafe {
+                        slice::from_raw_parts_mut(&mut dirent.d_name_start as *mut u8, (node_size - 18) as usize)
+                    };
+                    write_string_to_raw(buf_str, &sub_node_name);
+                    buf_ptr = buf_ptr + dirent.d_reclen as usize;
+                }
+                context.x[10] = 0;
+            } else {
+                let result_code: isize = -1;
+                context.x[10] = result_code as usize;
+            }
         },
         SYS_READ => {
             // 当前任务
