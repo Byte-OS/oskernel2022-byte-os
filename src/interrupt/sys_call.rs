@@ -405,6 +405,9 @@ pub fn sys_call() {
                             };
                             write_string_to_raw(buf_str, &sub_node_name);
                             buf_ptr = buf_ptr + dirent.d_reclen as usize;
+                            if buf_ptr - start_ptr >= 512 {
+                                break;
+                            }
                         }
                         context.x[10] = buf_ptr - start_ptr;
                     },
