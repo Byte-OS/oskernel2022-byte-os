@@ -459,7 +459,7 @@ pub fn sys_call() {
                         let tree_node = tree_node.0.borrow_mut();
                         info!("treenode size: {}", tree_node.size);
                         kstat_ptr.st_dev = 1;
-                        kstat_ptr.st_ino = tree_node.cluster as u64;
+                        kstat_ptr.st_ino = 1;
                         kstat_ptr.st_mode = 0;
                         kstat_ptr.st_nlink = tree_node.nlinkes as u32;
                         kstat_ptr.st_uid = 0;
