@@ -1,9 +1,9 @@
-use core::{slice, result};
+use core::slice;
 
-use alloc::{string::String, vec::Vec, sync::Arc};
+use alloc::{string::String, sync::Arc, vec::Vec};
 use riscv::register::satp;
 
-use crate::{console::puts, task::{kill_current_task, get_current_task, exec, clone_task, TASK_CONTROLLER_MANAGER, suspend_and_run_next, wait_task, FileDescEnum, FileDesc}, memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum, PhysAddr}}, sbi::shutdown, fs::{filetree::{FILETREE, FileTreeNode}, file, self}, print_file_tree, interrupt::{timer::get_time_ms, TICKS}, sync::mutex::Mutex};
+use crate::{console::puts, task::{kill_current_task, get_current_task, exec, clone_task, TASK_CONTROLLER_MANAGER, suspend_and_run_next, wait_task, FileDescEnum, FileDesc}, memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum, PhysAddr}}, fs::filetree::{FILETREE, FileTreeNode},  interrupt::TICKS, sync::mutex::Mutex};
 
 use super::{Context,  timer::{TimeSpec, TMS}};
 
@@ -111,7 +111,7 @@ pub fn write_string_to_raw(target: &mut [u8], str: &str) {
     target[index] = 0;
 }
 
-pub fn sys_call(context: &mut Context) {
+pub fn sys_call() {
     let current_task_wrap = get_current_task().unwrap();
     let mut current_task = current_task_wrap.force_get();
     let context: &mut Context = &mut current_task.context;
@@ -164,7 +164,6 @@ pub fn sys_call(context: &mut Context) {
             }
         }
         SYS_MKDIRAT => {
-            let pmm = PageMapping::from(PhysPageNum(satp::read().bits()).to_addr());
             let dirfd = context.x[10];
             let filename = pmm.get_phys_addr(VirtAddr::from(context.x[11])).unwrap();
             let filename = get_string_from_raw(filename);
@@ -175,7 +174,7 @@ pub fn sys_call(context: &mut Context) {
                 current_task.home_dir.mkdir(&filename, flags as u16);
                 context.x[10] = 0;
             } else {
-                if let Some(mut tree_node) = current_task.fd_table[dirfd].clone() {
+                if let Some(tree_node) = current_task.fd_table[dirfd].clone() {
                     match &mut tree_node.lock().target {
                         FileDescEnum::File(tree_node) => {
                             tree_node.mkdir(&filename, flags as u16);
@@ -185,8 +184,6 @@ pub fn sys_call(context: &mut Context) {
                             let result_code: isize = -1;
                             context.x[10] = result_code as usize;
                         }
-                        FileDescEnum::Pipe(_) => todo!(),
-                        FileDescEnum::Device(_) => todo!(),
                     }
                 } else {
                     let result_code: isize = -1;
@@ -195,11 +192,10 @@ pub fn sys_call(context: &mut Context) {
             };
         },
         SYS_UNLINKAT => {
-            let mut current_task = current_task_wrap.force_get();
             let fd = context.x[10];
             let filename = pmm.get_phys_addr(VirtAddr::from(context.x[11])).unwrap();
             let filename = get_string_from_raw(filename);
-            let flags = context.x[12];
+            let _flags = context.x[12];
 
             // 判断文件描述符是否存在
             if fd == 0xffffffffffffff9c {
@@ -239,19 +235,19 @@ pub fn sys_call(context: &mut Context) {
             
         },
         SYS_UMOUNT2 => {
-            let special_ptr = pmm.get_phys_addr(VirtAddr::from(context.x[10])).unwrap();
-            let flag = context.x[11];
+            let _special_ptr = pmm.get_phys_addr(VirtAddr::from(context.x[10])).unwrap();
+            let _flag = context.x[11];
             context.x[10] = 0;
         },
         SYS_MOUNT => {
             let special_ptr = pmm.get_phys_addr(VirtAddr::from(context.x[10])).unwrap();
             let dir_ptr = pmm.get_phys_addr(VirtAddr::from(context.x[11])).unwrap();
             let fstype_ptr = pmm.get_phys_addr(VirtAddr::from(context.x[12])).unwrap();
-            let flag = context.x[13];
-            let data_ptr = context.x[14];
-            let special = get_string_from_raw(special_ptr);
-            let dir = get_string_from_raw(dir_ptr);
-            let fstype = get_string_from_raw(fstype_ptr);
+            let _flag = context.x[13];
+            let _data_ptr = context.x[14];
+            let _special = get_string_from_raw(special_ptr);
+            let _dir = get_string_from_raw(dir_ptr);
+            let _fstype = get_string_from_raw(fstype_ptr);
             // info!("special: {}, dir: {}, fstype: {}", special, dir, fstype);
             // let special = get_string_from_raw(fstype_ptr);
             context.x[10] = 0;
@@ -281,7 +277,7 @@ pub fn sys_call(context: &mut Context) {
             let filename = pmm.get_phys_addr(VirtAddr::from(context.x[11])).unwrap();
             let filename = get_string_from_raw(filename);
             let flags = context.x[12];
-            let open_mod = context.x[13];
+            let _open_mod = context.x[13];
 
             let flags = OpenFlags::from_bits(flags as u32).unwrap();
 
@@ -299,7 +295,7 @@ pub fn sys_call(context: &mut Context) {
                     context.x[10] = result_code as usize;
                 }
             } else {
-                if let Some(mut tree_node) = current_task.fd_table[fd].clone() {
+                if let Some(tree_node) = current_task.fd_table[fd].clone() {
                     match &mut tree_node.lock().target {
                         FileDescEnum::File(tree_node) => {
                             if flags.contains(OpenFlags::CREATE) {
@@ -339,9 +335,12 @@ pub fn sys_call(context: &mut Context) {
         }
         SYS_PIPE2 => {
             let req_ptr = usize::from(pmm.get_phys_addr(VirtAddr::from(context.x[10])).unwrap()) as *mut u32;
-            let mut current_task = current_task_wrap.force_get();
+            let (read_pipe, write_pipe) = FileDesc::new_pipe();
             let read_fd = current_task.alloc_fd();
+            current_task.fd_table[read_fd] = Some(Arc::new(Mutex::new(read_pipe)));
             let write_fd = current_task.alloc_fd();
+            current_task.fd_table[write_fd] = Some(Arc::new(Mutex::new(write_pipe)));
+
             unsafe {
                 req_ptr.write(read_fd as u32);
                 req_ptr.add(1).write(write_fd as u32);
@@ -386,8 +385,6 @@ pub fn sys_call(context: &mut Context) {
             }
         },
         SYS_READ => {
-            // 当前任务
-            let current_task = current_task_wrap.force_get();
             // 获取参数
             let fd = context.x[10];
             let mut buf = pmm.get_phys_addr(VirtAddr::from(context.x[11])).unwrap();
@@ -399,6 +396,9 @@ pub fn sys_call(context: &mut Context) {
                     FileDescEnum::File(file_tree_node) => {
                         let size = file_tree_node.to_file().read_to(buf);
                         context.x[10] = size as usize;
+                    },
+                    FileDescEnum::Pipe(pipe) => {
+                        context.x[10] = pipe.read(buf);
                     },
                     _ => {
                         let result_code: isize = -1;
@@ -425,16 +425,16 @@ pub fn sys_call(context: &mut Context) {
                         context.x[10] = context.x[12];
                     },
                     FileDescEnum::Device(device_name) => {
-                        if device_name == "STDIN" {
-
-                        } else if device_name == "STDOUT" {
-                            puts(buf);
-                        } else if device_name == "STDERR" {
-                
-                        } else {
-                            info!("未找到设备!");
+                        match device_name as &str {
+                            "STDIN" => {},
+                            "STDOUT" => puts(buf),
+                            "STDERR" => {},
+                            _ => info!("未找到设备!")
                         }
-                    }
+                    },
+                    FileDescEnum::Pipe(pipe) => {
+                        context.x[10] = pipe.write(buf, count);
+                    },
                     _ => {
                         let result_code: isize = -1;
                         context.x[10] = result_code as usize;
@@ -477,8 +477,9 @@ pub fn sys_call(context: &mut Context) {
             suspend_and_run_next();
         },
         SYS_TIMES => {
+            // 等待添加
             let tms = usize::from(pmm.get_phys_addr(VirtAddr::from(context.x[10])).unwrap()) as *mut TMS;
-            let tms = unsafe { tms.as_mut().unwrap() };
+            let _tms = unsafe { tms.as_mut().unwrap() };
         },
         SYS_UNAME => {
             let sys_info = usize::from(pmm.get_phys_addr(VirtAddr::from(context.x[10])).unwrap()) as *mut UTSname;
@@ -518,11 +519,11 @@ pub fn sys_call(context: &mut Context) {
             }
         }
         SYS_CLONE => {
-            let flag = context.x[10];
+            let _flag = context.x[10];
             let stack_addr = context.x[11];
-            let ptid = context.x[12];
-            let tls = context.x[13];
-            let ctid = context.x[14];
+            let _ptid = context.x[12];
+            let _tls = context.x[13];
+            let _ctid = context.x[14];
 
 
             let mut task = clone_task(&mut current_task_wrap.force_get());

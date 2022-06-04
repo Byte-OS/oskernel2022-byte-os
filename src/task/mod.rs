@@ -58,6 +58,21 @@ impl FileDesc {
             writable: true
         }
     }
+
+    pub fn new_pipe() -> (Self, Self) {
+        let buf = PipeBuf::new();
+        let read_pipe = FileDesc {
+            target: FileDescEnum::Pipe(buf.clone()),
+            readable: true,
+            writable: false
+        };
+        let write_pipe = FileDesc {
+            target: FileDescEnum::Pipe(buf.clone()),
+            readable: false,
+            writable: true
+        };
+        (read_pipe, write_pipe)
+    }
 }
 
 pub struct PidGenerater(usize);

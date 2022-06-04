@@ -89,7 +89,7 @@ fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) -> us
         // 时钟中断
         Trap::Interrupt(Interrupt::SupervisorTimer) => timer::timer_handler(context),
         Trap::Exception(Exception::StorePageFault) => handle_page_fault(stval),
-        Trap::Exception(Exception::UserEnvCall) => sys_call::sys_call(context),
+        Trap::Exception(Exception::UserEnvCall) => sys_call::sys_call(),
         Trap::Exception(Exception::LoadPageFault) => {
             panic!("加载权限异常 地址:{:#x}", stval)
         },

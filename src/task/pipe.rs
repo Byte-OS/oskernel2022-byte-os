@@ -1,21 +1,25 @@
-use alloc::collections::VecDeque;
+use alloc::{collections::VecDeque, sync::Arc};
 
-pub struct PipeBuf (VecDeque<u8>);
+use crate::sync::mutex::Mutex;
+
+#[derive(Clone)]
+pub struct PipeBuf (Arc<Mutex<VecDeque<u8>>>);
 
 impl PipeBuf {
     // 创建pipeBuf
     pub fn new() -> Self {
-        PipeBuf(VecDeque::new())
+        PipeBuf(Arc::new(Mutex::new(VecDeque::new())))
     }
     // 读取字节
     pub fn read(&mut self, buf: &mut [u8]) -> usize {
         let mut read_index = 0;
+        let mut queue = self.0.lock();
         loop {
             if read_index >= buf.len() {
                 break;
             }
             
-            if let Some(char) = self.0.pop_front() {
+            if let Some(char) = queue.pop_front() {
                 buf[read_index] = char;
             } else {
                 break;
@@ -29,12 +33,13 @@ impl PipeBuf {
     // 写入字节
     pub fn write(&mut self, buf: &mut [u8], count: usize) -> usize {
         let mut write_index = 0;
+        let mut queue = self.0.lock();
         loop {
             if write_index >= buf.len() || write_index >= count {
                 break;
             }
             
-            self.0.push_back(buf[write_index]);
+            queue.push_back(buf[write_index]);
             write_index = write_index + 1;
         }
         write_index
