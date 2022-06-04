@@ -2,6 +2,7 @@ use core::{slice::from_raw_parts_mut, arch::global_asm};
 
 use alloc::collections::VecDeque;
 use alloc::slice;
+use alloc::string::String;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 use crate::fs::filetree::FileTreeNode;
@@ -12,6 +13,7 @@ use crate::memory::page_table::PagingMode;
 use crate::sync::mutex::Mutex;
 use crate::{memory::{page_table::{PageMappingManager, PTEFlags}, addr::{PAGE_SIZE, VirtAddr, PhysAddr, PhysPageNum}, page::PAGE_ALLOCATOR}, fs::filetree::FILETREE};
 
+use self::pipe::PipeBuf;
 use self::task_queue::load_next_task;
 
 pub mod pipe;
@@ -34,6 +36,28 @@ pub struct UserHeap {
     start: PhysPageNum, 
     pointer: usize,
     size: usize
+}
+
+pub enum FileDescEnum {
+    File(FileTreeNode),
+    Pipe(PipeBuf),
+    Device(String)
+}
+
+pub struct FileDesc {
+    target: FileDescEnum,
+    readable: bool,
+    writable: bool
+}
+
+impl FileDesc {
+    pub fn new(target: FileDescEnum) -> Self {
+        FileDesc {
+            target,
+            readable: true,
+            writable: true
+        }
+    }
 }
 
 pub struct PidGenerater(usize);
@@ -243,7 +267,8 @@ pub struct TaskController {
     pub heap: UserHeap,
     pub context: Context,
     pub home_dir: FileTreeNode,
-    pub fd_table: Vec<Option<FileTreeNode>>,
+    pub fd_table: Vec<Option<Arc<Mutex<FileDesc>>>>,
+    // pub fd_table: Vec<Option<FileTreeNode>>,
 }
 
 impl TaskController {
@@ -259,9 +284,9 @@ impl TaskController {
             home_dir: FILETREE.force_get().open("/").unwrap().clone(),
             context: Context::new(),
             fd_table: vec![
-                Some(FileTreeNode::new_device("STDIN")),
-                Some(FileTreeNode::new_device("STDOUT")),
-                Some(FileTreeNode::new_device("STDERR"))
+                Some(Arc::new(Mutex::new(FileDesc::new(FileDescEnum::Device(String::from("STDIN")))))),
+                Some(Arc::new(Mutex::new(FileDesc::new(FileDescEnum::Device(String::from("STDOUT")))))),
+                Some(Arc::new(Mutex::new(FileDesc::new(FileDescEnum::Device(String::from("STDERR"))))))
             ]
         };
         task.pmm.init_pte();

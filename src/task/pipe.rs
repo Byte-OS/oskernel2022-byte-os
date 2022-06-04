@@ -1,10 +1,12 @@
 use alloc::collections::VecDeque;
 
-pub struct PipeBuf {
-    buf: VecDeque<u8>
-}
+pub struct PipeBuf (VecDeque<u8>);
 
 impl PipeBuf {
+    // 创建pipeBuf
+    pub fn new() -> Self {
+        PipeBuf(VecDeque::new())
+    }
     // 读取字节
     pub fn read(&mut self, buf: &mut [u8]) -> usize {
         let mut read_index = 0;
@@ -13,7 +15,7 @@ impl PipeBuf {
                 break;
             }
             
-            if let Some(char) = self.buf.pop_front() {
+            if let Some(char) = self.0.pop_front() {
                 buf[read_index] = char;
             } else {
                 break;
@@ -32,7 +34,7 @@ impl PipeBuf {
                 break;
             }
             
-            self.buf.push_back(buf[write_index]);
+            self.0.push_back(buf[write_index]);
             write_index = write_index + 1;
         }
         write_index
