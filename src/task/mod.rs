@@ -144,8 +144,6 @@ impl TaskControllerManager {
                     // 加入等待进程
                     let ready_task = x.task.clone();
                     ready_task.lock().context.x[10] = self_task.pid;
-                    // info!("pid: {}", self_task.pid);
-                    // info!("exit_code: {}", self_task.context.x[10]);
                     unsafe {x.callback.write((self_task.context.x[10] << 8) as u16)};
                     self.ready_queue.push_back(ready_task);
                     wait_queue_index = i;

@@ -536,6 +536,7 @@ pub fn sys_call() {
             task.context.x[10] = 0;
             context.x[10] = task.pid;
             TASK_CONTROLLER_MANAGER.force_get().add(task);
+            suspend_and_run_next();
         }
         SYS_EXECVE => {
             let filename = pmm.get_phys_addr(VirtAddr::from(context.x[10])).unwrap();
