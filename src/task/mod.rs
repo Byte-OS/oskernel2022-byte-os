@@ -204,12 +204,14 @@ impl TaskControllerManager {
             self.wait_queue.push(wait_item);
             // 清除当前任务
             self.current = None;
+            self.switch_to_next();
         } else {
             let killed_task_wrap = self.killed_queue[killed_index].clone();
             let killed_task = killed_task_wrap.lock();
             self.killed_queue.remove(killed_index);
             
             unsafe {callback.write((killed_task.context.x[10] << 8) as u16)};
+            task.lock().context.x[10] = killed_task.pid;
         }
     }
 
@@ -441,7 +443,7 @@ pub fn get_current_task() ->Option<Arc<Mutex<TaskController>>> {
 
 pub fn wait_task(pid: usize, status: *mut u16, options: usize) {
     TASK_CONTROLLER_MANAGER.force_get().wait_pid(status, pid );
-    TASK_CONTROLLER_MANAGER.force_get().switch_to_next();
+    // TASK_CONTROLLER_MANAGER.force_get().switch_to_next();
 }
 
 pub fn kill_current_task() {
