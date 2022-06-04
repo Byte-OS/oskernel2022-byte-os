@@ -3,7 +3,7 @@ use core::slice;
 use alloc::{string::String, sync::Arc, vec::Vec};
 use riscv::register::satp;
 
-use crate::{console::puts, task::{kill_current_task, get_current_task, exec, clone_task, TASK_CONTROLLER_MANAGER, suspend_and_run_next, wait_task, FileDescEnum, FileDesc}, memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum, PhysAddr}}, fs::filetree::{FILETREE, FileTreeNode},  interrupt::TICKS, sync::mutex::Mutex};
+use crate::{console::puts, task::{kill_current_task, get_current_task, exec, clone_task, TASK_CONTROLLER_MANAGER, suspend_and_run_next, wait_task, FileDescEnum, FileDesc}, memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum, PhysAddr}}, fs::{filetree::{FILETREE, FileTreeNode}, file::Kstat},  interrupt::TICKS, sync::mutex::Mutex};
 
 use super::{Context,  timer::{TimeSpec, TMS}};
 
@@ -21,6 +21,7 @@ pub const SYS_PIPE2: usize  = 59;
 pub const SYS_GETDENTS:usize= 61;
 pub const SYS_READ:  usize  = 63;
 pub const SYS_WRITE: usize  = 64;
+pub const SYS_FSTAT: usize  = 80;
 pub const SYS_EXIT:  usize  = 93;
 pub const SYS_NANOSLEEP: usize = 101;
 pub const SYS_SCHED_YIELD: usize = 124;
@@ -445,6 +446,44 @@ pub fn sys_call() {
                 }
             } else {
                 context.x[10] = -1 as isize as usize;
+            }
+        },
+        SYS_FSTAT => {
+            let fd = context.x[10];
+            let kstat_ptr = unsafe {
+                (usize::from(pmm.get_phys_addr(VirtAddr::from(context.x[11])).unwrap()) as *mut Kstat).as_mut().unwrap()
+            };
+            if let Some(tree_node) = current_task.fd_table[fd].clone() {
+                match &mut tree_node.lock().target {
+                    FileDescEnum::File(tree_node) => {
+                        let tree_node = tree_node.0.borrow_mut();
+                        kstat_ptr.st_dev = 1;
+                        kstat_ptr.st_ino = tree_node.cluster as u64;
+                        kstat_ptr.st_mode = 0;
+                        kstat_ptr.st_nlink = tree_node.nlinkes as u32;
+                        kstat_ptr.st_uid = 0;
+                        kstat_ptr.st_gid = 0;
+                        kstat_ptr.st_rdev = 0;
+                        kstat_ptr.__pad = 0;
+                        kstat_ptr.st_size = tree_node.size as u64;
+                        kstat_ptr.st_blksize = 512;
+                        kstat_ptr.st_blocks = ((tree_node.size - 1 + 512) / 512) as u64;
+                        kstat_ptr.st_atime_sec = tree_node.st_atime_sec;
+                        kstat_ptr.st_atime_nsec = tree_node.st_atime_nsec;
+                        kstat_ptr.st_mtime_sec = tree_node.st_mtime_sec;
+                        kstat_ptr.st_mtime_nsec = tree_node.st_mtime_nsec;
+                        kstat_ptr.st_ctime_sec = tree_node.st_ctime_sec;
+                        kstat_ptr.st_ctime_nsec = tree_node.st_ctime_nsec;
+                        context.x[10] = 0;
+                    }, 
+                    _ => {
+                        let result_code: isize = -1;
+                        context.x[10] = result_code as usize;
+                    }
+                }
+            } else {
+                let result_code: isize = -1;
+                context.x[10] = result_code as usize;
             }
         },
         SYS_EXIT => {

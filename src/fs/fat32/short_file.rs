@@ -6,19 +6,19 @@ use super::{FAT32FileItemAttr, file_trait::FilesystemItemOperator};
 #[allow(dead_code)]
 #[repr(packed)]
 pub struct FAT32shortFileItem {
-    filename: [u8; 8],          // 文件名
-    ext: [u8; 3],               // 扩展名
-    attr: FAT32FileItemAttr,    // 属性
-    system_reserved: u8,        // 系统保留
-    create_time_10ms: u8,       // 创建时间的10毫秒位
-    create_time: u16,           // 创建时间
-    create_date: u16,           // 创建日期
-    last_access_date: u16,      // 最后访问日期
-    start_high: u16,            // 起始簇号的高16位
-    last_modify_time: u16,      // 最近修改时间
-    last_modify_date: u16,      // 最近修改日期
-    start_low: u16,             // 起始簇号的低16位
-    len: u32                    // 文件长度
+    pub filename: [u8; 8],          // 文件名
+    pub ext: [u8; 3],               // 扩展名
+    pub attr: FAT32FileItemAttr,    // 属性
+    pub system_reserved: u8,        // 系统保留
+    pub create_time_10ms: u8,       // 创建时间的10毫秒位
+    pub create_time: u16,           // 创建时间
+    pub create_date: u16,           // 创建日期
+    pub last_access_date: u16,      // 最后访问日期
+    pub start_high: u16,            // 起始簇号的高16位
+    pub last_modify_time: u16,      // 最近修改时间
+    pub last_modify_date: u16,      // 最近修改日期
+    pub start_low: u16,             // 起始簇号的低16位
+    pub len: u32                    // 文件长度
 }
 
 impl FilesystemItemOperator for FAT32shortFileItem {

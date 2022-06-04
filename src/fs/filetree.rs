@@ -18,7 +18,14 @@ lazy_static! {
             parent: None, 
             children: vec![],
             size: 0,
-            cluster: 2
+            cluster: 2,
+            nlinkes: 0,
+            st_atime_sec: 0,
+            st_atime_nsec: 0,
+            st_mtime_sec: 0,
+            st_mtime_nsec: 0,
+            st_ctime_sec: 0,
+            st_ctime_nsec: 0,
         }))
     ))));
 }
@@ -51,7 +58,14 @@ pub struct FileTreeNodeRaw {
     pub parent: Option<FileTreeNode>,   // 父节点
     pub children: Vec<FileTreeNode>,    // 子节点
     pub cluster: usize,                 // 开始簇
-    pub size: usize                     // 文件大小
+    pub size: usize,                     // 文件大小
+    pub nlinkes: u64,
+    pub st_atime_sec: u64,
+	pub st_atime_nsec: u64,
+	pub st_mtime_sec: u64,
+	pub st_mtime_nsec: u64,
+	pub st_ctime_sec: u64,
+	pub st_ctime_nsec: u64,
 }
 
 
@@ -66,7 +80,14 @@ impl FileTreeNode {
             parent: None,                           // 父节点
             children: vec![],                       // 子节点
             cluster: 0,                             // 开始簇
-            size: 0                                 // 文件大小
+            size: 0,                                // 文件大小
+            nlinkes: 0,
+            st_atime_sec: 0,
+            st_atime_nsec: 0,
+            st_mtime_sec: 0,
+            st_mtime_nsec: 0,
+            st_ctime_sec: 0,
+            st_ctime_nsec: 0,
         })))
     }
     
@@ -78,7 +99,14 @@ impl FileTreeNode {
             parent: None,                           // 父节点
             children: vec![],                       // 子节点
             cluster: 0,                             // 作为pip buf index
-            size: 0                                 // 文件大小
+            size: 0,                                // 文件大小
+            nlinkes: 0,
+            st_atime_sec: 0,
+            st_atime_nsec: 0,
+            st_mtime_sec: 0,
+            st_mtime_nsec: 0,
+            st_ctime_sec: 0,
+            st_ctime_nsec: 0,
         })))
     }
 
@@ -217,7 +245,14 @@ impl FileTreeNode {
             parent: None,                           // 父节点
             children: vec![],                       // 子节点
             cluster: 0,                             // 开始簇
-            size: 0                                 // 文件大小
+            size: 0,                                // 文件大小
+            nlinkes: 0,                             // link数量
+            st_atime_sec: 0,                        // 最后访问时间
+            st_atime_nsec: 0,
+            st_mtime_sec: 0,                        // 最后修改时间
+            st_mtime_nsec: 0,
+            st_ctime_sec: 0,                        // 最后修改文件状态时间
+            st_ctime_nsec: 0,
         })));
         self.add(new_node);
     }
@@ -240,7 +275,14 @@ impl FileTreeNode {
             parent: None,                           // 父节点
             children: vec![],                       // 子节点
             cluster: 0,                             // 开始簇
-            size: 0                                 // 文件大小
+            size: 0,                                // 文件大小
+            nlinkes: 0,
+            st_atime_sec: 0,
+            st_atime_nsec: 0,
+            st_mtime_sec: 0,
+            st_mtime_nsec: 0,
+            st_ctime_sec: 0,
+            st_ctime_nsec: 0,
         })));
         let mut curr_node = self.0.borrow_mut();
         curr_node.children.push(node);
