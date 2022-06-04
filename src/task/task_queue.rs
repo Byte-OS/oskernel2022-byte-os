@@ -6,8 +6,8 @@ use super::exec;
 
 lazy_static! {
     pub static ref TASK_QUEUE: Mutex<Vec<&'static str>> = Mutex::new(vec![
-        "getdents"
-        // "pipe",
+        "pipe", 
+        // "getdents",
         // "times","gettimeofday","uname","sleep", "unlink",
         // "umount", "mount", "waitpid","clone",
         // "dup","dup2","yield","fork","wait","exit",

@@ -333,6 +333,7 @@ pub fn sys_call(context: &mut Context) {
                 for i in 0..sub_nodes.len() {
                     let sub_node_name = sub_nodes[i].get_filename();
                     let dirent = unsafe { (buf_ptr as *mut Dirent).as_mut().unwrap() };
+                    // 计算大小保证内存对齐
                     let node_size = ((18 + sub_node_name.len() as u16 + 1 + 15) / 16) * 16;
                     dirent.d_ino = i as u64;
                     dirent.d_off = i as u64;

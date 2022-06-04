@@ -1,9 +1,5 @@
 close
 fstat
-getdents
 mmap
-munmapunlink
+munmap
 pipe
-
-sleep
-times
