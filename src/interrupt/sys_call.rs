@@ -457,6 +457,7 @@ pub fn sys_call() {
                 match &mut tree_node.lock().target {
                     FileDescEnum::File(tree_node) => {
                         let tree_node = tree_node.0.borrow_mut();
+                        info!("treenode size: {}", tree_node.size);
                         kstat_ptr.st_dev = 1;
                         kstat_ptr.st_ino = tree_node.cluster as u64;
                         kstat_ptr.st_mode = 0;

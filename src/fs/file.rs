@@ -14,6 +14,7 @@ pub enum FileType {
     None            // 空
 }
 
+#[repr(C)]
 pub struct Kstat {
 	pub st_dev: u64,
 	pub st_ino: u64,
