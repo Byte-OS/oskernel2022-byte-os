@@ -1,11 +1,11 @@
 
-use core::cell::RefCell;
+use core::{cell::RefCell, slice};
 
 use alloc::{string::{String, ToString}, vec::Vec, sync::Arc, rc::Rc};
 
-use crate::sync::mutex::Mutex;
+use crate::{sync::mutex::Mutex, device::BLK_CONTROL, memory::{page::PAGE_ALLOCATOR, addr::{PhysAddr, PAGE_SIZE}}};
 
-use super::file::{FileItem, FileType, self};
+use super::file::FileType;
 
 pub struct FileTree(FileTreeNode);
 
@@ -36,6 +36,7 @@ impl FileTree {
         self.0.open(path)
     }
 
+    // 创建文件
     pub fn create(&mut self, filename: &str) {
         self.0.create(filename)
     }
@@ -73,6 +74,7 @@ pub struct FileTreeNodeRaw {
 pub struct FileTreeNode(pub Rc<RefCell<FileTreeNodeRaw>>);
 
 impl FileTreeNode {
+    // 创建新设备
     pub fn new_device(filename: &str) -> Self {
         FileTreeNode(Rc::new(RefCell::new(FileTreeNodeRaw {
             filename:String::from(filename),        // 文件名
@@ -226,48 +228,96 @@ impl FileTreeNode {
         self.0.borrow_mut().size
     }
 
+    // 获取文件类型
     pub fn get_file_type(&self) -> FileType {
         self.0.borrow_mut().file_type
-    }
-
-    // 判断是否为设备文件
-    pub fn is_device(&self) -> bool {
-        self.0.borrow().file_type == FileType::Device
     }
 
     // 创建文件
     pub fn create(&mut self, filename: &str) {
         let str_split: Vec<&str> = filename.split("/").collect();
         let filename = str_split[str_split.len() - 1];
-        let new_node = FileTreeNode(Rc::new(RefCell::new(FileTreeNodeRaw {
-            filename:String::from(filename),        // 文件名
-            file_type: FileType::File,            // 文件数类型
-            parent: None,                           // 父节点
-            children: vec![],                       // 子节点
-            cluster: 0,                             // 开始簇
-            size: 0,                                // 文件大小
-            nlinkes: 0,                             // link数量
-            st_atime_sec: 0,                        // 最后访问时间
-            st_atime_nsec: 0,
-            st_mtime_sec: 0,                        // 最后修改时间
-            st_mtime_nsec: 0,
-            st_ctime_sec: 0,                        // 最后修改文件状态时间
-            st_ctime_nsec: 0,
-        })));
-        self.add(new_node);
+
+        if let Some(page_num) = PAGE_ALLOCATOR.lock().alloc() {
+            let addr = usize::from(PhysAddr::from(page_num));
+            // 清空页表
+            unsafe {
+                let temp_ref = slice::from_raw_parts_mut(addr as *mut u64, PAGE_SIZE / 8);
+                for i in 0..temp_ref.len() {
+                    temp_ref[i] = 0;
+                }
+            }
+            let new_node = FileTreeNode(Rc::new(RefCell::new(FileTreeNodeRaw {
+                filename:String::from(filename),        // 文件名
+                file_type: FileType::VirtFile,          // 文件数类型
+                parent: None,                           // 父节点
+                children: vec![],                       // 无需
+                cluster: addr, // 虚拟文件cluster指向申请到的页表内存地址 默认情况下支持一个页表
+                size: 0,                                // 文件大小
+                nlinkes: 1,                             // link数量
+                st_atime_sec: 0,                        // 最后访问时间
+                st_atime_nsec: 0,
+                st_mtime_sec: 0,                        // 最后修改时间
+                st_mtime_nsec: 0,
+                st_ctime_sec: 0,                        // 最后修改文件状态时间
+                st_ctime_nsec: 0,
+            })));
+            self.add(new_node);
+        } else {
+            error!("虚拟文件 已无页表可分配");
+        }
+
+        // 写入硬盘空间
+        // match self.get_file_type() {
+        //     FileType::Directory => {
+        //         // 申请cluster
+        //         unsafe {
+        //             let cluster = BLK_CONTROL.get_partition(0).lock().alloc_cluster();
+        //             match cluster {
+        //                 Some(cluster) => {info!("cluster: {}", cluster);}
+        //                 None => {panic!("已无空间");}
+        //             }
+        //         }
+        //     }
+        //     _ => {}
+        // }
     }
 
-    // 到文件
-    pub fn to_file(&self) -> FileItem {
-        FileItem { 
-            device_id: 0,
-            filename: self.get_filename(), 
-            start_cluster: self.get_cluster(), 
-            size: self.get_file_size(), 
-            flag: self.get_file_type()
+    // 读取文件内容
+    pub fn read(&self) -> Vec<u8> {
+        let mut file_vec = vec![0u8; self.get_file_size()];
+        unsafe {
+            BLK_CONTROL.get_partition(0).lock().read(self.get_cluster(), self.get_file_size(), &mut file_vec);
+        }
+        file_vec
+    }
+    
+    // 读取文件内容
+    pub fn read_to(&self, buf: &mut [u8]) -> usize  {
+        unsafe {
+            BLK_CONTROL.get_partition(0).lock().read(self.get_cluster(), self.get_file_size(), buf)
         }
     }
 
+    // 写入设备
+    pub fn write(&self, buf: &mut [u8]) -> usize {
+        match self.get_file_type() {
+            FileType::VirtFile => {
+                let target = unsafe {
+                    slice::from_raw_parts_mut(self.get_cluster() as *mut u8, PAGE_SIZE)
+                };
+                target[0..buf.len()].copy_from_slice(buf);
+                self.0.borrow_mut().size = buf.len();
+                buf.len()
+            }
+            _=> {
+                error!("暂未支持写入的文件格式");
+                0
+            }
+        }
+    }
+
+    // 创建文件夹
     pub fn mkdir(&mut self, filename: &str, flags: u16) {
         let node = FileTreeNode(Rc::new(RefCell::new(FileTreeNodeRaw {
             filename:String::from(filename),        // 文件名

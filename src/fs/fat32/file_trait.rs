@@ -1,6 +1,5 @@
 use alloc::string::String;
 
-use crate::fs::file::FileItem;
 
 use super::FAT32FileItemAttr;
 
@@ -10,10 +9,4 @@ pub trait FilesystemItemOperator {
     fn file_size(&self) -> usize;            // 获取文件大小
     fn start_cluster(&self) -> usize;        // 开始簇
     fn get_attr(&self) -> FAT32FileItemAttr;     // 文件属性
-}
-
-// 文件系统操作接口
-pub trait FilesystemOperator {
-    fn open(&self, filename: &str) -> FileItem;
-    fn write(&self, file: &FileItem);
 }

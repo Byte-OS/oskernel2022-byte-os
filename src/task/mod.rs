@@ -381,10 +381,8 @@ pub fn exec(path: &str) {
         // 初始化项目
         task_controller.init();
 
-        // 读取文件信息
-        let program = program.to_file();
         // 申请页表存储程序 申请多一页作为栈
-        let pages = (program.size - 1 + PAGE_SIZE) / PAGE_SIZE;
+        let pages = (program.get_file_size() - 1 + PAGE_SIZE) / PAGE_SIZE;
         if let Some(phy_start) = PAGE_ALLOCATOR.lock().alloc_more(pages + 1) {
             unsafe {
                 PAGE_ALLOCATOR.force_unlock()

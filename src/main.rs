@@ -104,7 +104,6 @@ pub extern "C" fn rust_main(hartid: usize, device_tree_paddr: usize) -> ! {
     // 初始化多任务
     task::init();
 
-    //
     // unsafe {
     //     loop {
     //         // 正常使用代码
@@ -120,7 +119,6 @@ pub extern "C" fn rust_main(hartid: usize, device_tree_paddr: usize) -> ! {
     //     }
     // }
 
-    
     // let mut words = String::new();
     // read_line_display(&mut words);
     // info!("I say {}", words);

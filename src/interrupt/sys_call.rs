@@ -3,7 +3,7 @@ use core::slice;
 use alloc::{string::String, sync::Arc, vec::Vec};
 use riscv::register::satp;
 
-use crate::{console::puts, task::{kill_current_task, get_current_task, exec, clone_task, TASK_CONTROLLER_MANAGER, suspend_and_run_next, wait_task, FileDescEnum, FileDesc}, memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum, PhysAddr}}, fs::{filetree::{FILETREE, FileTreeNode}, file::Kstat},  interrupt::TICKS, sync::mutex::Mutex};
+use crate::{console::puts, task::{kill_current_task, get_current_task, exec, clone_task, TASK_CONTROLLER_MANAGER, suspend_and_run_next, wait_task, FileDescEnum, FileDesc}, memory::{page_table::{PageMapping, PTEFlags}, addr::{VirtAddr, PhysPageNum, PhysAddr}}, fs::{filetree::{FILETREE, FileTreeNode}, file::{Kstat, FileType}},  interrupt::TICKS, sync::mutex::Mutex};
 
 use super::{Context,  timer::{TimeSpec, TMS}};
 
@@ -33,6 +33,8 @@ pub const SYS_GETPPID:usize = 173;
 pub const SYS_BRK:   usize  = 214;
 pub const SYS_CLONE: usize  = 220;
 pub const SYS_EXECVE:usize  = 221;
+pub const SYS_MMAP: usize   = 222;
+pub const SYS_MUNMAP:usize  = 215;
 pub const SYS_WAIT4: usize  = 260;
 
 bitflags! {
@@ -72,19 +74,23 @@ pub fn sys_write(fd: FileTreeNode, buf: usize, count: usize) -> usize {
     // 寻找物理地址
     let buf = unsafe {slice::from_raw_parts_mut(usize::from(buf) as *mut u8, count)};
     
-    if fd.is_device() {
-        let device_name = fd.get_filename();
-        if device_name == "STDIN" {
-
-        } else if device_name == "STDOUT" {
-            puts(buf);
-        } else if device_name == "STDERR" {
-
-        } else {
-            info!("未找到设备!");
+    match fd.get_file_type() {
+        FileType::Device => {
+            let device_name = fd.get_filename();
+            if device_name == "STDIN" {
+    
+            } else if device_name == "STDOUT" {
+                puts(buf);
+            } else if device_name == "STDERR" {
+    
+            } else {
+                info!("未找到设备!");
+            }
         }
-    } else {
-        info!("暂未找到中断地址");
+        FileType::VirtFile => {
+            fd.write(buf);
+        }
+        _ => info!("SYS_WRITE暂未找到设备")
     }
     count
 }
@@ -118,15 +124,11 @@ pub fn sys_call() {
     let context: &mut Context = &mut current_task.context;
     // 重新设置current_task 前一个current_task所有权转移
     let mut current_task = current_task_wrap.force_get();
-    let pmm = PageMapping::from(PhysPageNum(satp::read().bits()).to_addr());
+    let mut pmm = PageMapping::from(PhysPageNum(satp::read().bits()).to_addr());
     context.sepc = context.sepc + 4;
     // a7(x17) 作为调用号
     match context.x[17] {
         SYS_GETCWD => {
-            let current_task_wrap = get_current_task().unwrap();
-            let current_task = current_task_wrap.force_get();
-            // 内存映射管理器
-            let pmm = PageMapping::from(PhysPageNum(satp::read().bits()).to_addr());
             // 获取参数
             let mut buf = pmm.get_phys_addr(VirtAddr::from(context.x[10])).unwrap();
             let size = context.x[11];
@@ -431,7 +433,7 @@ pub fn sys_call() {
             if let Some(file_tree_node) = current_task.fd_table[fd].clone() {
                 match &mut file_tree_node.lock().target {
                     FileDescEnum::File(file_tree_node) => {
-                        let size = file_tree_node.to_file().read_to(buf);
+                        let size = file_tree_node.read_to(buf);
                         context.x[10] = size as usize;
                     },
                     FileDescEnum::Pipe(pipe) => {
@@ -622,6 +624,42 @@ pub fn sys_call() {
             exec(&filename);
             kill_current_task();
         }
+        SYS_MMAP => {
+            let start = context.x[10];
+            // let start = usize::from(pmm.get_phys_addr(VirtAddr::from(context.x[10])).unwrap());
+            let _len = context.x[11];
+            let _prot = context.x[12];
+            let _flags = context.x[13];
+            let fd = context.x[14];
+            let _offset = context.x[15];
+
+            if let Some(file_tree_node) = current_task.fd_table[fd].clone() {
+                match &mut file_tree_node.lock().target {
+                    FileDescEnum::File(file_tree_node) => {
+                        // 如果start为0 则分配空间 暂分配0xd0000000
+                        if start == 0 {
+                            // 添加映射
+                            pmm.add_mapping(PhysAddr::from(file_tree_node.get_cluster()), VirtAddr::from(0xd0000000), 
+                                PTEFlags::VRWX | PTEFlags::U);
+                            context.x[10] = 0xd0000000;
+                        } else {
+                            context.x[10] = 0;
+                        }
+                    },
+                    _ => {
+                        context.x[10] = -1 as isize as usize;
+                    }
+                }
+            } else {
+                context.x[10] = -1 as isize as usize;
+            }
+        }
+        SYS_MUNMAP => {
+            let start = context.x[10];
+            let _len = context.x[11];
+            pmm.remove_mapping(VirtAddr::from(start));
+            context.x[10] = 0;
+        }
         SYS_WAIT4 => {
             let pid = context.x[10];
             let ptr = usize::from(pmm.get_phys_addr(VirtAddr::from(context.x[11])).unwrap()) as *mut u16;
@@ -629,7 +667,7 @@ pub fn sys_call() {
             wait_task(pid, ptr, options);
         }
         _ => {
-            info!("未识别调用号 {}", context.x[17]);
+            warn!("未识别调用号 {}", context.x[17]);
         }
     }
 }

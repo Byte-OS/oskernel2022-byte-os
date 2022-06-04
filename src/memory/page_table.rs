@@ -161,6 +161,45 @@ impl PageMapping {
         }
     }
 
+    // 删除mapping
+    pub fn remove_mapping(&mut self, virt_addr: VirtAddr) {
+        // 如果没有pte则申请pte
+        if usize::from(self.0) == 0 {
+            return;
+        }
+
+        // 得到 列表中的项
+        let l2_pte_ptr = unsafe {
+            PageTableEntry::get_mut_ptr_from_phys(PhysAddr::from(self.0)).add(virt_addr.l2())
+        };
+        let mut l2_pte = unsafe { l2_pte_ptr.read() };
+
+        // 判断 是否是页表项 如果是则申请一个页防止其内容
+        if !l2_pte.is_valid_pd() {
+            // 创建一个页表放置二级页目录 并写入一级页目录的项中
+            l2_pte = PageTableEntry::new(PhysPageNum::from(PhysAddr::from(self.alloc_pte(1).unwrap())), PTEFlags::V);
+            // 写入列表
+            unsafe {l2_pte_ptr.write(l2_pte)};
+        }
+
+        let l1_pte_ptr = unsafe {
+            PageTableEntry::get_mut_ptr_from_phys(PhysAddr::from(l2_pte.ppn())).add(virt_addr.l1())
+        };
+        let mut l1_pte = unsafe {l1_pte_ptr.read()};
+
+        // 判断 是否有指向下一级的页表
+        if !l1_pte.is_valid_pd(){
+            l1_pte = PageTableEntry::new(PhysPageNum::from(PhysAddr::from(self.alloc_pte(0).unwrap())), PTEFlags::V);
+            unsafe{l1_pte_ptr.write(l1_pte)};
+        }
+        
+        // 写入映射项
+        unsafe {
+            PageTableEntry::get_mut_ptr_from_phys(PhysAddr::from(l1_pte.ppn()))
+                .add(virt_addr.l0()).write(PageTableEntry::new(PhysPageNum::from(PhysPageNum::from(virt_addr.l0() << 18)), PTEFlags::VRWX));
+        }
+    }
+
     // 获取物理地址
     pub fn get_phys_addr(&self, virt_addr: VirtAddr) -> Option<PhysAddr> {
         // 如果没有pte则申请pte
@@ -234,7 +273,11 @@ impl PageMappingManager {
 
     // 添加mapping
     pub fn add_mapping(&mut self, phy_addr: PhysAddr, virt_addr: VirtAddr, flags:PTEFlags) {
-        self.pte.add_mapping(phy_addr, virt_addr, flags);
+        self.pte.add_mapping(phy_addr, virt_addr, flags)
+    }
+
+    pub fn remove_mapping(&mut self, virt_addr: VirtAddr) {
+        self.pte.remove_mapping(virt_addr)
     }
 
     // 获取物理地址

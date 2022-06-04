@@ -1,4 +1,4 @@
-use core::{cell::RefCell, mem::size_of};
+use core::{cell::RefCell, mem::size_of, slice};
 
 use alloc::{sync::Arc, rc::Rc, string::String, boxed::Box};
 
@@ -6,7 +6,7 @@ use crate::{sync::mutex::Mutex, device::{SECTOR_SIZE, BLK_CONTROL, BlockDevice},
 
 use self::{fat32bpb::FAT32BPB, file_trait::FilesystemItemOperator};
 
-use super::{Partition, file::{FileItem, FileType}, filetree::{FILETREE, FileTreeNode}};
+use super::{Partition, file::FileType, filetree::{FILETREE, FileTreeNode}};
 
 pub mod fat32bpb;
 pub mod short_file;
@@ -33,6 +33,7 @@ pub struct FAT32 {
 }
 
 impl Partition for FAT32 {
+    // 读扇区
     fn read_sector(&self, sector_offset: usize, buf: &mut [u8]) {
         let mut output = vec![0; SECTOR_SIZE];
         // let t = self.device.lock();
@@ -41,24 +42,14 @@ impl Partition for FAT32 {
         buf.copy_from_slice(&output[..buf.len()]);
     }
 
+    // 写扇区
     fn write_sector(&self, sector_offset: usize, buf: &mut [u8]) {
         let mut input = vec![0; SECTOR_SIZE];
         input.copy_from_slice(&buf);
         self.device.lock().write_block(sector_offset, &mut input);
     }
 
-    fn open_file(&self, _filename: &str) -> Result<FileItem, core::fmt::Error> {
-        todo!()
-    }
-
-    fn read_file(&self, _file: FileItem, _buf: &mut [u8]) -> Result<(), core::fmt::Error> {
-        todo!()
-    }
-
-    fn write_file(&self, _filename: &str, _file: &FileItem) -> Result<(), core::fmt::Error> {
-        todo!()
-    }
-
+    // 挂载分区到路径
     fn mount(&self, prefix: &str) {
         // 获取文件树前缀节点
         let filetree = FILETREE.lock();
@@ -107,6 +98,7 @@ impl FAT32 {
         }
     }
 
+    // 从内存中读取文件
     pub fn read_file_from(&self, buf: &[u8]) -> Option<FileTreeNode> {
         if buf[11] == 0 {
             return None;
@@ -157,6 +149,7 @@ impl FAT32 {
         None
     }
 
+    // 获取下一个cluster
     pub fn get_next_cluster(&self, curr_cluster: usize) -> usize {
         let mut buf = vec![0u8; SECTOR_SIZE];
         let sector_offset = curr_cluster / (SECTOR_SIZE / 4);
@@ -188,6 +181,8 @@ impl FAT32 {
     // 输出文件系统信息
     pub fn info(&self) {
         info!("每簇扇区数: {}", self.bpb.sectors_per_cluster);
+        info!("FAT表地址: {:#x}", self.bpb.reserved_sector as usize * 512);
+        info!("FAT表大小: {:#x}", self.bpb.sectors_per_fat as usize * 512);
     }
 
     // 读取文件夹
@@ -228,17 +223,58 @@ impl FAT32 {
             cluster = self.get_next_cluster(cluster);
         }
     }
+
+    // 获取最后一个fat
+    pub fn get_last_cluster(&self, start_cluster: usize) -> usize {
+        let mut cluster = start_cluster;
+        loop {
+            let next_cluster = self.get_next_cluster(cluster);
+            if cluster >= 0x0fff_ffef {
+                break;
+            }
+        }
+        cluster
+    }
+
+    // 改变fat表中的cluster指向
+    pub fn change_fat_cluster(&self, cluster: usize, value: usize) {
+        let mut buf = vec![0u8; SECTOR_SIZE];
+        let sector_offset = cluster / (SECTOR_SIZE / 4);
+        let byte_offset = (cluster % (SECTOR_SIZE / 4)) * 4;
+
+        self.read_sector(self.bpb.reserved_sector as usize + sector_offset, &mut buf);
+        buf[byte_offset..byte_offset + 4].clone_from_slice(&u32::to_ne_bytes(value as u32));
+    }
+
+    // 申请cluster
+    pub fn alloc_cluster(&self) -> Option<usize> {
+        let mut buf = vec![0u32; SECTOR_SIZE / 4];
+
+        for i in 0..self.bpb.sectors_per_fat as usize {
+            // 读取fat表到buf中
+            self.read_sector(self.bpb.reserved_sector as usize + i, unsafe {
+                slice::from_raw_parts_mut(buf.as_mut_ptr() as *mut u8, SECTOR_SIZE)
+            });
+            // 遍历扇区中的cluster
+            for offset in 0..buf.len() {
+                if buf[offset] == 0 {
+                    return Some(i * (SECTOR_SIZE / 4) + offset + 2);
+                }
+            }
+        }
+        None
+    }
 }
 
-
+// 初始化分区
 pub fn init() {
     // let mut buf = vec![0u8; 64];
     unsafe {
         for partition in BLK_CONTROL.get_partitions() {
             let fat32 = partition.lock();
+            // 输出分区信息
             fat32.info();
-            // info!("数据扇区地址: {:#x}", fat32.bpb.data_sector() << 9);
-            // fat32.bpb.info();
+            // 挂载分区
             fat32.mount("/");
         }        
     }
