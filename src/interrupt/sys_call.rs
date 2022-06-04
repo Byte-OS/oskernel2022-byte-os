@@ -353,7 +353,8 @@ pub fn sys_call() {
         SYS_GETDENTS => {
             // 获取参数
             let fd = context.x[10];
-            let mut buf_ptr = usize::from(pmm.get_phys_addr(VirtAddr::from(context.x[11])).unwrap());
+            let start_ptr = usize::from(pmm.get_phys_addr(VirtAddr::from(context.x[11])).unwrap());
+            let mut buf_ptr = start_ptr;
             if let Some(file_tree_node) = current_task.fd_table[fd].clone() {
                 match &mut file_tree_node.lock().target {
                     FileDescEnum::File(file_tree_node) => {
@@ -373,7 +374,7 @@ pub fn sys_call() {
                             write_string_to_raw(buf_str, &sub_node_name);
                             buf_ptr = buf_ptr + dirent.d_reclen as usize;
                         }
-                        context.x[10] = 0;
+                        context.x[10] = buf_ptr - start_ptr;
                     },
                     _ => {
                         let result_code: isize = -1;
@@ -457,7 +458,6 @@ pub fn sys_call() {
                 match &mut tree_node.lock().target {
                     FileDescEnum::File(tree_node) => {
                         let tree_node = tree_node.0.borrow_mut();
-                        info!("treenode size: {}", tree_node.size);
                         kstat_ptr.st_dev = 1;
                         kstat_ptr.st_ino = 1;
                         kstat_ptr.st_mode = 0;
