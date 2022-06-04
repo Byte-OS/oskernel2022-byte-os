@@ -142,7 +142,7 @@ impl FAT32 {
                             children: vec![],
                             size: file_item.file_size(),
                             cluster: file_item.start_cluster(),
-                            nlinkes: 0,
+                            nlinkes: 1,
                             st_atime_sec: 0,
                             st_atime_nsec: 0,
                             st_mtime_sec: 0,
