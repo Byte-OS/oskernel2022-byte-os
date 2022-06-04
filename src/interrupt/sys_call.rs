@@ -427,7 +427,10 @@ pub fn sys_call() {
                     FileDescEnum::Device(device_name) => {
                         match device_name as &str {
                             "STDIN" => {},
-                            "STDOUT" => puts(buf),
+                            "STDOUT" => {
+                                puts(buf);
+                                context.x[10] = buf.len();
+                            },
                             "STDERR" => {},
                             _ => info!("未找到设备!")
                         }
