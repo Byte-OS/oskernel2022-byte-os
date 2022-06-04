@@ -1,9 +1,9 @@
 use core::{slice, result};
 
-use alloc::{string::String, vec::Vec};
+use alloc::{string::String, vec::Vec, sync::Arc};
 use riscv::register::satp;
 
-use crate::{console::puts, task::{kill_current_task, get_current_task, exec, clone_task, TASK_CONTROLLER_MANAGER, suspend_and_run_next, wait_task}, memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum, PhysAddr}}, sbi::shutdown, fs::{filetree::{FILETREE, FileTreeNode}, file, self}, print_file_tree, interrupt::{timer::get_time_ms, TICKS}};
+use crate::{console::puts, task::{kill_current_task, get_current_task, exec, clone_task, TASK_CONTROLLER_MANAGER, suspend_and_run_next, wait_task, FileDescEnum, FileDesc}, memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum, PhysAddr}}, sbi::shutdown, fs::{filetree::{FILETREE, FileTreeNode}, file, self}, print_file_tree, interrupt::{timer::get_time_ms, TICKS}, sync::mutex::Mutex};
 
 use super::{Context,  timer::{TimeSpec, TMS}};
 
@@ -164,7 +164,6 @@ pub fn sys_call(context: &mut Context) {
             }
         }
         SYS_MKDIRAT => {
-            let current_task = current_task_wrap.force_get();
             let pmm = PageMapping::from(PhysPageNum(satp::read().bits()).to_addr());
             let dirfd = context.x[10];
             let filename = pmm.get_phys_addr(VirtAddr::from(context.x[11])).unwrap();
@@ -173,11 +172,22 @@ pub fn sys_call(context: &mut Context) {
 
             // 判断文件描述符是否存在
             if dirfd == 0xffffffffffffff9c {
-                FILETREE.lock().open("/").unwrap().mkdir(&filename, flags as u16);
+                current_task.home_dir.mkdir(&filename, flags as u16);
                 context.x[10] = 0;
             } else {
                 if let Some(mut tree_node) = current_task.fd_table[dirfd].clone() {
-                    tree_node.mkdir(&filename, flags as u16);
+                    match &mut tree_node.lock().target {
+                        FileDescEnum::File(tree_node) => {
+                            tree_node.mkdir(&filename, flags as u16);
+                            context.x[10] = 0;
+                        }, 
+                        _ => {
+                            let result_code: isize = -1;
+                            context.x[10] = result_code as usize;
+                        }
+                        FileDescEnum::Pipe(_) => todo!(),
+                        FileDescEnum::Device(_) => todo!(),
+                    }
                 } else {
                     let result_code: isize = -1;
                     context.x[10] = result_code as usize;
@@ -204,14 +214,22 @@ pub fn sys_call(context: &mut Context) {
                 }
             } else {
                 if let Some(tree_node) = current_task.fd_table[fd].clone() {
-                    if let Ok(node) = tree_node.open(&filename) {
-                        let node_name = node.get_filename();
-    
-                        let parent = node.get_parent().clone().unwrap();
-                        parent.delete(&node_name);
-                        context.x[10] = 0;
-                    } else {
-                        context.x[10] = -1 as isize as usize;
+                    match &mut tree_node.lock().target {
+                        FileDescEnum::File(tree_node) => {
+                            if let Ok(node) = tree_node.open(&filename) {
+                                let node_name = node.get_filename();
+            
+                                let parent = node.get_parent().clone().unwrap();
+                                parent.delete(&node_name);
+                                context.x[10] = 0;
+                            } else {
+                                context.x[10] = -1 as isize as usize;
+                            }
+                        }, 
+                        _ => {
+                            let result_code: isize = -1;
+                            context.x[10] = result_code as usize;
+                        }
                     }
                 } else {
                     context.x[10] = -1 as isize as usize;
@@ -270,11 +288,11 @@ pub fn sys_call(context: &mut Context) {
             // 判断文件描述符是否存在
             if fd == 0xffffffffffffff9c {
                 if flags.contains(OpenFlags::CREATE) {
-                    FILETREE.lock().open("/").unwrap().create(&filename);
+                    current_task.home_dir.create(&filename);
                 }
-                if let Ok(file) = FILETREE.lock().open(&filename) {
+                if let Ok(file) = current_task.home_dir.open(&filename) {
                     let fd = current_task.alloc_fd();
-                    current_task.fd_table[fd] = Some(file.clone());
+                    current_task.fd_table[fd] = Some(Arc::new(Mutex::new(FileDesc::new(FileDescEnum::File(file.clone())))));
                     context.x[10] = fd;
                 } else {
                     let result_code: isize = -1;
@@ -282,16 +300,24 @@ pub fn sys_call(context: &mut Context) {
                 }
             } else {
                 if let Some(mut tree_node) = current_task.fd_table[fd].clone() {
-                    if flags.contains(OpenFlags::CREATE) {
-                        tree_node.create(&filename);
-                    }
-                    if let Ok(file) = tree_node.open(&filename) {
-                        let fd = current_task.alloc_fd();
-                        current_task.fd_table[fd] = Some(file.clone());
-                        context.x[10] = fd;
-                    } else {
-                        let result_code: isize = -1;
-                        context.x[10] = result_code as usize;
+                    match &mut tree_node.lock().target {
+                        FileDescEnum::File(tree_node) => {
+                            if flags.contains(OpenFlags::CREATE) {
+                                tree_node.create(&filename);
+                            }
+                            if let Ok(file) = tree_node.open(&filename) {
+                                let fd = current_task.alloc_fd();
+                                current_task.fd_table[fd] = Some(Arc::new(Mutex::new(FileDesc::new(FileDescEnum::File(file.clone())))));
+                                context.x[10] = fd;
+                            } else {
+                                let result_code: isize = -1;
+                                context.x[10] = result_code as usize;
+                            }
+                        }, 
+                        _ => {
+                            let result_code: isize = -1;
+                            context.x[10] = result_code as usize;
+                        }
                     }
                 } else {
                     let result_code: isize = -1;
@@ -329,23 +355,31 @@ pub fn sys_call(context: &mut Context) {
             let fd = context.x[10];
             let mut buf_ptr = usize::from(pmm.get_phys_addr(VirtAddr::from(context.x[11])).unwrap());
             if let Some(file_tree_node) = current_task.fd_table[fd].clone() {
-                let sub_nodes = file_tree_node.get_children();
-                for i in 0..sub_nodes.len() {
-                    let sub_node_name = sub_nodes[i].get_filename();
-                    let dirent = unsafe { (buf_ptr as *mut Dirent).as_mut().unwrap() };
-                    // 计算大小保证内存对齐
-                    let node_size = ((18 + sub_node_name.len() as u16 + 1 + 15) / 16) * 16;
-                    dirent.d_ino = i as u64;
-                    dirent.d_off = i as u64;
-                    dirent.d_reclen = node_size;
-                    dirent.d_type = 0;
-                    let buf_str = unsafe {
-                        slice::from_raw_parts_mut(&mut dirent.d_name_start as *mut u8, (node_size - 18) as usize)
-                    };
-                    write_string_to_raw(buf_str, &sub_node_name);
-                    buf_ptr = buf_ptr + dirent.d_reclen as usize;
+                match &mut file_tree_node.lock().target {
+                    FileDescEnum::File(file_tree_node) => {
+                        let sub_nodes = file_tree_node.get_children();
+                        for i in 0..sub_nodes.len() {
+                            let sub_node_name = sub_nodes[i].get_filename();
+                            let dirent = unsafe { (buf_ptr as *mut Dirent).as_mut().unwrap() };
+                            // 计算大小保证内存对齐
+                            let node_size = ((18 + sub_node_name.len() as u16 + 1 + 15) / 16) * 16;
+                            dirent.d_ino = i as u64;
+                            dirent.d_off = i as u64;
+                            dirent.d_reclen = node_size;
+                            dirent.d_type = 0;
+                            let buf_str = unsafe {
+                                slice::from_raw_parts_mut(&mut dirent.d_name_start as *mut u8, (node_size - 18) as usize)
+                            };
+                            write_string_to_raw(buf_str, &sub_node_name);
+                            buf_ptr = buf_ptr + dirent.d_reclen as usize;
+                        }
+                        context.x[10] = 0;
+                    },
+                    _ => {
+                        let result_code: isize = -1;
+                        context.x[10] = result_code as usize;
+                    }
                 }
-                context.x[10] = 0;
             } else {
                 let result_code: isize = -1;
                 context.x[10] = result_code as usize;
@@ -361,9 +395,16 @@ pub fn sys_call(context: &mut Context) {
             let buf = unsafe { slice::from_raw_parts_mut(buf.as_mut_ptr(), count) };
 
             if let Some(file_tree_node) = current_task.fd_table[fd].clone() {
-                let size = file_tree_node.to_file().read_to(buf);
-                // buf[buf.len() - 1] = 0;
-                context.x[10] = size as usize;
+                match &mut file_tree_node.lock().target {
+                    FileDescEnum::File(file_tree_node) => {
+                        let size = file_tree_node.to_file().read_to(buf);
+                        context.x[10] = size as usize;
+                    },
+                    _ => {
+                        let result_code: isize = -1;
+                        context.x[10] = result_code as usize;
+                    }
+                }
             } else {
                 let result_code: isize = -1;
                 context.x[10] = result_code as usize;
@@ -372,10 +413,33 @@ pub fn sys_call(context: &mut Context) {
         }
         SYS_WRITE => {
             let fd = context.x[10];
-            let current_task = current_task_wrap.force_get();
+            let buf = pmm.get_phys_addr(VirtAddr::from(context.x[11])).unwrap();
+            let count = context.x[12];
+            // 寻找物理地址
+            let buf = unsafe {slice::from_raw_parts_mut(usize::from(buf) as *mut u8, count)};
+
             if let Some(file_tree_node) = current_task.fd_table[fd].clone() {
-                sys_write(file_tree_node,context.x[11],context.x[12]);
-                context.x[10] = context.x[12];
+                match &mut file_tree_node.lock().target {
+                    FileDescEnum::File(file_tree) => {
+                        sys_write(file_tree.clone(),context.x[11],context.x[12]);
+                        context.x[10] = context.x[12];
+                    },
+                    FileDescEnum::Device(device_name) => {
+                        if device_name == "STDIN" {
+
+                        } else if device_name == "STDOUT" {
+                            puts(buf);
+                        } else if device_name == "STDERR" {
+                
+                        } else {
+                            info!("未找到设备!");
+                        }
+                    }
+                    _ => {
+                        let result_code: isize = -1;
+                        context.x[10] = result_code as usize;
+                    }
+                }
             } else {
                 context.x[10] = -1 as isize as usize;
             }

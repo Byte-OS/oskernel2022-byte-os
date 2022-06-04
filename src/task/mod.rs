@@ -45,9 +45,9 @@ pub enum FileDescEnum {
 }
 
 pub struct FileDesc {
-    target: FileDescEnum,
-    readable: bool,
-    writable: bool
+    pub target: FileDescEnum,
+    pub readable: bool,
+    pub writable: bool
 }
 
 impl FileDesc {
