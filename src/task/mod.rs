@@ -110,11 +110,11 @@ lazy_static! {
 
 // 任务控制器管理器
 pub struct TaskControllerManager {
-    current: Option<Arc<Mutex<TaskController>>>,
-    ready_queue: VecDeque<Arc<Mutex<TaskController>>>,
-    wait_queue: Vec<WaitQueueItem>,
-    killed_queue: Vec<Arc<Mutex<TaskController>>>,
-    is_run: bool
+    current: Option<Arc<Mutex<TaskController>>>,        // 当前任务
+    ready_queue: VecDeque<Arc<Mutex<TaskController>>>,  // 准备队列
+    wait_queue: Vec<WaitQueueItem>,                     // 等待队列
+    killed_queue: Vec<Arc<Mutex<TaskController>>>,      // 僵尸进程队列
+    is_run: bool                                        // 任务运行标志
 }
 
 impl TaskControllerManager {
