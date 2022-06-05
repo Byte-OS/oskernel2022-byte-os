@@ -8,6 +8,8 @@ pub use timer::TICKS;
 
 use crate::{memory::{addr::{VirtAddr, PhysAddr},  page_table::{PTEFlags, KERNEL_PAGE_MAPPING}}, task::get_current_task};
 
+use self::timer::LAST_TICKS;
+
 #[repr(C)]
 pub struct Context {
     pub x: [usize; 32],     // 32 个通用寄存器
@@ -83,6 +85,10 @@ fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) -> us
     // 如果当前有任务则选择任务复制到context
     if let Some(current_task) = get_current_task() {
         current_task.force_get().context.clone_from(context);
+        current_task.force_get().tms.tms_cutime = unsafe { TICKS - LAST_TICKS } as u64;
+        unsafe {
+            LAST_TICKS = TICKS;
+        }
     }
     match scause.cause(){
         Trap::Exception(Exception::Breakpoint) => breakpoint(context),
@@ -102,6 +108,10 @@ fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) -> us
     // 如果当前有任务则选择任务复制到context
     if let Some(current_task) = get_current_task() {
         context.clone_from(&mut current_task.force_get().context);
+        current_task.force_get().tms.tms_cstime = unsafe { TICKS - LAST_TICKS } as u64;
+        unsafe {
+            LAST_TICKS = TICKS;
+        }
     }
     context as *const Context as usize
 }

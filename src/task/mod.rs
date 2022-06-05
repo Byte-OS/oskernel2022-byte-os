@@ -6,9 +6,9 @@ use alloc::string::String;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
 use crate::fs::filetree::FileTreeNode;
-use crate::interrupt::Context;
+use crate::interrupt::{Context, TICKS};
 
-use crate::interrupt::timer::NEXT_TICKS;
+use crate::interrupt::timer::{NEXT_TICKS, TMS, LAST_TICKS};
 use crate::memory::page_table::PagingMode;
 use crate::sync::mutex::Mutex;
 use crate::{memory::{page_table::{PageMappingManager, PTEFlags}, addr::{PAGE_SIZE, VirtAddr, PhysAddr, PhysPageNum}, page::PAGE_ALLOCATOR}, fs::filetree::FILETREE};
@@ -217,6 +217,9 @@ impl TaskControllerManager {
 
     // 开始运行任务
     pub fn run(&mut self) {
+        unsafe {
+            LAST_TICKS = TICKS;
+        }
         loop {
             if let Some(current_task) = self.current.clone() {
                 self.is_run = true;
@@ -283,7 +286,7 @@ pub struct TaskController {
     pub context: Context,
     pub home_dir: FileTreeNode,
     pub fd_table: Vec<Option<Arc<Mutex<FileDesc>>>>,
-    // pub fd_table: Vec<Option<FileTreeNode>>,
+    pub tms: TMS
 }
 
 impl TaskController {
@@ -302,7 +305,8 @@ impl TaskController {
                 Some(Arc::new(Mutex::new(FileDesc::new(FileDescEnum::Device(String::from("STDIN")))))),
                 Some(Arc::new(Mutex::new(FileDesc::new(FileDescEnum::Device(String::from("STDOUT")))))),
                 Some(Arc::new(Mutex::new(FileDesc::new(FileDescEnum::Device(String::from("STDERR"))))))
-            ]
+            ],
+            tms: TMS::new()
         };
         task.pmm.init_pte();
         task

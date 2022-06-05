@@ -26,10 +26,16 @@ pub struct TimeSpec {
 #[allow(dead_code)]
 pub struct TMS
 {                     
-	tms_utime: u64, 
-	tms_stime: u64,
-	tms_cutime: u64,
-	tms_cstime: u64
+	pub tms_utime: u64, 
+	pub tms_stime: u64,
+	pub tms_cutime: u64,
+	pub tms_cstime: u64
+}
+
+impl TMS {
+    pub fn new() -> Self {
+        TMS { tms_utime: 0, tms_stime: 0, tms_cutime: 0, tms_cstime: 0 }
+    }
 }
 
 impl TimeSpec {
@@ -66,6 +72,7 @@ lazy_static! {
 }
 
 pub static mut TICKS: usize = 0;
+pub static mut LAST_TICKS: usize = 0;
 /// 时钟中断处理器
 pub fn timer_handler() {
     set_next_timeout();

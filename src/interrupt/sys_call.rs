@@ -559,7 +559,11 @@ pub fn sys_call() {
         SYS_TIMES => {
             // 等待添加
             let tms = usize::from(pmm.get_phys_addr(VirtAddr::from(context.x[10])).unwrap()) as *mut TMS;
-            let _tms = unsafe { tms.as_mut().unwrap() };
+            let tms = unsafe { tms.as_mut().unwrap() };
+
+            tms.tms_cstime = current_task.tms.tms_cstime;
+            tms.tms_cutime = current_task.tms.tms_cutime;
+            context.x[10] = unsafe {TICKS};
         },
         SYS_UNAME => {
             let sys_info = usize::from(pmm.get_phys_addr(VirtAddr::from(context.x[10])).unwrap()) as *mut UTSname;
