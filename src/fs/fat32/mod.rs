@@ -15,6 +15,7 @@ pub mod long_file;
 
 #[allow(dead_code)]
 #[derive(Clone)]
+/// FAT32文件属性
 pub enum FAT32FileItemAttr {
     RW  = 0,            // 读写
     R   = 1,            // 只读
@@ -25,27 +26,29 @@ pub enum FAT32FileItemAttr {
     FILE   = 1 << 5,    // 归档
 }
 
-
+/// FAT32表
 pub struct FAT32 {
-    // pub device: Arc<Mutex<VirtIOBlk<'a>>>,
-    pub device: Arc<Mutex<Box<dyn BlockDevice>>>,
-    pub bpb: FAT32BPB,
+    pub device: Arc<Mutex<Box<dyn BlockDevice>>>,   // 设备
+    pub bpb: FAT32BPB,                              // bpb
 }
 
 impl Partition for FAT32 {
     // 读扇区
     fn read_sector(&self, sector_offset: usize, buf: &mut [u8]) {
+        // 创建缓冲区
         let mut output = vec![0; SECTOR_SIZE];
-        // let t = self.device.lock();
+        // 读取扇区信息
         self.device.lock().read_block(sector_offset, &mut output);        
-
+        // 复制到buf
         buf.copy_from_slice(&output[..buf.len()]);
     }
 
     // 写扇区
     fn write_sector(&self, sector_offset: usize, buf: &mut [u8]) {
+        // 创建缓冲区
         let mut input = vec![0; SECTOR_SIZE];
         input.copy_from_slice(&buf);
+        // 写入扇区
         self.device.lock().write_block(sector_offset, &mut input);
     }
 
@@ -187,6 +190,7 @@ impl FAT32 {
 
     // 读取文件夹
     pub fn read_directory(&self, start_cluster: usize, filetree_node: &FileTreeNode) {
+        // 创建缓冲区 缓冲区大小为一个簇(cluster)
         let mut buf = vec![0u8; self.bpb.sectors_per_cluster as usize * SECTOR_SIZE];
         let mut cluster = start_cluster;
         
@@ -272,7 +276,6 @@ impl FAT32 {
 
 // 初始化分区
 pub fn init() {
-    // let mut buf = vec![0u8; 64];
     unsafe {
         for partition in BLK_CONTROL.get_partitions() {
             let fat32 = partition.lock();

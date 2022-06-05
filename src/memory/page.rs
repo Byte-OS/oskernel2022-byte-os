@@ -16,6 +16,7 @@ pub struct MemoryPageAllocator {
 
 // 添加内存页分配器方法
 impl MemoryPageAllocator {
+    // 创建内存分配器结构
     fn new() -> Self {
         MemoryPageAllocator {
             start: 0,
@@ -24,6 +25,7 @@ impl MemoryPageAllocator {
         }
     }
 
+    // 初始化内存分配器
     fn init(&mut self, start: usize, end: usize) {
         self.start = start;
         self.end = end;
@@ -31,6 +33,7 @@ impl MemoryPageAllocator {
         info!("初始化页式内存管理, 页表数: {}", self.pages.capacity());
     }
 
+    // 申请内存
     pub fn alloc(&mut self) -> Option<PhysPageNum> {
         for i in 0..self.pages.len() {
             if !self.pages[i] {
@@ -41,6 +44,7 @@ impl MemoryPageAllocator {
         None
     }
 
+    // 取消分配页
     pub fn dealloc(&mut self, page: PhysPageNum) {
         let index = usize::from(page) - (self.start >> 12); 
         if let Some(_) = self.pages.get(index) {
@@ -48,6 +52,7 @@ impl MemoryPageAllocator {
         }
     }
 
+    // 申请多个页
     pub fn alloc_more(&mut self, pages: usize) ->Option<PhysPageNum> {
         let mut i = 0;
         loop {
@@ -84,6 +89,7 @@ impl MemoryPageAllocator {
         None
     }
 
+    // 释放多个页
     pub fn dealloc_more(&mut self, page: PhysPageNum, pages: usize) {
         let index = usize::from(page) - (self.start >> 12); 
         if let Some(_) = self.pages.get(index) {

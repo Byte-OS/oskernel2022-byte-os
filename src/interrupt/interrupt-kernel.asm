@@ -1,4 +1,3 @@
-# 我们将会用一个宏来用循环保存寄存器。这是必要的设置
 .altmacro
 # 寄存器宽度对应的字节数
 .set    REG_SIZE, 8
@@ -25,7 +24,7 @@
 
     .section .text
     .global kernel_callback_entry
-# 内核中断调用入口 无论从哪个函数进入 都会保存结果 不影响结果
+# 内核中断调用入口
 kernel_callback_entry:
     addi    sp, sp, CONTEXT_SIZE*-8
 
@@ -41,10 +40,10 @@ kernel_callback_entry:
         .set    n, n + 1
     .endr
     # 取出 CSR 并保存
-    csrr    s1, sstatus
-    csrr    s2, sepc
-    SAVE    s1, 32
-    SAVE    s2, 33
+    csrr    t0, sstatus
+    csrr    t1, sepc
+    SAVE    t0, 32
+    SAVE    t1, 33
 
     # 将第一个参数设置为栈顶 便于Context引用访问
     add a0, x0, sp

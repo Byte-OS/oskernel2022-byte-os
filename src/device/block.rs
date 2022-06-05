@@ -3,6 +3,7 @@ use super::BlockDevice;
 
 pub const SECTOR_SIZE: usize = 512;
 
+// 虚拟IO设备
 pub struct VirtIOBlock(pub VirtIOBlk<'static>);
 
 impl BlockDevice for VirtIOBlock {

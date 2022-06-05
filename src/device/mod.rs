@@ -17,42 +17,40 @@ use self::sdcard::SDCardWrapper;
 #[cfg(not(feature = "board_k210"))]
 pub const VIRTIO0: usize = 0x10001000;
 
+// 存储设备控制器 用来存储读取设备
 pub static mut BLK_CONTROL: BlockDeviceContainer = BlockDeviceContainer(vec![]);
 
 pub trait BlockDevice {
+    // 读取扇区
     fn read_block(&mut self, sector_offset: usize, buf: &mut [u8]);
-
+    // 写入扇区
     fn write_block(&mut self, sector_offset: usize, buf: &mut [u8]);
-
+    // 处理中断
     fn handle_irq(&mut self);
 }
 
+// 块储存设备容器
 pub struct BlockDeviceContainer (Vec<Arc<Mutex<FAT32>>>);
 
-
 impl BlockDeviceContainer {
+    // 添加VIRTIO设备
     pub fn add(&mut self, virtio: usize) {
         // 创建存储设备
         let device = VirtIOBlk::new(unsafe {&mut *(virtio as *mut VirtIOHeader)}).expect("failed to create blk driver");
         let block_device:Arc<Mutex<Box<dyn BlockDevice>>> = Arc::new(Mutex::new(Box::new(VirtIOBlock(device))));
         let disk_device = Arc::new(Mutex::new(FAT32::new(block_device)));
-        // device.lock().write_block_nb(block_id, buf, resp)
-        // 识别分区
+        // 加入设备表
         self.0.push(disk_device);
     }
 
     #[allow(unused)]
+    // 添加sd卡存储设备
     pub fn add_sdcard(&mut self) {
-        // 创建存储设备
+        // 创建SD存储设备
         let block_device:Arc<Mutex<Box<dyn BlockDevice>>> = Arc::new(Mutex::new(Box::new(SDCardWrapper::new())));
-        // let mut buf = [0u8; 512];
-        // block_device.lock().read_block(0, &mut buf);
-
-        // info!("读取扇区内容");        
-
         let disk_device = Arc::new(Mutex::new(FAT32::new(block_device)));
 
-        // 识别分区
+        // 加入存储设备表
         self.0.push(disk_device);
     }
 
@@ -67,6 +65,7 @@ impl BlockDeviceContainer {
     }
 }
 
+// 初始化函数
 pub fn init() {
     info!("初始化设备");
     #[cfg(not(feature = "board_k210"))]

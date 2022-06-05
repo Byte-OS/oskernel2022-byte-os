@@ -24,6 +24,7 @@ pub const STDOUT: usize = 1;
 pub const STDERR: usize = 2;
 
 #[derive(Clone, Copy, PartialEq)]
+// 任务状态
 pub enum TaskStatus {
     READY   = 0,
     RUNNING = 1,
@@ -32,18 +33,21 @@ pub enum TaskStatus {
 }
 
 #[allow(dead_code)]
+// 用户heap
 pub struct UserHeap {
     start: PhysPageNum, 
     pointer: usize,
     size: usize
 }
 
+// 文件描述符类型
 pub enum FileDescEnum {
     File(FileTreeNode),
     Pipe(PipeBuf),
     Device(String)
 }
 
+// 文件描述符
 pub struct FileDesc {
     pub target: FileDescEnum,
     pub readable: bool,
@@ -51,6 +55,7 @@ pub struct FileDesc {
 }
 
 impl FileDesc {
+    // 创建文件描述符
     pub fn new(target: FileDescEnum) -> Self {
         FileDesc {
             target,
@@ -59,6 +64,7 @@ impl FileDesc {
         }
     }
 
+    // 创建pipe
     pub fn new_pipe() -> (Self, Self) {
         let buf = PipeBuf::new();
         let read_pipe = FileDesc {
@@ -75,12 +81,15 @@ impl FileDesc {
     }
 }
 
+// PID生成器
 pub struct PidGenerater(usize);
 
 impl PidGenerater {
+    // 创建进程id生成器
     pub fn new() -> Self {
         PidGenerater(1000)
     }
+    // 切换到下一个pid
     pub fn next(&mut self) -> usize {
         let n = self.0;
         self.0 = n + 1;
@@ -89,14 +98,17 @@ impl PidGenerater {
 }
 
 extern "C" {
+    // 改变任务
     fn change_task(pte: usize, stack: usize);
 }
 
 lazy_static! {
+    // 任务管理器和pid生成器
     pub static ref TASK_CONTROLLER_MANAGER: Mutex<TaskControllerManager> = Mutex::new(TaskControllerManager::new());
     pub static ref NEXT_PID: Mutex<PidGenerater> = Mutex::new(PidGenerater::new());
 }
 
+// 任务控制器管理器
 pub struct TaskControllerManager {
     current: Option<Arc<Mutex<TaskController>>>,
     ready_queue: VecDeque<Arc<Mutex<TaskController>>>,
@@ -106,6 +118,7 @@ pub struct TaskControllerManager {
 }
 
 impl TaskControllerManager {
+    // 创建任务管理器
     pub fn new() -> Self {
         TaskControllerManager {
             current: None,
@@ -206,6 +219,7 @@ impl TaskControllerManager {
             self.current = None;
             self.switch_to_next();
         } else {
+            // 从killed列表中获取任务
             let killed_task_wrap = self.killed_queue[killed_index].clone();
             let killed_task = killed_task_wrap.lock();
             self.killed_queue.remove(killed_index);
@@ -228,14 +242,15 @@ impl TaskControllerManager {
             } else {
                 // 当无任务时加载下一个任务
                 load_next_task();
-                // panic!("无任务可执行");
             }
         }
     }
 }
 
 impl UserHeap {
+    // 创建heap
     pub fn new() -> Self {
+        // 申请页表作为heap
         if let Some(phy_start) = PAGE_ALLOCATOR.lock().alloc() { 
             UserHeap {
                 start: phy_start,
@@ -258,6 +273,7 @@ impl UserHeap {
 }
 
 #[derive(Clone)]
+// 等待队列
 pub struct WaitQueueItem {
     pub task: Arc<Mutex<TaskController>>,
     pub callback: *mut u16,
@@ -265,6 +281,7 @@ pub struct WaitQueueItem {
 }
 
 impl WaitQueueItem {
+    // 创建等待队列项
     pub fn new(task: Arc<Mutex<TaskController>>, callback: *mut u16,wait: usize) -> Self {
         WaitQueueItem {
             task,
@@ -275,21 +292,23 @@ impl WaitQueueItem {
 }
 
 #[allow(dead_code)]
+// 任务控制器
 pub struct TaskController {
-    pub pid: usize,
-    pub ppid: usize,
-    pub entry_point: VirtAddr,
-    pub pmm: PageMappingManager,
-    pub status: TaskStatus,
-    pub stack: VirtAddr,
-    pub heap: UserHeap,
-    pub context: Context,
-    pub home_dir: FileTreeNode,
-    pub fd_table: Vec<Option<Arc<Mutex<FileDesc>>>>,
-    pub tms: TMS
+    pub pid: usize,                                     // 进程id
+    pub ppid: usize,                                    // 父进程id
+    pub entry_point: VirtAddr,                          // 入口地址
+    pub pmm: PageMappingManager,                        // 页表映射控制器
+    pub status: TaskStatus,                             // 任务状态
+    pub stack: VirtAddr,                                // 栈地址
+    pub heap: UserHeap,                                 // 堆地址
+    pub context: Context,                               // 寄存器上下文
+    pub home_dir: FileTreeNode,                         // 家地址
+    pub fd_table: Vec<Option<Arc<Mutex<FileDesc>>>>,    // 任务描述符地址
+    pub tms: TMS                                        // 时间地址
 }
 
 impl TaskController {
+    // 创建任务控制器
     pub fn new(pid: usize) -> Self {
         let mut task = TaskController {
             pid,
@@ -312,31 +331,37 @@ impl TaskController {
         task
     }
 
+    // 更新用户状态
     pub fn update_status(&mut self, status: TaskStatus) {
         self.status = status;
     }
 
+    // 初始化任务
     pub fn init(&mut self) {
         self.context.sepc = 0x1000;
         self.context.x[2] = 0xf0000fe0;
     }
 
+    // 申请堆地址
     pub fn alloc_heap(&mut self, size: usize) -> usize {
         let top = self.heap.pointer;
         self.heap.pointer = top + size;
         top
     }
 
+    // 设置堆顶地址
     pub fn set_heap_top(&mut self, top: usize) -> usize {
         let origin_top = self.heap.pointer;
         self.heap.pointer = top;
         origin_top
     }
 
+    // 获取heap大小
     pub fn get_heap_size(&self) -> usize {
         self.heap.pointer
     }
 
+    // 申请文件描述符
     pub fn alloc_fd(&mut self) -> usize {
         if let Some(fd) = (0..self.fd_table.len()).find(|fd| self.fd_table[*fd].is_none()) {
             fd
@@ -346,6 +371,7 @@ impl TaskController {
         }
     }
 
+    // 申请固定大小的文件描述符
     pub fn alloc_fd_with_size(&mut self, new_size: usize) -> usize {
         if self.fd_table.len() > new_size {
             if self.fd_table[new_size].is_none() {
@@ -362,6 +388,7 @@ impl TaskController {
         }
     }
 
+    // 运行当前任务
     pub fn run_current(&mut self) {
         // 切换satp
         self.pmm.change_satp();
@@ -373,6 +400,7 @@ impl TaskController {
     }
 }
 
+// 获取pid
 pub fn get_new_pid() -> usize {
     NEXT_PID.lock().next()
 }
@@ -426,6 +454,7 @@ pub fn exec(path: &str) {
     }
 }
 
+// 等待当前任务并切换到下一个任务
 pub fn suspend_and_run_next() {
     if !TASK_CONTROLLER_MANAGER.force_get().is_run {
         return;
@@ -435,25 +464,31 @@ pub fn suspend_and_run_next() {
     TASK_CONTROLLER_MANAGER.force_get().switch_to_next();
 }
 
+// 运行第一个任务
 pub fn run_first() {
     TASK_CONTROLLER_MANAGER.force_get().run();
 }
 
+// 获取当前任务
 pub fn get_current_task() ->Option<Arc<Mutex<TaskController>>> {
     TASK_CONTROLLER_MANAGER.force_get().current.clone()
 }
 
+// 等待任务
 pub fn wait_task(pid: usize, status: *mut u16, _options: usize) {
     TASK_CONTROLLER_MANAGER.force_get().wait_pid(status, pid );
     // TASK_CONTROLLER_MANAGER.force_get().switch_to_next();
 }
 
+// 杀死当前任务
 pub fn kill_current_task() {
     TASK_CONTROLLER_MANAGER.force_get().kill_current();
     TASK_CONTROLLER_MANAGER.force_get().switch_to_next();
 }
 
+// clone任务
 pub fn clone_task(task_controller: &mut TaskController) -> TaskController {
+    // 创建任务并复制文件信息
     let mut task = TaskController::new(get_new_pid());
     let mut pmm = task.pmm.clone();
     task.context.clone_from(&mut task_controller.context);
@@ -464,9 +499,12 @@ pub fn clone_task(task_controller: &mut TaskController) -> TaskController {
     let start_addr: PhysAddr = task_controller.pmm.get_phys_addr(VirtAddr::from(0x0)).unwrap();
     let stack_addr: PhysAddr = task_controller.pmm.get_phys_addr(VirtAddr::from(0xf0000000)).unwrap();
 
+    // 获取任务占用的页表数量
     let pages = (usize::from(stack_addr) - usize::from(start_addr)) / PAGE_SIZE;
     
+    // 申请页表
     if let Some(phy_start) = PAGE_ALLOCATOR.force_get().alloc_more(pages + 1) {
+        // 复制任务信息
         let new_buf = unsafe { slice::from_raw_parts_mut(usize::from(PhysAddr::from(phy_start)) as *mut u8,(pages + 1) * PAGE_SIZE) };
         let old_buf = unsafe { slice::from_raw_parts_mut(usize::from(PhysAddr::from(start_addr)) as *mut u8, (pages + 1) * PAGE_SIZE) };
         new_buf.copy_from_slice(old_buf);

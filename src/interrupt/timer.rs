@@ -13,19 +13,13 @@ const CHANGE_TASK_TICKS: usize = 10;
 const INTERVAL: usize = CLOCK_FREQ / 100;
 const MSEC_PER_SEC: usize = 1000;
 
-#[repr(C)]
-pub struct TimeSpec {
-	pub tv_sec: u64,       /* 秒 */
-    pub tv_nsec: i64       /* 纳秒, 范围在0~999999999 */
-}
-
 // tms_utime记录的是进程执行用户代码的时间.
 // tms_stime记录的是进程执行内核代码的时间.
 // tms_cutime记录的是子进程执行用户代码的时间.
 // tms_ustime记录的是子进程执行内核代码的时间.
 #[allow(dead_code)]
 pub struct TMS
-{                     
+{
 	pub tms_utime: u64, 
 	pub tms_stime: u64,
 	pub tms_cutime: u64,
@@ -33,10 +27,18 @@ pub struct TMS
 }
 
 impl TMS {
+    // 创建TMS
     pub fn new() -> Self {
         TMS { tms_utime: 0, tms_stime: 0, tms_cutime: 0, tms_cstime: 0 }
     }
 }
+
+#[repr(C)]
+pub struct TimeSpec {
+	pub tv_sec: u64,       /* 秒 */
+    pub tv_nsec: i64       /* 纳秒, 范围在0~999999999 */
+}
+
 
 impl TimeSpec {
     pub fn get_now(&mut self) {
@@ -46,22 +48,27 @@ impl TimeSpec {
     }
 }
 
+// 获取毫秒结构
 pub fn get_time_ms() -> usize {
     time::read() / (CLOCK_FREQ / MSEC_PER_SEC)
 }
 
 
+// 下一个任务ticks
 pub struct NextTaskTicks(usize);
 
 impl NextTaskTicks {
+    // 创建任务TICKS结构
     pub fn new() -> Self {
         NextTaskTicks(CHANGE_TASK_TICKS)
     }
 
+    // 刷新TICKS
     pub fn refresh(&mut self) {
         self.0 = self.0 + CHANGE_TASK_TICKS;
     }
 
+    // 判断是否需要更换任务
     pub fn need_change(&self, ticks: usize) -> bool {
         ticks > self.0
     }
@@ -71,14 +78,17 @@ lazy_static! {
     pub static ref NEXT_TICKS: Mutex<NextTaskTicks> = Mutex::new(NextTaskTicks::new());
 }
 
+// 时间信息
 pub static mut TICKS: usize = 0;
 pub static mut LAST_TICKS: usize = 0;
+
 /// 时钟中断处理器
 pub fn timer_handler() {
     set_next_timeout();
     unsafe {
         TICKS=TICKS+1;
     }
+    // 判断是否需要更换任务
     if NEXT_TICKS.force_get().need_change(unsafe { TICKS }) {
         suspend_and_run_next();
     }

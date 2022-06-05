@@ -15,13 +15,10 @@ pub struct Mutex<T: ?Sized> {
     data: UnsafeCell<T>,
 }
 
-
 pub struct MutexGuard<'a, T: ?Sized + 'a> {
     lock: &'a AtomicBool,
     data: &'a mut T,
 }
-
-
 
 impl<T> Mutex<T> {
     pub const fn new(data: T) -> Mutex<T> {
@@ -61,7 +58,7 @@ impl<T: ?Sized> Mutex<T> {
         // 跳出循环后表明获得锁
     }
 
-
+    // 锁定
     pub fn lock(&self) -> MutexGuard<T> {
         self.obtain_lock();
         MutexGuard {
@@ -71,11 +68,13 @@ impl<T: ?Sized> Mutex<T> {
     }
 
     #[allow(unused)]
+    // 强制解锁
     pub unsafe fn force_unlock(&self) {
         self.lock.store(false, Ordering::Release)
     }
 
     #[allow(unused)]
+    // 强制获取数据
     pub fn force_get(&self)->MutexGuard<T> {
         MutexGuard {
             lock: &self.lock,
@@ -85,6 +84,7 @@ impl<T: ?Sized> Mutex<T> {
 
 
     #[allow(unused)]
+    // 尝试锁定
     pub fn try_lock(&self) -> Option<MutexGuard<T>> {
         if let Ok(res) = self.lock.compare_exchange(false, true, Ordering::Relaxed, Ordering::Relaxed) {
             return Some(MutexGuard {

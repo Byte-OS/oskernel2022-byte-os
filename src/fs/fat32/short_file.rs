@@ -47,11 +47,11 @@ impl FilesystemItemOperator for FAT32shortFileItem {
         self.len as usize
     }
 
-    // 开始簇
+    // 获取文件开始簇
     fn start_cluster(&self) -> usize {
         (self.start_high as usize) << 16 | self.start_low as usize
     }
-
+    // 获取文件属性
     fn get_attr(&self) -> FAT32FileItemAttr {
         self.attr.clone()
     }

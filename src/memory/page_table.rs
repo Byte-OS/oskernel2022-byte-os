@@ -38,9 +38,13 @@ impl PageTableEntry {
             bits: 0,
         }
     }
+
+    // 获取ppn
     pub fn ppn(&self) -> PhysPageNum {
         (self.bits >> 10 & ((1usize << 44) - 1)).into()
     }
+
+    // 获取标志
     pub fn flags(&self) -> PTEFlags {
         PTEFlags::from_bits(self.bits as u8).unwrap()
     }
@@ -56,6 +60,7 @@ impl PageTableEntry {
         self.flags().contains(PTEFlags::V) && self.flags() & PTEFlags::VRWX == PTEFlags::V
     }
 
+    // 获取可更换ptr
     pub unsafe fn get_mut_ptr_from_phys(addr:PhysAddr) -> *mut Self {
         usize::from(addr) as *mut Self
     }

@@ -11,6 +11,7 @@ use crate::{memory::{addr::{VirtAddr, PhysAddr},  page_table::{PTEFlags, KERNEL_
 use self::timer::LAST_TICKS;
 
 #[repr(C)]
+// 上下文
 pub struct Context {
     pub x: [usize; 32],     // 32 个通用寄存器
     pub sstatus: usize,
@@ -18,6 +19,7 @@ pub struct Context {
 }
 
 impl Context {
+    // 创建上下文信息
     pub fn new() -> Self {
         Context {
             x: [0usize; 32],
@@ -25,7 +27,7 @@ impl Context {
             sepc: 0
         }
     }
-
+    // 从另一个上下文复制
     pub fn clone_from(&mut self, target: &mut Self) {
         for i in 0..32 {
             self.x[i] = target.x[i];
@@ -40,7 +42,6 @@ impl Context {
 fn breakpoint(context: &mut Context) {
     warn!("break中断产生 中断地址 {:#x}", sepc::read());
     context.sepc = context.sepc + 2;
-    // panic!("中断退出")
 }
 
 // 中断错误
@@ -49,26 +50,30 @@ fn fault(_context: &mut Context, scause: Scause, stval: usize) {
     panic!("未知中断")
 }
 
+// 处理缺页异常
 fn handle_page_fault(stval: usize) {
     warn!("缺页中断触发 缺页地址: {:#x} 触发地址:{:#x} 已同步映射", stval, sepc::read());
     KERNEL_PAGE_MAPPING.lock().add_mapping(PhysAddr::from(stval), VirtAddr::from(stval), PTEFlags::VRWX);
     unsafe{
         asm!("sfence.vma {x}", x = in(reg) stval)
     };
-    // panic!("缺页异常");
 }
 
-// 中断回调
+// 内核中断回调
 #[no_mangle]
 fn kernel_callback(context: &mut Context, scause: Scause, stval: usize) -> usize {
     match scause.cause(){
+        // 中断异常
         Trap::Exception(Exception::Breakpoint) => breakpoint(context),
         // 时钟中断
         Trap::Interrupt(Interrupt::SupervisorTimer) => timer::timer_handler(),
+        // 缺页异常
         Trap::Exception(Exception::StorePageFault) => handle_page_fault(stval),
+        // 加载页面错误
         Trap::Exception(Exception::LoadPageFault) => {
             panic!("加载权限异常 地址:{:#x}", stval)
         },
+        // 页面未对齐异常
         Trap::Exception(Exception::StoreMisaligned) => {
             info!("页面未对齐");
         }
@@ -79,26 +84,33 @@ fn kernel_callback(context: &mut Context, scause: Scause, stval: usize) -> usize
 }
 
 
-// 中断回调
+// 用户中断回调
 #[no_mangle]
 fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) -> usize {
     // 如果当前有任务则选择任务复制到context
     if let Some(current_task) = get_current_task() {
         current_task.force_get().context.clone_from(context);
-        current_task.force_get().tms.tms_cutime = unsafe { TICKS - LAST_TICKS } as u64;
+        // 处理进程时间
+        current_task.force_get().tms.tms_cutime += unsafe { TICKS - LAST_TICKS } as u64;
         unsafe {
             LAST_TICKS = TICKS;
         }
     }
+    // 匹配中断原因
     match scause.cause(){
+        // 断点中断
         Trap::Exception(Exception::Breakpoint) => breakpoint(context),
         // 时钟中断
         Trap::Interrupt(Interrupt::SupervisorTimer) => timer::timer_handler(),
+        // 页处理错误
         Trap::Exception(Exception::StorePageFault) => handle_page_fault(stval),
+        // 用户请求
         Trap::Exception(Exception::UserEnvCall) => sys_call::sys_call(),
+        // 加载页面错误
         Trap::Exception(Exception::LoadPageFault) => {
             panic!("加载权限异常 地址:{:#x}", stval)
         },
+        // 页面未对齐错误
         Trap::Exception(Exception::StoreMisaligned) => {
             info!("页面未对齐");
         }
@@ -108,7 +120,7 @@ fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) -> us
     // 如果当前有任务则选择任务复制到context
     if let Some(current_task) = get_current_task() {
         context.clone_from(&mut current_task.force_get().context);
-        current_task.force_get().tms.tms_cstime = unsafe { TICKS - LAST_TICKS } as u64;
+        current_task.force_get().tms.tms_cstime += unsafe { TICKS - LAST_TICKS } as u64;
         unsafe {
             LAST_TICKS = TICKS;
         }
@@ -127,6 +139,7 @@ pub fn init() {
         fn int_callback_entry();
     }
 
+    // 输出内核信息
     info!("kernel_callback_entry addr: {:#x}", kernel_callback_entry as usize);
     info!("int_callback_entry addr: {:#x}", int_callback_entry as usize);
 
@@ -139,6 +152,7 @@ pub fn init() {
     test();
 }
 
+// 调试代码
 pub fn test() {
     unsafe {asm!("ebreak")};
 }

@@ -3,6 +3,7 @@ use alloc::string::String;
 #[allow(dead_code)]
 #[derive(Default)]
 #[repr(packed)]
+// FATBPB 信息
 pub struct FAT32BPB {
     pub jmpcode: [u8; 3],       // 跳转代码
     pub oem: [u8; 8],           // oem 信息

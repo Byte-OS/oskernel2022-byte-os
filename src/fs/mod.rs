@@ -5,6 +5,7 @@ pub mod filetree;
 
 pub use partition::Partition;
 
+// 初始化文件系统
 pub fn init() {
     fat32::init();
     info!("初始化文件系统");
