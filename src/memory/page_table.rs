@@ -32,6 +32,7 @@ impl PageTableEntry {
             bits: ppn.0 << 10 | flags.bits as usize,
         }
     }
+    #[allow(unused)]
     pub fn empty() -> Self {
         PageTableEntry {
             bits: 0,
@@ -45,6 +46,7 @@ impl PageTableEntry {
     }
 
     // 判断是否为页表
+    #[allow(unused)]
     pub fn is_valid_pte(&self) -> bool {
         self.flags().contains(PTEFlags::V) && self.flags() & PTEFlags::VRWX != PTEFlags::V
     }
@@ -304,10 +306,4 @@ pub fn init() {
     let mut mapping_manager = KERNEL_PAGE_MAPPING.lock();
     mapping_manager.init_pte();
     mapping_manager.change_satp();
-}
-
-pub fn refresh_addr(addr: usize) {
-    unsafe {
-        asm!("sfence.vma {x}", x = in(reg) addr)
-    }
 }

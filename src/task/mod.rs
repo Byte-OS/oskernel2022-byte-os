@@ -439,7 +439,7 @@ pub fn get_current_task() ->Option<Arc<Mutex<TaskController>>> {
     TASK_CONTROLLER_MANAGER.force_get().current.clone()
 }
 
-pub fn wait_task(pid: usize, status: *mut u16, options: usize) {
+pub fn wait_task(pid: usize, status: *mut u16, _options: usize) {
     TASK_CONTROLLER_MANAGER.force_get().wait_pid(status, pid );
     // TASK_CONTROLLER_MANAGER.force_get().switch_to_next();
 }

@@ -1,6 +1,6 @@
 use core::slice;
 
-use alloc::{string::String, sync::Arc, vec::Vec};
+use alloc::{string::String, sync::Arc};
 use riscv::register::satp;
 
 use crate::{console::puts, task::{kill_current_task, get_current_task, exec, clone_task, TASK_CONTROLLER_MANAGER, suspend_and_run_next, wait_task, FileDescEnum, FileDesc}, memory::{page_table::{PageMapping, PTEFlags}, addr::{VirtAddr, PhysPageNum, PhysAddr}}, fs::{filetree::{FILETREE, FileTreeNode}, file::{Kstat, FileType}},  interrupt::TICKS, sync::mutex::Mutex};
@@ -90,7 +90,7 @@ pub fn sys_write(fd: FileTreeNode, buf: usize, count: usize) -> usize {
         FileType::VirtFile => {
             fd.write(buf);
         }
-        _ => info!("SYS_WRITE暂未找到设备")
+        _ => {info!("SYS_WRITE暂未找到设备");}
     }
     count
 }
@@ -471,16 +471,16 @@ pub fn sys_call() {
                                 context.x[10] = buf.len();
                             },
                             "STDERR" => {},
-                            _ => info!("未找到设备!")
+                            _ => {info!("未找到设备!");}
                         }
                     },
                     FileDescEnum::Pipe(pipe) => {
                         context.x[10] = pipe.write(buf, count);
                     },
-                    _ => {
-                        let result_code: isize = -1;
-                        context.x[10] = result_code as usize;
-                    }
+                    // _ => {
+                    //     let result_code: isize = -1;
+                    //     context.x[10] = result_code as usize;
+                    // }
                 }
             } else {
                 context.x[10] = -1 as isize as usize;

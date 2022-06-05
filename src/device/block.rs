@@ -1,7 +1,6 @@
 use virtio_drivers::VirtIOBlk;
 use super::BlockDevice;
 
-pub const VIRTIO0: usize = 0x10001000;
 pub const SECTOR_SIZE: usize = 512;
 
 pub struct VirtIOBlock(pub VirtIOBlk<'static>);

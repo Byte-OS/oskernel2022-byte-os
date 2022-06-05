@@ -1,5 +1,3 @@
-use core::fmt::Error;
-
 
 pub trait Partition {
     fn read_sector(&self, sector_offset: usize, buf: &mut [u8]);                // 读取扇区

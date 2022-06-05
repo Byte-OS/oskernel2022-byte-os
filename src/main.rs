@@ -27,7 +27,6 @@ extern crate lazy_static;
 extern crate alloc;
 use core::arch::global_asm;
 
-use alloc::string::String;
 use fs::filetree::FileTreeNode;
 
 use crate::{sbi::shutdown, fs::filetree::FILETREE};

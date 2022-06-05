@@ -225,6 +225,7 @@ impl FAT32 {
     }
 
     // 获取最后一个fat
+    #[allow(unused)]
     pub fn get_last_cluster(&self, start_cluster: usize) -> usize {
         let mut cluster = start_cluster;
         loop {
@@ -232,11 +233,13 @@ impl FAT32 {
             if cluster >= 0x0fff_ffef {
                 break;
             }
+            cluster = next_cluster;
         }
         cluster
     }
 
     // 改变fat表中的cluster指向
+    #[allow(unused)]
     pub fn change_fat_cluster(&self, cluster: usize, value: usize) {
         let mut buf = vec![0u8; SECTOR_SIZE];
         let sector_offset = cluster / (SECTOR_SIZE / 4);
@@ -247,6 +250,7 @@ impl FAT32 {
     }
 
     // 申请cluster
+    #[allow(unused)]
     pub fn alloc_cluster(&self) -> Option<usize> {
         let mut buf = vec![0u32; SECTOR_SIZE / 4];
 

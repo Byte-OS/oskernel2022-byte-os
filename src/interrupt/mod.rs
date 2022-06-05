@@ -6,7 +6,7 @@ mod sys_call;
 
 pub use timer::TICKS;
 
-use crate::{memory::{addr::{VirtAddr, PhysAddr},  page_table::{PTEFlags, KERNEL_PAGE_MAPPING}, page::PAGE_ALLOCATOR}, task::get_current_task};
+use crate::{memory::{addr::{VirtAddr, PhysAddr},  page_table::{PTEFlags, KERNEL_PAGE_MAPPING}}, task::get_current_task};
 
 #[repr(C)]
 pub struct Context {
@@ -62,7 +62,7 @@ fn kernel_callback(context: &mut Context, scause: Scause, stval: usize) -> usize
     match scause.cause(){
         Trap::Exception(Exception::Breakpoint) => breakpoint(context),
         // 时钟中断
-        Trap::Interrupt(Interrupt::SupervisorTimer) => timer::timer_handler(context),
+        Trap::Interrupt(Interrupt::SupervisorTimer) => timer::timer_handler(),
         Trap::Exception(Exception::StorePageFault) => handle_page_fault(stval),
         Trap::Exception(Exception::LoadPageFault) => {
             panic!("加载权限异常 地址:{:#x}", stval)
@@ -87,7 +87,7 @@ fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) -> us
     match scause.cause(){
         Trap::Exception(Exception::Breakpoint) => breakpoint(context),
         // 时钟中断
-        Trap::Interrupt(Interrupt::SupervisorTimer) => timer::timer_handler(context),
+        Trap::Interrupt(Interrupt::SupervisorTimer) => timer::timer_handler(),
         Trap::Exception(Exception::StorePageFault) => handle_page_fault(stval),
         Trap::Exception(Exception::UserEnvCall) => sys_call::sys_call(),
         Trap::Exception(Exception::LoadPageFault) => {

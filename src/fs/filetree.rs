@@ -36,18 +36,15 @@ impl FileTree {
         self.0.open(path)
     }
 
-    // 创建文件
-    pub fn create(&mut self, filename: &str) {
-        self.0.create(filename)
-    }
-
     // 卸载设备
-    pub fn umount(&self, device: &str, _flags: usize) {
+    #[allow(unused)]
+    pub fn umount(&self, _device: &str, _flags: usize) {
 
     }
 
     // 挂载设备
-    pub fn mount(&self, device: &str, dir: &str, fs_type: usize, flags: usize, data: usize) {
+    #[allow(unused)]
+    pub fn mount(&self, _device: &str, _dir: &str, _fs_type: usize, _flags: usize, _data: usize) {
 
     }
 }
@@ -318,7 +315,7 @@ impl FileTreeNode {
     }
 
     // 创建文件夹
-    pub fn mkdir(&mut self, filename: &str, flags: u16) {
+    pub fn mkdir(&mut self, filename: &str, _flags: u16) {
         let node = FileTreeNode(Rc::new(RefCell::new(FileTreeNodeRaw {
             filename:String::from(filename),        // 文件名
             file_type: FileType::Directory,         // 文件数类型

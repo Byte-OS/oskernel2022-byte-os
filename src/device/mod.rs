@@ -11,9 +11,11 @@ use virtio_drivers::VirtIOHeader;
 use crate::fs::fat32::FAT32;
 use crate::sync::mutex::Mutex;
 
-use self::block::VIRTIO0;
 use self::block::VirtIOBlock;
 use self::sdcard::SDCardWrapper;
+
+#[cfg(not(feature = "board_k210"))]
+pub const VIRTIO0: usize = 0x10001000;
 
 pub static mut BLK_CONTROL: BlockDeviceContainer = BlockDeviceContainer(vec![]);
 
@@ -39,6 +41,7 @@ impl BlockDeviceContainer {
         self.0.push(disk_device);
     }
 
+    #[allow(unused)]
     pub fn add_sdcard(&mut self) {
         // 创建存储设备
         let block_device:Arc<Mutex<Box<dyn BlockDevice>>> = Arc::new(Mutex::new(Box::new(SDCardWrapper::new())));

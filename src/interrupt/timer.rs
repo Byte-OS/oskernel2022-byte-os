@@ -1,7 +1,5 @@
 use crate::sync::mutex::Mutex;
-use crate::task::get_current_task;
 use crate::{sbi::set_timer, task::suspend_and_run_next};
-use crate::interrupt::Context;
 use riscv::register::{sie, sstatus, time};
 
 #[cfg(not(feature = "board_k210"))]
@@ -25,6 +23,7 @@ pub struct TimeSpec {
 // tms_stime记录的是进程执行内核代码的时间.
 // tms_cutime记录的是子进程执行用户代码的时间.
 // tms_ustime记录的是子进程执行内核代码的时间.
+#[allow(dead_code)]
 pub struct TMS
 {                     
 	tms_utime: u64, 
@@ -68,7 +67,7 @@ lazy_static! {
 
 pub static mut TICKS: usize = 0;
 /// 时钟中断处理器
-pub fn timer_handler(context: &mut Context) {
+pub fn timer_handler() {
     set_next_timeout();
     unsafe {
         TICKS=TICKS+1;
