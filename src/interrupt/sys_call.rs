@@ -372,6 +372,7 @@ pub fn sys_call() {
             // 获取参数
             let fd = context.x[10];
             let start_ptr = usize::from(pmm.get_phys_addr(VirtAddr::from(context.x[11])).unwrap());
+            let len = context.x[12];
             let mut buf_ptr = start_ptr;
             if let Some(file_tree_node) = current_task.fd_table[fd].clone() {
                 match &mut file_tree_node.lock().target {
@@ -423,7 +424,8 @@ pub fn sys_call() {
                             };
                             write_string_to_raw(buf_str, &sub_node_name);
                             buf_ptr = buf_ptr + dirent.d_reclen as usize;
-                            if buf_ptr - start_ptr >= 512 {
+                            // 保证缓冲区不会溢出
+                            if buf_ptr - start_ptr >= len {
                                 break;
                             }
                         }
