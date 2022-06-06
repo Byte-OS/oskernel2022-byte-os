@@ -10,12 +10,26 @@
 </head>
 <body>
   <div id="app"></div>
+  <script src="https://cdn.bytedance.com/cdn/mermaid/8.14.0/mermaid.min.js"></script>
   <script>
+    mermaid.initialize({ startOnLoad: false });
     window.$docsify = {
       name: '操作系统笔记',
       repo: 'https://gitlab.eduxiji.net/alexsondes/oskernel2022-byte-os/',
-      homepage: '/report.md'
+      homepage: '/report.md',
       // homepage: 'https://gitlab.eduxiji.net/alexsondes/oskernel2022-byte-os/raw/main/docs/README.md'
+      markdown: {
+        renderer: {
+          code: function(code, lang) {
+            if (lang === "mermaid") {
+              return (
+                '<div class="mermaid">' + mermaid.render('mermaid-svg-' + num++, code) + "</div>"
+              );
+            }
+            return this.origin.code.apply(this, arguments);
+          }
+        }
+      }
     }
   </script>
   <!-- Docsify v4 -->
