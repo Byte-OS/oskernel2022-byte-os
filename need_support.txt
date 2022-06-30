@@ -1,5 +1,0 @@
-close
-fstat
-mmap
-munmap
-pipe
