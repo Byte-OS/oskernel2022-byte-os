@@ -2,17 +2,17 @@
 .PHONY: doc kernel build clean qemu run k210 flash
 
 run:
-	cd os && make -f makefile run || exit 1;
+	cd kernel && make -f makefile run || exit 1;
 
 flash:
-	cd os && make -f makefile flash || exit 1;
+	cd kernel && make -f makefile flash || exit 1;
 
 
 hexdump:
 	hexdump $(FS_IMG) -C
 
 coredump:
-	cd os && make -f makefile FS_IMG=../$(FS_IMG) coredump || exit 1;
+	cd kernel && make -f makefile FS_IMG=../$(FS_IMG) coredump || exit 1;
 
 fs-img: 
 	@rm -f $(FS_IMG)

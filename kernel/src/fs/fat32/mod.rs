@@ -200,6 +200,7 @@ impl FAT32 {
             
             let mut start;
             let mut end = 0;
+            // TODO: add new buf, resolving the possible problem that index out of bound
             loop {
                 start = end;
 
@@ -224,6 +225,7 @@ impl FAT32 {
                     break;
                 }
             }
+
             cluster = self.get_next_cluster(cluster);
         }
     }

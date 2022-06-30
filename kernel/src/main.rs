@@ -75,6 +75,7 @@ pub extern "C" fn rust_main(hartid: usize, device_tree_paddr: usize) -> ! {
     memory::init();
 
     // 初始化中断
+
     interrupt::init();
 
     // 初始化设备

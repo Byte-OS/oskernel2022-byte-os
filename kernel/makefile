@@ -53,7 +53,7 @@ flash:
 	python3 $(K210-BURNER) -p $(K210-SERIALPORT) -b 1500000 $(BIN_FILE)
 	python3 -m serial.tools.miniterm --eol LF --dtr 0 --rts 0 --filter direct $(K210-SERIALPORT) 115200
 
-run:
+run: qemu
 	@qemu-system-riscv64 \
             -machine virt \
             -bios $(BOOTLOADER) \
