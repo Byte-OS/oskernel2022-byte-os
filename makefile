@@ -5,7 +5,7 @@ run:
 	cd os && make -f makefile run || exit 1;
 
 flash:
-		cd os && make -f makefile flash || exit 1;
+	cd os && make -f makefile flash || exit 1;
 
 
 hexdump:
