@@ -81,5 +81,8 @@ gdb:
         -ex 'set arch riscv:rv64' \
         -ex 'target remote localhost:1234'
 
+hexdump:
+	hexdump $(FS_IMG) -C -s 0x10F200
+
 coredump:
-	hexdump $(BIN_FILE) -C
+	cd kernel && make -f makefile FS_IMG=../$(FS_IMG) coredump || exit 1;

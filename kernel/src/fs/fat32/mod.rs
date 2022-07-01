@@ -1,4 +1,4 @@
-use core::{cell::RefCell, mem::size_of, slice};
+use core::{cell::RefCell, mem::size_of, slice, ptr};
 
 use alloc::{sync::Arc, rc::Rc, string::String, boxed::Box};
 
@@ -103,7 +103,7 @@ impl FAT32 {
 
     // 从内存中读取文件
     pub fn read_file_from(&self, buf: &[u8]) -> Option<FileTreeNode> {
-        if buf[11] == 0 {
+        if buf[11] == 0 || buf[0] == 0xe5{
             return None;
         }
         let mut filename = String::new();
@@ -111,8 +111,9 @@ impl FAT32 {
             for i in 0..buf.len()/0x20 {
                 match buf[i*0x20 + 11] {
                     0x0f=>{
-                        let long_name = &*(buf.as_ptr() as *const u8 as *const FAT32longFileItem);
-                        filename = filename + long_name.filename().as_ref();
+                        // let long_name = &*(buf.as_ptr() as *const u8 as *const FAT32longFileItem);
+                        let long_name = &*((buf.as_ptr() as usize + i*0x20) as *const FAT32longFileItem);
+                        filename = long_name.filename() + &filename;
                     }
                     _=> {
                         let file_item;
@@ -193,41 +194,74 @@ impl FAT32 {
         // 创建缓冲区 缓冲区大小为一个簇(cluster)
         let mut buf = vec![0u8; self.bpb.sectors_per_cluster as usize * SECTOR_SIZE];
         let mut cluster = start_cluster;
-        
-        // 0x0 - 0x0fffffef 为有效簇
+
+        // 文件项读取Buf
+        let mut file_item_buf = FileItemBuf::new();
+
         while cluster < 0x0fff_ffef {
             self.read_cluster(cluster, &mut buf);
             
-            let mut start;
-            let mut end = 0;
+            let mut start = 0;
             // TODO: add new buf, resolving the possible problem that index out of bound
             loop {
-                start = end;
-
-                while buf[end + 11] == 0x0f {
-                    end = end + 0x20;
-                }
-                end = end + 0x20;
-
-                let new_node = self.read_file_from(&buf[start..end]);
-                if let Some(new_node) = new_node {
-                    if !(new_node.get_filename() == "." || new_node.get_filename() == "..") {
-                        if new_node.is_dir() {                            
-                            self.read_directory(new_node.get_cluster(), &new_node);
-                        }
-                        // 添加到节点
-                        filetree_node.add(new_node.clone());
-                    }
-                    
-                }
-
-                if end >= self.bpb.sectors_per_cluster as usize * SECTOR_SIZE {
+                if start >= self.bpb.sectors_per_cluster as usize * SECTOR_SIZE {
                     break;
                 }
+                file_item_buf.push(&buf[start..start+0x20]);
+                if file_item_buf.is_end() {
+                    // 如果是结束项 则进行读取
+                    let new_node = self.read_file_from(file_item_buf.get());
+                    if let Some(new_node) = new_node {
+                        if !(new_node.get_filename() == "." || new_node.get_filename() == "..") {
+                            if new_node.is_dir() {                            
+                                self.read_directory(new_node.get_cluster(), &new_node);
+                            }
+                            // 添加到节点
+                            filetree_node.add(new_node.clone());
+                        }
+                    }
+                    file_item_buf.init();
+                }
+                start += 0x20;
             }
 
             cluster = self.get_next_cluster(cluster);
         }
+        
+        // 0x0 - 0x0fffffef 为有效簇
+        // while cluster < 0x0fff_ffef {
+        //     self.read_cluster(cluster, &mut buf);
+            
+        //     let mut start;
+        //     let mut end = 0;
+        //     // TODO: add new buf, resolving the possible problem that index out of bound
+        //     loop {
+        //         start = end;
+
+        //         while buf[end + 11] == 0x0f {
+        //             end = end + 0x20;
+        //         }
+        //         end = end + 0x20;
+
+        //         let new_node = self.read_file_from(&buf[start..end]);
+        //         if let Some(new_node) = new_node {
+        //             if !(new_node.get_filename() == "." || new_node.get_filename() == "..") {
+        //                 if new_node.is_dir() {                            
+        //                     self.read_directory(new_node.get_cluster(), &new_node);
+        //                 }
+        //                 // 添加到节点
+        //                 filetree_node.add(new_node.clone());
+        //             }
+                    
+        //         }
+
+        //         if end >= self.bpb.sectors_per_cluster as usize * SECTOR_SIZE {
+        //             break;
+        //         }
+        //     }
+
+        //     cluster = self.get_next_cluster(cluster);
+        // }
     }
 
     // 获取最后一个fat
@@ -286,5 +320,46 @@ pub fn init() {
             // 挂载分区
             fat32.mount("/");
         }        
+    }
+}
+
+const FILE_ITEM_BUF_SIZE: usize = 0x100;
+
+pub struct FileItemBuf {
+    pointer: usize,
+    buf: [u8; FILE_ITEM_BUF_SIZE]
+}
+
+impl FileItemBuf {
+    pub fn new() -> Self {
+        FileItemBuf {
+            pointer: 0,
+            buf: [0;FILE_ITEM_BUF_SIZE]
+        }
+    }
+
+    pub fn init(&mut self) {
+        self.pointer = 0
+    }
+
+    // add items, return new size that buf used
+    pub fn push(&mut self, buf: &[u8]) -> usize {
+        let new_pointer = self.pointer + buf.len();
+        // 判断数组是否越界
+        if new_pointer > FILE_ITEM_BUF_SIZE {
+            panic!("FileItemBuf数组越界");
+        }
+        self.buf[self.pointer..new_pointer].copy_from_slice(buf);
+        self.pointer = new_pointer;
+        new_pointer
+    }
+
+    // get items buf
+    pub fn get(&self) -> &[u8] {
+        &self.buf[..self.pointer]
+    }
+
+    pub fn is_end(&self) -> bool { 
+        self.buf[self.pointer - 0x20 + 11] != 0xf
     }
 }
