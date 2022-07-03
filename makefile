@@ -7,6 +7,8 @@ run:
 flash:
 	@cd kernel && make -f makefile flash || exit 1;
 
+debug:
+	@cd kernel && make -f makefile debug || exit 1;
 
 hexdump:
 	@cd kernel && make -f makefile hexdump || exit 1;
