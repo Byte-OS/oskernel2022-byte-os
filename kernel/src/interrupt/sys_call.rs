@@ -3,7 +3,7 @@ use core::slice;
 use alloc::{string::String, sync::Arc};
 use riscv::register::satp;
 
-use crate::{console::puts, task::{kill_current_task, get_current_task, exec, clone_task, TASK_CONTROLLER_MANAGER, suspend_and_run_next, wait_task, FileDescEnum, FileDesc}, memory::{page_table::{PageMapping, PTEFlags}, addr::{VirtAddr, PhysPageNum, PhysAddr}}, fs::{filetree::{FILETREE, FileTreeNode}, file::{Kstat, FileType}},  interrupt::TICKS, sync::mutex::Mutex};
+use crate::{console::puts, task::{kill_current_task, get_current_task, exec, clone_task, TASK_CONTROLLER_MANAGER, suspend_and_run_next, wait_task, FileDescEnum, FileDesc}, memory::{page_table::{PageMapping, PTEFlags}, addr::{VirtAddr, PhysPageNum, PhysAddr}, page::PAGE_ALLOCATOR}, fs::{filetree::{FILETREE, FileTreeNode}, file::{Kstat, FileType}},  interrupt::TICKS, sync::mutex::Mutex};
 
 use super::{Context,  timer::{TimeSpec, TMS}};
 
@@ -129,6 +129,8 @@ pub fn sys_call() {
     let mut pmm = PageMapping::from(PhysPageNum(satp::read().bits()).to_addr());
     // 将 恢复地址 + 4 跳过调用地址
     context.sepc += 4;
+
+    info!("中断号: {}", context.x[17]);
 
     // 匹配系统调用 a7(x17) 作为调用号
     match context.x[17] {
@@ -668,31 +670,43 @@ pub fn sys_call() {
         // 进行文件映射
         SYS_MMAP => {
             let start = context.x[10];
-            let _len = context.x[11];
+            let len = context.x[11];
             let _prot = context.x[12];
             let _flags = context.x[13];
             let fd = context.x[14];
             let _offset = context.x[15];
 
-            if let Some(file_tree_node) = current_task.fd_table[fd].clone() {
-                match &mut file_tree_node.lock().target {
-                    FileDescEnum::File(file_tree_node) => {
-                        // 如果start为0 则分配空间 暂分配0xd0000000
-                        if start == 0 {
-                            // 添加映射
-                            pmm.add_mapping(PhysAddr::from(file_tree_node.get_cluster()), VirtAddr::from(0xd0000000), 
-                                PTEFlags::VRWX | PTEFlags::U);
-                            context.x[10] = 0xd0000000;
-                        } else {
-                            context.x[10] = 0;
-                        }
-                    },
-                    _ => {
-                        context.x[10] = SYS_CALL_ERR;
-                    }
-                }
+            if fd == SYS_CALL_ERR { // 如果是匿名映射
+                let page_num = (len + 4095) / 4096;
+                info!("start: {:#x} len: {:#x} from: {:#x}", start, len, context.sepc);
+                // if let Some(start_page) = PAGE_ALLOCATOR.lock().alloc_more(page_num) {
+                //     let start_addr = PhysAddr::from(start_page);
+                //     context.x[10] = 0xd0000000;
+                // } else {
+                //     context.x[10] = SYS_CALL_ERR;
+                // }
+                context.x[10] = 0;
             } else {
-                context.x[10] = SYS_CALL_ERR;
+                if let Some(file_tree_node) = current_task.fd_table[fd].clone() {
+                    match &mut file_tree_node.lock().target {
+                        FileDescEnum::File(file_tree_node) => {
+                            // 如果start为0 则分配空间 暂分配0xd0000000
+                            if start == 0 {
+                                // 添加映射
+                                pmm.add_mapping(PhysAddr::from(file_tree_node.get_cluster()), VirtAddr::from(0xd0000000), 
+                                    PTEFlags::VRWX | PTEFlags::U);
+                                context.x[10] = 0xd0000000;
+                            } else {
+                                context.x[10] = 0;
+                            }
+                        },
+                        _ => {
+                            context.x[10] = SYS_CALL_ERR;
+                        }
+                    }
+                } else {
+                    context.x[10] = SYS_CALL_ERR;
+                }
             }
         }
         // 取消文件映射

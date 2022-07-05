@@ -342,6 +342,10 @@ impl TaskController {
         self.context.x[2] = 0xf0000fe0;
     }
 
+    pub fn set_entry_point(&mut self, entry_point: usize) {
+        self.context.sepc = entry_point;
+    }
+
     // 申请堆地址
     pub fn alloc_heap(&mut self, size: usize) -> usize {
         let top = self.heap.pointer;
@@ -424,12 +428,43 @@ pub fn exec(path: &str) {
                 from_raw_parts_mut(usize::from(phy_start.to_addr()) as *mut u8, pages*PAGE_SIZE)
             };
             program.read_to(buf);
+
+            // 读取elf信息
+            let elf = xmas_elf::ElfFile::new(buf).unwrap();
+            let elf_header = elf.header;
+            let magic = elf_header.pt1.magic;
+            assert_eq!(magic, [0x7f, 0x45, 0x4c, 0x46], "invalid elf!");
+
+            // 设置入口地址
+            task_controller.set_entry_point(elf.header.pt2.entry_point() as usize);
             
+            // set pageMappingManager
             let pmm = &mut task_controller.pmm;
 
-            for i in 0..pages {
-                pmm.add_mapping(PhysAddr::from(PhysPageNum::from(usize::from(phy_start) + i)), 
-                    VirtAddr::from(i*0x1000), PTEFlags::VRWX | PTEFlags::U);
+            // remap memory and set program header
+            let ph_count = elf_header.pt2.ph_count();
+            for i in 0..ph_count {
+                let ph = elf.program_header(i).unwrap();
+                if ph.get_type().unwrap() == xmas_elf::program::Type::Load {
+                    let start_va: VirtAddr = (ph.virtual_addr() as usize).into();
+                    let end_va: VirtAddr = ((ph.virtual_addr() + ph.mem_size()) as usize).into();
+                    let ph_offset = ph.offset();
+                    
+                    let mut i = start_va.0 / 4096 * 4096;
+                    loop {
+                        if i > end_va.0 { break; }
+                        let v_offset = i - start_va.0;
+                        pmm.add_mapping(PhysAddr::from(PhysAddr::from(phy_start).0 + ph_offset as usize + v_offset), VirtAddr::from(i), PTEFlags::VRWX | PTEFlags::U);
+                        info!("映射内存: {:#x}, {:#x}", i, PhysAddr::from(phy_start).0 + ph_offset as usize + v_offset);
+                        i += 4096;
+                    }
+
+                    // read flags
+                    // let ph_flags = ph.flags();
+                    // ph_flags.is_read() readable
+                    // ph_flags.is_write() writeable
+                    // ph_flags.is_execute() executeable
+                }
             }
 
             let stack_addr = PhysAddr::from(PhysPageNum::from(usize::from(phy_start) + pages));
