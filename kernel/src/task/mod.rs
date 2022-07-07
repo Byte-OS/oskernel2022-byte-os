@@ -396,6 +396,7 @@ impl TaskController {
     pub fn run_current(&mut self) {
         // 切换satp
         self.pmm.change_satp();
+
         // 切换为运行状态
         self.status = TaskStatus::RUNNING;
         
@@ -455,7 +456,6 @@ pub fn exec(path: &str) {
                         if i > end_va.0 { break; }
                         let v_offset = i - start_va.0;
                         pmm.add_mapping(PhysAddr::from(PhysAddr::from(phy_start).0 + ph_offset as usize + v_offset), VirtAddr::from(i), PTEFlags::VRWX | PTEFlags::U);
-                        info!("映射内存: {:#x}, {:#x}", i, PhysAddr::from(phy_start).0 + ph_offset as usize + v_offset);
                         i += 4096;
                     }
 
@@ -470,10 +470,23 @@ pub fn exec(path: &str) {
             let stack_addr = PhysAddr::from(PhysPageNum::from(usize::from(phy_start) + pages));
 
             // 添加参数
-            let argc_ptr = (usize::from(stack_addr) + 0xff0) as *mut usize;
+            let argc_ptr = (usize::from(stack_addr) + 0xfd0) as *mut usize;
             unsafe {
-                argc_ptr.write(0);
-                argc_ptr.add(1).write(0);
+                // test for argc
+                argc_ptr.write(1);
+                argc_ptr.add(1).write(0xf0010000);
+
+                // write byte
+                let t = 
+                    slice::from_raw_parts_mut(task_controller.heap.get_addr().as_mut_ptr(), 5);
+                t[0] = 'a' as u8;
+                t[1] = 'l' as u8;
+                t[2] = 'e' as u8;
+                t[3] = 'x' as u8;
+                t[4] = 0;
+
+                // set sp
+                task_controller.context.x[2] = 0xf0000fd0;
             };
 
             // 映射栈 
@@ -482,6 +495,7 @@ pub fn exec(path: &str) {
             // 映射堆
             pmm.add_mapping(task_controller.heap.get_addr(), VirtAddr::from(0xf0010000), PTEFlags::VRWX | PTEFlags::U);
         }
+
         TASK_CONTROLLER_MANAGER.lock().add(task_controller);
 
     } else {

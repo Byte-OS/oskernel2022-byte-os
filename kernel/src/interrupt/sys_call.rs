@@ -677,15 +677,18 @@ pub fn sys_call() {
             let _offset = context.x[15];
 
             if fd == SYS_CALL_ERR { // 如果是匿名映射
-                let page_num = (len + 4095) / 4096;
+                // let page_num = (len + 4095) / 4096;
+                let page_num = 2;
                 info!("start: {:#x} len: {:#x} from: {:#x}", start, len, context.sepc);
-                // if let Some(start_page) = PAGE_ALLOCATOR.lock().alloc_more(page_num) {
-                //     let start_addr = PhysAddr::from(start_page);
-                //     context.x[10] = 0xd0000000;
-                // } else {
-                //     context.x[10] = SYS_CALL_ERR;
-                // }
-                context.x[10] = 0;
+                if let Some(start_page) = PAGE_ALLOCATOR.force_get().alloc_more(page_num) {
+                    let start_addr = PhysAddr::from(start_page);
+                    pmm.add_mapping(start_addr, VirtAddr::from(0xe0000000), PTEFlags::VRWX |PTEFlags::U);
+                    // 添加映射成功
+                    context.x[10] = 0xe0000000;
+                } else {
+                    context.x[10] = SYS_CALL_ERR;
+                }
+                // context.x[10] = 0;
             } else {
                 if let Some(file_tree_node) = current_task.fd_table[fd].clone() {
                     match &mut file_tree_node.lock().target {

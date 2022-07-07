@@ -108,7 +108,7 @@ fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) -> us
         Trap::Exception(Exception::UserEnvCall) => sys_call::sys_call(),
         // 加载页面错误
         Trap::Exception(Exception::LoadPageFault) => {
-            panic!("加载权限异常 地址:{:#x}", stval)
+            panic!("加载权限异常 地址:{:#x} 调用地址: {:#x}", stval, context.sepc)
         },
         // 页面未对齐错误
         Trap::Exception(Exception::StoreMisaligned) => {

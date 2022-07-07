@@ -40,62 +40,62 @@ rustup target add riscv64imac-unknown-none-elf
 
 ```rust
 .
-├── Cargo.toml				// Cargo文件
-├── README.md				// README文件
-├── bootloader				// rustsbi引导目录
-│   ├── rustsbi-k210.bin	// rustsbi k210文件
-│   └── rustsbi-qemu.bin	// rust qemu文件
-├── docs					// 文档目录 部署在pages
-│   ├── README.md			// 笔记文档
-│   ├── index.html			// 笔记网页
-│   └── report.md			// 报告文件
-├── fs.img					// 测试文件系统
-├── makefile				// makefile文件
-├── os.bin					// 生成的操作系统镜像
-└── src						// 源代码目录
-    ├── console.rs			// 字符输出
-    ├── device				// 设备控制模块
-    │   ├── block.rs		// VIRTIO Block驱动
-    │   ├── mod.rs			// device mod文件
-    │   └── sdcard.rs		// SDCARD驱动文件	(来自rCore 进行略微修改)
-    ├── entry.asm			// 操作系统入口
-    ├── fs					// 文件系统驱动
-    │   ├── fat32			// fat32驱动
-    │   │   ├── fat32bpb.rs		// fat32bpb
-    │   │   ├── file_trait.rs	// file_trait
-    │   │   ├── long_file.rs	// fat32长文件名
-    │   │   ├── mod.rs			// fat32驱动 mod文件
-    │   │   └── short_file.rs	// fat32短文件名
-    │   ├── file.rs				// 文件系统文件
-    │   ├── filetree.rs			// 文件树
-    │   ├── mod.rs				// 文件系统 mod文件
-    │   └── partition.rs		// 分区
-    ├── interrupt					// 中断
-    │   ├── interrupt-kernel.asm	// 内核中断入口
-    │   ├── interrupt-user.asm		// 应用程序中断入口
-    │   ├── mod.rs					// 中断Mod文件 含有中断处理函数
-    │   ├── sys_call.rs				// 系统调用函数
-    │   └── timer.rs				// 定时器
-    ├── linker-k210.ld				// k210 linker文件
-    ├── linker-qemu.ld				// qemu linker文件
-    ├── main.rs						// 操作系统主函数
-    ├── memory						// 内存描述函数
-    │   ├── addr.rs					// 虚拟地址和物理地址描述文件
-    │   ├── heap.rs					// 操作系统堆结构 和 Global_Allocator
-    │   ├── mod.rs					// 内存mod文件
-    │   ├── page.rs					// 内存页 管理器 分配器
-    │   └── page_table.rs			// 内存页映射管理器
-    ├── panic.rs					// panic 文件
-    ├── sbi.rs						// sbi调用函数
-    ├── sync						// sync相关函数
-    │   ├── mod.rs					// sync mod文件
-    │   └── mutex.rs				// Mutex 定义
-    ├── task						// 任务管理函数
-    │   ├── change_task.asm			// 更换任务 汇编代码
-    │   ├── mod.rs					// task mod文件
-    │   ├── pipe.rs					// 任务 pipe文件 包含PipeBuf
-    │   └── task_queue.rs			// 任务队列文件
-    └── virtio_impl.rs				// virtio_impl申请文件
+├── Cargo.toml                // Cargo文件
+├── README.md                // README文件
+├── bootloader                // rustsbi引导目录
+│   ├── rustsbi-k210.bin    // rustsbi k210文件
+│   └── rustsbi-qemu.bin    // rust qemu文件
+├── docs                    // 文档目录 部署在pages
+│   ├── README.md            // 笔记文档
+│   ├── index.html            // 笔记网页
+│   └── report.md            // 报告文件
+├── fs.img                    // 测试文件系统
+├── makefile                // makefile文件
+├── os.bin                    // 生成的操作系统镜像
+└── src                        // 源代码目录
+    ├── console.rs            // 字符输出
+    ├── device                // 设备控制模块
+    │   ├── block.rs        // VIRTIO Block驱动
+    │   ├── mod.rs            // device mod文件
+    │   └── sdcard.rs        // SDCARD驱动文件    (来自rCore 进行略微修改)
+    ├── entry.asm            // 操作系统入口
+    ├── fs                    // 文件系统驱动
+    │   ├── fat32            // fat32驱动
+    │   │   ├── fat32bpb.rs        // fat32bpb
+    │   │   ├── file_trait.rs    // file_trait
+    │   │   ├── long_file.rs    // fat32长文件名
+    │   │   ├── mod.rs            // fat32驱动 mod文件
+    │   │   └── short_file.rs    // fat32短文件名
+    │   ├── file.rs                // 文件系统文件
+    │   ├── filetree.rs            // 文件树
+    │   ├── mod.rs                // 文件系统 mod文件
+    │   └── partition.rs        // 分区
+    ├── interrupt                    // 中断
+    │   ├── interrupt-kernel.asm    // 内核中断入口
+    │   ├── interrupt-user.asm        // 应用程序中断入口
+    │   ├── mod.rs                    // 中断Mod文件 含有中断处理函数
+    │   ├── sys_call.rs                // 系统调用函数
+    │   └── timer.rs                // 定时器
+    ├── linker-k210.ld                // k210 linker文件
+    ├── linker-qemu.ld                // qemu linker文件
+    ├── main.rs                        // 操作系统主函数
+    ├── memory                        // 内存描述函数
+    │   ├── addr.rs                    // 虚拟地址和物理地址描述文件
+    │   ├── heap.rs                    // 操作系统堆结构 和 Global_Allocator
+    │   ├── mod.rs                    // 内存mod文件
+    │   ├── page.rs                    // 内存页 管理器 分配器
+    │   └── page_table.rs            // 内存页映射管理器
+    ├── panic.rs                    // panic 文件
+    ├── sbi.rs                        // sbi调用函数
+    ├── sync                        // sync相关函数
+    │   ├── mod.rs                    // sync mod文件
+    │   └── mutex.rs                // Mutex 定义
+    ├── task                        // 任务管理函数
+    │   ├── change_task.asm            // 更换任务 汇编代码
+    │   ├── mod.rs                    // task mod文件
+    │   ├── pipe.rs                    // 任务 pipe文件 包含PipeBuf
+    │   └── task_queue.rs            // 任务队列文件
+    └── virtio_impl.rs                // virtio_impl申请文件
 ```
 
 ## 分工与协作
@@ -343,11 +343,11 @@ pub struct FileTreeNodeRaw {
     pub size: usize,                    // 文件大小
     pub nlinkes: u64,                   // 链接数量
     pub st_atime_sec: u64,              // 最后访问秒
-	pub st_atime_nsec: u64,             // 最后访问微秒
-	pub st_mtime_sec: u64,              // 最后修改秒
-	pub st_mtime_nsec: u64,             // 最后修改微秒
-	pub st_ctime_sec: u64,              // 最后创建秒
-	pub st_ctime_nsec: u64,             // 最后创建微秒
+    pub st_atime_nsec: u64,             // 最后访问微秒
+    pub st_mtime_sec: u64,              // 最后修改秒
+    pub st_mtime_nsec: u64,             // 最后修改微秒
+    pub st_ctime_sec: u64,              // 最后创建秒
+    pub st_ctime_nsec: u64,             // 最后创建微秒
 }
 #[derive(Clone)]
 // 文件树节点
@@ -443,33 +443,31 @@ impl FileDesc {
 
 ```mermaid
 graph LR;
-	中断开始-->任务调度;
-	任务调度-->中断处理;
-	中断处理--无需切换任务-->中断结束;
-	中断结束-->获取当前任务;
-	获取当前任务-->恢复当前任务环境;
-	
-	中断处理-->切换任务当前任务;
-	切换任务当前任务-->中断结束;
+    中断开始-->任务调度;
+    任务调度-->中断处理;
+    中断处理--无需切换任务-->中断结束;
+    中断结束-->获取当前任务;
+    获取当前任务-->恢复当前任务环境;
+
+    中断处理-->切换任务当前任务;
+    切换任务当前任务-->中断结束;
 ```
 
 #### 等待任务
 
 ```mermaid
 graph LR;
-	中断开始-->从僵尸进程列表中获取需要等待的任务;
-	从僵尸进程列表中获取需要等待的任务--存在任务-->移出僵尸进程;
-	移出僵尸进程-->写入系统参数;
-	写入系统参数-->获取当前任务;
-	
-	从僵尸进程列表中获取需要等待的任务--不存在任务-->将当前任务加入等待列表;
-	将当前任务加入等待列表-->切换任务;
-	
-	切换任务-->获取当前任务;
-	获取当前任务-->恢复当前任务环境;
+    中断开始-->从僵尸进程列表中获取需要等待的任务;
+    从僵尸进程列表中获取需要等待的任务--存在任务-->移出僵尸进程;
+    移出僵尸进程-->写入系统参数;
+    写入系统参数-->获取当前任务;
+
+    从僵尸进程列表中获取需要等待的任务--不存在任务-->将当前任务加入等待列表;
+    将当前任务加入等待列表-->切换任务;
+
+    切换任务-->获取当前任务;
+    获取当前任务-->恢复当前任务环境;
 ```
-
-
 
 ### 3.内存管理
 
@@ -553,7 +551,7 @@ impl PageMapping {
 
     // 删除mapping
     pub fn remove_mapping(&mut self, virt_addr: VirtAddr) {
-       	...
+           ...
     }
 
     // 获取物理地址
@@ -621,13 +619,13 @@ target = "riscv64imac-unknown-none-elf"
 
 ```makefile
 k210: 
-	@cp src/linker-k210.ld src/linker.ld
-	@RUSTFLAGS="-Clink-arg=-Tsrc/linker.ld" cargo build $(MODE_FLAG) --features "board_k210" --offline
-	@rm src/linker.ld
-	$(OBJCOPY) $(KERNEL_FILE) --strip-all -O binary $(BIN_FILE)
-	@cp $(BOOTLOADER_K210) $(BOOTLOADER_K210).copy
-	@dd if=$(BIN_FILE) of=$(BOOTLOADER_K210).copy bs=131072 seek=1
-	@mv $(BOOTLOADER_K210).copy $(BIN_FILE)
+    @cp src/linker-k210.ld src/linker.ld
+    @RUSTFLAGS="-Clink-arg=-Tsrc/linker.ld" cargo build $(MODE_FLAG) --features "board_k210" --offline
+    @rm src/linker.ld
+    $(OBJCOPY) $(KERNEL_FILE) --strip-all -O binary $(BIN_FILE)
+    @cp $(BOOTLOADER_K210) $(BOOTLOADER_K210).copy
+    @dd if=$(BIN_FILE) of=$(BOOTLOADER_K210).copy bs=131072 seek=1
+    @mv $(BOOTLOADER_K210).copy $(BIN_FILE)
 ```
 
 ## 辅助函数
@@ -648,7 +646,7 @@ for i in (0..0x200).step_by(16) {
 
 ```rust
 pub extern "C" fn rust_main(hartid: usize, device_tree_paddr: usize) -> ! {
-	...
+    ...
     // 输出文件树
     print_file_tree(FILETREE.lock().open("/").unwrap());
     ...
@@ -705,3 +703,26 @@ match FILETREE.lock().open("text.txt") {
 
 (三)注重团队合作
   全国大学生操作系统大赛，这不是个人的比赛，是整个团队的竞争。团队精神是非常重要的，团队是成功的保障，是合作精神和服务精神的集中体现。胜出的团队应该是一个拥有全面技能的团队，包括技术和管理人员。每个团队成员都可以灵活，协调和有效地工作，并且可以相互信任，互相帮助并面对问题，一起战胜。
+
+
+
+## MUSL LIBC
+
+### TLS
+
+[c - On Linux, is TLS set up by the kernel or by libc (or other language runtime)? - Stack Overflow](https://stackoverflow.com/questions/30377020/on-linux-is-tls-set-up-by-the-kernel-or-by-libc-or-other-language-runtime)
+
+[linux - ELF file TLS and LOAD program sections - Stack Overflow](https://stackoverflow.com/questions/4126184/elf-file-tls-and-load-program-sections)
+
+https://stackoverflow.com/questions/64957077/get-argv0-from-a-none-main-file-such-as-start-no-libc-no-libs/64957497#64957497
+
+The ELF entry point contract is **not a C function** in the vast majority of psABIs (processor-specific ABI, the arch-dependent part of ELF). At entry, the stack pointer register points to an array of system-word-sized slots consisting of:
+
+```c
+argc, argv[0], ..., argv[argc-1], 0, environ[0], ..., environ[N], 0,
+auxv[0].a_type, auxv[0].a_value, ..., 0
+```
+
+You need at least a minimal asm stub to convert this into form that's readable by C. The simplest way to do this is to copy the stack pointer register into the first-argument register, align the stack pointer down according the function call ABI requirements, and call your C function taking a single pointer argument.
+
+You can see the `crt_arch.h` files ([x86_64 version here](https://git.musl-libc.org/cgit/musl/tree/arch/x86_64/crt_arch.h?id=v1.2.1)) in musl libc for an example of how this is done. (You can probably ignore the part about `_DYNAMIC` which is arranging for self-relocation when the entry point is used in the dynamic linker startup or static PIE executables.)
