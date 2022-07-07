@@ -18,6 +18,7 @@ mod sbi;
 mod panic;
 mod sync;
 pub mod task;
+pub mod runtime_err;
 
 #[macro_use]
 extern crate bitflags;

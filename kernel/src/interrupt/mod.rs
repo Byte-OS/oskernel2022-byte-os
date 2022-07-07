@@ -6,7 +6,7 @@ mod sys_call;
 
 pub use timer::TICKS;
 
-use crate::{memory::{addr::{VirtAddr, PhysAddr},  page_table::{PTEFlags, KERNEL_PAGE_MAPPING}}, task::get_current_task};
+use crate::{memory::{addr::{VirtAddr, PhysAddr},  page_table::{PTEFlags, KERNEL_PAGE_MAPPING}}, task::get_current_task, runtime_err::RuntimeError};
 
 use self::timer::LAST_TICKS;
 
@@ -105,7 +105,16 @@ fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) -> us
         // 页处理错误
         Trap::Exception(Exception::StorePageFault) => handle_page_fault(stval),
         // 用户请求
-        Trap::Exception(Exception::UserEnvCall) => sys_call::sys_call(),
+        Trap::Exception(Exception::UserEnvCall) => {
+            // 错误处理
+            if let Err(e) = sys_call::sys_call() {
+                match e {
+                    RuntimeError::FileNotFound => panic!("文件未找到"),
+                    RuntimeError::NoEnoughPage => panic!("页表不足"),
+                    _ => panic!("未知错误")
+                }
+            }
+        },
         // 加载页面错误
         Trap::Exception(Exception::LoadPageFault) => {
             panic!("加载权限异常 地址:{:#x} 调用地址: {:#x}", stval, context.sepc)

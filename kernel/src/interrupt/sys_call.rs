@@ -3,7 +3,7 @@ use core::slice;
 use alloc::{string::String, sync::Arc};
 use riscv::register::satp;
 
-use crate::{console::puts, task::{kill_current_task, get_current_task, exec, clone_task, TASK_CONTROLLER_MANAGER, suspend_and_run_next, wait_task, FileDescEnum, FileDesc}, memory::{page_table::{PageMapping, PTEFlags}, addr::{VirtAddr, PhysPageNum, PhysAddr}, page::PAGE_ALLOCATOR}, fs::{filetree::{FILETREE, FileTreeNode}, file::{Kstat, FileType}},  interrupt::TICKS, sync::mutex::Mutex};
+use crate::{console::puts, task::{kill_current_task, get_current_task, exec, clone_task, TASK_CONTROLLER_MANAGER, suspend_and_run_next, wait_task, FileDescEnum, FileDesc}, memory::{page_table::{PageMapping, PTEFlags}, addr::{VirtAddr, PhysPageNum, PhysAddr}, page::PAGE_ALLOCATOR}, fs::{filetree::{FILETREE, FileTreeNode}, file::{Kstat, FileType}},  interrupt::TICKS, sync::mutex::Mutex, runtime_err::RuntimeError};
 
 use super::{Context,  timer::{TimeSpec, TMS}};
 
@@ -119,7 +119,7 @@ pub fn write_string_to_raw(target: &mut [u8], str: &str) {
 }
 
 // 系统调用
-pub fn sys_call() {
+pub fn sys_call() -> Result<(), RuntimeError> {
     // 读取当前任务和任务的寄存器上下文
     let current_task_wrap = get_current_task().unwrap();
     let mut current_task = current_task_wrap.force_get();
@@ -647,7 +647,7 @@ pub fn sys_call() {
             let _tls = context.x[13];
             let _ctid = context.x[14];
 
-            let mut task = clone_task(&mut current_task_wrap.force_get());
+            let mut task = clone_task(&mut current_task_wrap.force_get())?;
             
             // 如果指定了栈 则设置栈
             if stack_addr > 0 {
@@ -680,7 +680,7 @@ pub fn sys_call() {
                 // let page_num = (len + 4095) / 4096;
                 let page_num = 2;
                 info!("start: {:#x} len: {:#x} from: {:#x}", start, len, context.sepc);
-                if let Some(start_page) = PAGE_ALLOCATOR.force_get().alloc_more(page_num) {
+                if let Ok(start_page) = PAGE_ALLOCATOR.force_get().alloc_more(page_num) {
                     let start_addr = PhysAddr::from(start_page);
                     pmm.add_mapping(start_addr, VirtAddr::from(0xe0000000), PTEFlags::VRWX |PTEFlags::U);
                     // 添加映射成功
@@ -731,4 +731,5 @@ pub fn sys_call() {
             warn!("未识别调用号 {}", context.x[17]);
         }
     }
+    Ok(())
 }

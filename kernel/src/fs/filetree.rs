@@ -3,7 +3,7 @@ use core::{cell::RefCell, slice};
 
 use alloc::{string::{String, ToString}, vec::Vec, sync::Arc, rc::Rc};
 
-use crate::{sync::mutex::Mutex, device::BLK_CONTROL, memory::{page::PAGE_ALLOCATOR, addr::{PhysAddr, PAGE_SIZE}}};
+use crate::{sync::mutex::Mutex, device::BLK_CONTROL, memory::{page::PAGE_ALLOCATOR, addr::{PhysAddr, PAGE_SIZE}}, runtime_err::RuntimeError};
 
 use super::file::FileType;
 
@@ -34,7 +34,7 @@ pub struct FileTree(FileTreeNode);
 
 impl FileTree {
     // 根据路径 获取文件节点 从根目录读取即为绝对路径读取
-    pub fn open(&self, path: &str) -> Result<FileTreeNode, &str> {
+    pub fn open(&self, path: &str) -> Result<FileTreeNode, RuntimeError> {
         self.0.open(path)
     }
 
@@ -113,7 +113,7 @@ impl FileTreeNode {
     }
 
     // 根据路径 获取文件节点
-    pub fn open(&self, path: &str) -> Result<FileTreeNode, &str> {
+    pub fn open(&self, path: &str) -> Result<FileTreeNode, RuntimeError> {
         let mut tree_node = self.clone();
         // 分割文件路径
         let location: Vec<&str> = path.split("/").collect();
@@ -138,7 +138,7 @@ impl FileTreeNode {
                         }
                     }
                     if !sign {
-                        return Err("文件不存在");
+                        return Err(RuntimeError::FileNotFound);
                     }
                 }
             }

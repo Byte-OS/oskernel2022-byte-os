@@ -1,6 +1,6 @@
 use alloc::vec::Vec;
 
-use crate::{sync::mutex::Mutex, memory::addr::PAGE_SIZE};
+use crate::{sync::mutex::Mutex, memory::addr::PAGE_SIZE, runtime_err::RuntimeError};
 
 use super::addr::PhysPageNum;
 
@@ -53,7 +53,7 @@ impl MemoryPageAllocator {
     }
 
     // 申请多个页
-    pub fn alloc_more(&mut self, pages: usize) ->Option<PhysPageNum> {
+    pub fn alloc_more(&mut self, pages: usize) -> Result<PhysPageNum, RuntimeError> {
         let mut i = 0;
         loop {
             if i >= self.pages.len() {
@@ -73,7 +73,7 @@ impl MemoryPageAllocator {
                    for j in 0..pages {
                        self.pages[i+j] = true;
                    } 
-                   return Some(PhysPageNum::from((self.start >> 12) + i));
+                   return Ok(PhysPageNum::from((self.start >> 12) + i));
                 }
             }
 
@@ -83,10 +83,10 @@ impl MemoryPageAllocator {
         for i in 0..self.pages.len() {
             if !self.pages[i] {
                 self.pages[i] = true;
-                return Some(PhysPageNum::from((self.start >> 12) + i));
+                return Ok(PhysPageNum::from((self.start >> 12) + i));
             }
         }
-        None
+        Err(RuntimeError::NoEnoughPage)
     }
 
     // 释放多个页

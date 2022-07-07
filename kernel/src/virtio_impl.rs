@@ -5,7 +5,7 @@ use crate::memory::{page::PAGE_ALLOCATOR, addr::{PhysPageNum, PhysAddr, VirtAddr
 #[no_mangle]
 extern "C" fn virtio_dma_alloc(pages: usize) -> PhysAddr {
     info!("申请设备地址!");
-    if let Some(page_num) = PAGE_ALLOCATOR.lock().alloc_more(pages) {
+    if let Ok(page_num) = PAGE_ALLOCATOR.lock().alloc_more(pages) {
         let addr = PhysAddr::from(page_num);
         info!("alloc DMA: {:?}, pages={}", addr, pages);
         return addr
