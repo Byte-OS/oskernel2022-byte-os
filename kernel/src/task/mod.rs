@@ -1,7 +1,7 @@
 use core::arch::global_asm;
 
 use alloc::collections::VecDeque;
-use alloc::slice;
+use alloc::{slice, task};
 use alloc::string::String;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
@@ -15,6 +15,7 @@ use crate::sync::mutex::Mutex;
 use crate::{memory::{page_table::{PageMappingManager, PTEFlags}, addr::{PAGE_SIZE, VirtAddr, PhysAddr, PhysPageNum}, page::PAGE_ALLOCATOR}, fs::filetree::FILETREE};
 
 use self::pipe::PipeBuf;
+use self::stack::UserStack;
 use self::task_queue::load_next_task;
 
 pub mod pipe;
@@ -301,7 +302,7 @@ pub struct TaskController {
     pub entry_point: VirtAddr,                          // 入口地址
     pub pmm: PageMappingManager,                        // 页表映射控制器
     pub status: TaskStatus,                             // 任务状态
-    pub stack: VirtAddr,                                // 栈地址
+    pub stack: UserStack,                               // 栈地址
     pub heap: UserHeap,                                 // 堆地址
     pub context: Context,                               // 寄存器上下文
     pub home_dir: FileTreeNode,                         // 家地址
@@ -312,14 +313,16 @@ pub struct TaskController {
 impl TaskController {
     // 创建任务控制器
     pub fn new(pid: usize) -> Result<Self, RuntimeError> {
+        let pmm = PageMappingManager::new();
+        let pte = pmm.clone().pte;
         let mut task = TaskController {
             pid,
             ppid: 1,
             entry_point: VirtAddr::from(0),
-            pmm: PageMappingManager::new(),
+            pmm,
             status: TaskStatus::READY,
             heap: UserHeap::new(),
-            stack: VirtAddr::from(0),
+            stack: UserStack::new(pte),
             home_dir: FILETREE.force_get().open("/")?.clone(),
             context: Context::new(),
             fd_table: vec![
@@ -413,7 +416,7 @@ pub fn get_new_pid() -> usize {
 }
 
 // 执行一个程序 path: 文件名 思路：加入程序准备池  等待执行  每过一个时钟周期就执行一次
-// TODO: 更新exec 添加envo 和 auxiliary vector
+// TODO: 更新exec 添加envp 和 auxiliary vector
 pub fn exec(path: &str) -> Result<(), RuntimeError> {
     // 如果存在write
     let program = FILETREE.lock().open(path)?;
@@ -474,24 +477,13 @@ pub fn exec(path: &str) -> Result<(), RuntimeError> {
     let stack_addr = PhysAddr::from(PhysPageNum::from(usize::from(phy_start) + pages));
 
     // 添加参数
-    let argc_ptr = (usize::from(stack_addr) + 0xfd0) as *mut usize;
-    unsafe {
-        // test for argc
-        argc_ptr.write(1);
-        argc_ptr.add(1).write(0xf0010000);
-
-        // write byte
-        let t = 
-            slice::from_raw_parts_mut(task_controller.heap.get_addr().as_mut_ptr(), 5);
-        t[0] = 'a' as u8;
-        t[1] = 'l' as u8;
-        t[2] = 'e' as u8;
-        t[3] = 'x' as u8;
-        t[4] = 0;
-
-        // set sp
-        task_controller.context.x[2] = 0xf0000fd0;
-    };
+    let stack = &mut task_controller.stack;
+    let value_ptr = stack.push_str("alexbd");
+    stack.push(value_ptr);
+    stack.push(1);
+    
+    // set sp
+    task_controller.context.x[2] = task_controller.stack.get_stack_top();
 
     // 映射栈 
     pmm.add_mapping(stack_addr, VirtAddr::from(0xf0000000), PTEFlags::VRWX | PTEFlags::U);

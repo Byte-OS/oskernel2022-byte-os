@@ -1,7 +1,7 @@
 use _core::{arch::asm, slice::from_raw_parts_mut};
 use bitflags::*;
 
-use crate::{memory::addr::PhysAddr, sync::mutex::Mutex};
+use crate::{memory::addr::PhysAddr, sync::mutex::Mutex, runtime_err::RuntimeError};
 
 use super::{addr::{PhysPageNum,  VirtAddr, PAGE_PTE_NUM}, page::PAGE_ALLOCATOR};
 
@@ -208,10 +208,10 @@ impl PageMapping {
     }
 
     // 获取物理地址
-    pub fn get_phys_addr(&self, virt_addr: VirtAddr) -> Option<PhysAddr> {
+    pub fn get_phys_addr(&self, virt_addr: VirtAddr) -> Result<PhysAddr, RuntimeError> {
         // 如果没有pte则申请pte
         if usize::from(self.0) == 0 {
-            return None;
+            return Err(RuntimeError::NoMatchedAddr);
         }
 
         // 得到 列表中的项
@@ -222,10 +222,10 @@ impl PageMapping {
 
         // 判断 是否有指向下一级的页表
         if !l2_pte.flags().contains(PTEFlags::V) {
-            return None;
+            return Err(RuntimeError::NoMatchedAddr);
         }
         if l2_pte.flags() & PTEFlags::VRWX != PTEFlags::V {
-            return Some(PhysAddr::from(virt_addr.page_offset() | (virt_addr.l0() << 12) | (virt_addr
+            return Ok(PhysAddr::from(virt_addr.page_offset() | (virt_addr.l0() << 12) | (virt_addr
                 .l1() << 21) | (usize::from(l2_pte.ppn()) << 12)));
         }
 
@@ -236,10 +236,10 @@ impl PageMapping {
 
         // 判断 是否有指向下一级的页表
         if !l1_pte.flags().contains(PTEFlags::V) {
-            return None;
+            return Err(RuntimeError::NoMatchedAddr);
         }
         if l1_pte.flags() & PTEFlags::VRWX != PTEFlags::V {
-            return Some(PhysAddr::from(virt_addr.page_offset() | (virt_addr.l0() << 12) | (usize::from(l1_pte.ppn()) << 12)));
+            return Ok(PhysAddr::from(virt_addr.page_offset() | (virt_addr.l0() << 12) | (usize::from(l1_pte.ppn()) << 12)));
         }
 
         // 获取pte项
@@ -248,9 +248,9 @@ impl PageMapping {
         };
         let l0_pte = unsafe { l0_pte_ptr.read() };
         if !l0_pte.flags().contains(PTEFlags::V) {
-            return None;
+            return Err(RuntimeError::NoMatchedAddr);
         }
-        Some(PhysAddr::from(usize::from(PhysAddr::from(l0_pte.ppn())) + virt_addr.page_offset()))
+        Ok(PhysAddr::from(usize::from(PhysAddr::from(l0_pte.ppn())) + virt_addr.page_offset()))
     }
 }
 
@@ -288,7 +288,7 @@ impl PageMappingManager {
     }
 
     // 获取物理地址
-    pub fn get_phys_addr(&self, virt_addr: VirtAddr) -> Option<PhysAddr> {
+    pub fn get_phys_addr(&self, virt_addr: VirtAddr) -> Result<PhysAddr, RuntimeError> {
         self.pte.get_phys_addr(virt_addr)
     }
 
