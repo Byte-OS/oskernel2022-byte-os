@@ -5,6 +5,8 @@ use alloc::slice;
 use alloc::string::String;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
+use xmas_elf::program::Type;
+use crate::elf;
 use crate::fs::filetree::FileTreeNode;
 use crate::interrupt::{Context, TICKS};
 
@@ -431,12 +433,14 @@ pub fn exec(path: &str) -> Result<(), RuntimeError> {
 
     // 读取elf信息
     let elf = xmas_elf::ElfFile::new(buf).unwrap();
-    let elf_header = elf.header;
+    let elf_header = elf.header;    
     let magic = elf_header.pt1.magic;
+
+    let entry_point = elf.header.pt2.entry_point() as usize;
     assert_eq!(magic, [0x7f, 0x45, 0x4c, 0x46], "invalid elf!");
 
     // 设置入口地址
-    task_controller.set_entry_point(elf.header.pt2.entry_point() as usize);
+    task_controller.set_entry_point(entry_point);
     
     // 设置内存管理器
     let pmm = &mut task_controller.pmm;
@@ -468,11 +472,51 @@ pub fn exec(path: &str) -> Result<(), RuntimeError> {
 
     // 添加参数
     let stack = &mut task_controller.stack;
-    let value_ptr = stack.push_str("alexbd");
-    // stack.push(value_ptr);
+    let platform_ptr = stack.push_str("alexbd");
+    let exec_ptr = stack.push_str("riscv");
     
+    info!("elf header: {:#x?}", elf_header.pt2);
+
     // auxv top
     stack.push(0);
+    
+    stack.push(platform_ptr);
+    stack.push(elf::AT_PLATFORM);
+
+    stack.push(exec_ptr);
+    stack.push(elf::AT_EXECFN);
+
+    stack.push(elf_header.pt2.ph_count() as usize);
+    stack.push(elf::AT_PHNUM);
+
+    stack.push(PAGE_SIZE);
+    stack.push(elf::AT_PAGESZ);
+
+    stack.push(entry_point);
+    stack.push(elf::AT_ENTRY);
+
+    stack.push(elf_header.pt2.ph_entry_size() as usize);
+    stack.push(elf::AT_PHENT);
+
+    let mut ph_addr = 0;
+    if let Some(phdr) = elf.program_iter()
+            .find(|ph| ph.get_type() == Ok(Type::Phdr))
+    {
+        // if phdr exists in program header, use it
+        ph_addr = phdr.virtual_addr();
+    } else if let Some(elf_addr) = elf
+        .program_iter()
+        .find(|ph| ph.get_type() == Ok(Type::Load) && ph.offset() == 0)
+    {
+        // otherwise, check if elf is loaded from the beginning, then phdr can be inferred.
+        ph_addr = elf_addr.virtual_addr() + elf.header.pt2.ph_offset();
+    } else {
+        warn!("elf: no phdr found, tls might not work");
+        return Err(RuntimeError::NoMatchedAddr);
+    };
+    info!("ph_addr {:#x}", ph_addr);
+    stack.push(ph_addr as usize);
+    stack.push(elf::AT_PHDR);
 
     // envp top
     stack.push(0);
@@ -485,7 +529,7 @@ pub fn exec(path: &str) -> Result<(), RuntimeError> {
     stack.push(1);
     
     // 设置sp top
-    task_controller.context.x[2] = task_controller.stack.get_stack_top();
+    task_controller.context.x[2] =task_controller.stack.get_stack_top();
 
     // 映射堆
     pmm.add_mapping(task_controller.heap.get_addr(), VirtAddr::from(0xf0010000), PTEFlags::VRWX | PTEFlags::U)?;
