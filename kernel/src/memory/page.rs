@@ -34,14 +34,14 @@ impl MemoryPageAllocator {
     }
 
     // 申请内存
-    pub fn alloc(&mut self) -> Option<PhysPageNum> {
+    pub fn alloc(&mut self) -> Result<PhysPageNum, RuntimeError> {
         for i in 0..self.pages.len() {
             if !self.pages[i] {
                 self.pages[i] = true;
-                return Some(PhysPageNum::from((self.start >> 12) + i));
+                return Ok(PhysPageNum::from((self.start >> 12) + i));
             }
         }
-        None
+        Err(RuntimeError::NoEnoughPage)
     }
 
     // 取消分配页

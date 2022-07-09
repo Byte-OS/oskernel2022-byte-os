@@ -19,12 +19,6 @@ impl UserStack {
         }
     }
 
-    // 获取虚拟地址对应的物理地址
-    fn get_phys_addr(&mut self, virt_addr: usize) -> usize {
-        // 此处确保代码不会出现问题 因此可以直接unwrap
-        self.pmm.get_phys_addr(VirtAddr::from(virt_addr)).unwrap().0
-    }
-
     pub fn get_stack_top(&self) -> usize {
         self.top
     }
@@ -32,8 +26,9 @@ impl UserStack {
     // 在栈中加入数字
     pub fn push(&mut self, num: usize) -> usize {
         self.top -= PTR_SIZE;
+        let phys_ptr = self.pmm.get_phys_addr(self.top.into()).unwrap().0;
         unsafe {
-            (self.top as *mut usize).write(num)
+            (phys_ptr as *mut usize).write(num)
         };
         self.top
     }
@@ -42,8 +37,7 @@ impl UserStack {
     pub fn push_arr(&mut self, str: &[u8]) -> usize {
         let str_len = (str.len() + (PTR_SIZE - 1)) / PTR_SIZE;
         self.top -= PTR_SIZE * str_len;
-
-        let mut phys_ptr = self.pmm.get_phys_addr(VirtAddr::from(self.top)).unwrap().0;
+        let mut phys_ptr = self.pmm.get_phys_addr(self.top.into()).unwrap().0;
         let mut virt_ptr = self.top;
         for i in 0..str.len() {
             // 写入字节

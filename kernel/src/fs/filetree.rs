@@ -229,41 +229,40 @@ impl FileTreeNode {
     }
 
     // 创建文件
-    pub fn create(&mut self, filename: &str) {
+    pub fn create(&mut self, filename: &str) -> Result<(), RuntimeError> {
         let str_split: Vec<&str> = filename.split("/").collect();
         let filename = str_split[str_split.len() - 1];
 
         // 申请页表
-        if let Some(page_num) = PAGE_ALLOCATOR.lock().alloc() {
-            // 将申请的页表转为地址
-            let addr = usize::from(PhysAddr::from(page_num));
-            // 清空页表
-            unsafe {
-                let temp_ref = slice::from_raw_parts_mut(addr as *mut u64, PAGE_SIZE / 8);
-                for i in 0..temp_ref.len() {
-                    temp_ref[i] = 0;
-                }
+        let page_num = PAGE_ALLOCATOR.lock().alloc()?;
+        // 将申请的页表转为地址
+        let addr = usize::from(PhysAddr::from(page_num));
+        // 清空页表
+        unsafe {
+            let temp_ref = slice::from_raw_parts_mut(addr as *mut u64, PAGE_SIZE / 8);
+            for i in 0..temp_ref.len() {
+                temp_ref[i] = 0;
             }
-            // 创建节点
-            let new_node = FileTreeNode(Rc::new(RefCell::new(FileTreeNodeRaw {
-                filename:String::from(filename),  // 文件名
-                file_type: FileType::VirtFile,    // 文件数类型
-                parent: None,                     // 父节点
-                children: vec![],                 // 无需
-                cluster: addr,                    // 虚拟文件cluster指向申请到的页表内存地址 默认情况下支持一个页表
-                size: 0,                          // 文件大小
-                nlinkes: 1,                       // link数量
-                st_atime_sec: 0,                  // 最后访问时间
-                st_atime_nsec: 0,                 
-                st_mtime_sec: 0,                  // 最后修改时间
-                st_mtime_nsec: 0,                 
-                st_ctime_sec: 0,                  // 最后修改文件状态时间
-                st_ctime_nsec: 0,
-            })));
-            self.add(new_node);
-        } else {
-            error!("虚拟文件 已无页表可分配");
         }
+        // 创建节点
+        let new_node = FileTreeNode(Rc::new(RefCell::new(FileTreeNodeRaw {
+            filename:String::from(filename),  // 文件名
+            file_type: FileType::VirtFile,    // 文件数类型
+            parent: None,                     // 父节点
+            children: vec![],                 // 无需
+            cluster: addr,                    // 虚拟文件cluster指向申请到的页表内存地址 默认情况下支持一个页表
+            size: 0,                          // 文件大小
+            nlinkes: 1,                       // link数量
+            st_atime_sec: 0,                  // 最后访问时间
+            st_atime_nsec: 0,                 
+            st_mtime_sec: 0,                  // 最后修改时间
+            st_mtime_nsec: 0,                 
+            st_ctime_sec: 0,                  // 最后修改文件状态时间
+            st_ctime_nsec: 0,
+        })));
+        self.add(new_node);
+
+        Ok(())
 
         // 写入硬盘空间
         // TODO: 进行持久化储存

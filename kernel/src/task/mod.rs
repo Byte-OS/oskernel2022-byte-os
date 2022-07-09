@@ -1,7 +1,7 @@
 use core::arch::global_asm;
 
 use alloc::collections::VecDeque;
-use alloc::{slice, task};
+use alloc::slice;
 use alloc::string::String;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
@@ -252,21 +252,14 @@ impl TaskControllerManager {
 
 impl UserHeap {
     // 创建heap
-    pub fn new() -> Self {
+    pub fn new() -> Result<Self, RuntimeError> {
+        let phy_start = PAGE_ALLOCATOR.lock().alloc()?;
         // 申请页表作为heap
-        if let Some(phy_start) = PAGE_ALLOCATOR.lock().alloc() { 
-            UserHeap {
-                start: phy_start,
-                pointer: 0,
-                size: PAGE_SIZE
-            }
-        } else {
-            UserHeap {
-                start: PhysPageNum::from(0),
-                pointer: 0,
-                size: PAGE_SIZE
-            }
-        }
+        Ok(UserHeap {
+            start: phy_start,
+            pointer: 0,
+            size: PAGE_SIZE
+        })
     }
 
     // 获取堆开始的地址
@@ -314,6 +307,7 @@ impl TaskController {
     // 创建任务控制器
     pub fn new(pid: usize) -> Result<Self, RuntimeError> {
         let pmm = PageMappingManager::new();
+        let heap = UserHeap::new()?;
         let pte = pmm.clone().pte;
         let mut task = TaskController {
             pid,
@@ -321,7 +315,7 @@ impl TaskController {
             entry_point: VirtAddr::from(0),
             pmm,
             status: TaskStatus::READY,
-            heap: UserHeap::new(),
+            heap,
             stack: UserStack::new(pte),
             home_dir: FILETREE.force_get().open("/")?.clone(),
             context: Context::new(),
@@ -339,12 +333,6 @@ impl TaskController {
     // 更新用户状态
     pub fn update_status(&mut self, status: TaskStatus) {
         self.status = status;
-    }
-
-    // 初始化任务
-    pub fn init(&mut self) {
-        self.context.sepc = 0x1000;
-        self.context.x[2] = 0xf0000fe0;
     }
 
     pub fn set_entry_point(&mut self, entry_point: usize) {
@@ -420,10 +408,9 @@ pub fn get_new_pid() -> usize {
 pub fn exec(path: &str) -> Result<(), RuntimeError> {
     // 如果存在write
     let program = FILETREE.lock().open(path)?;
+    
     // 创建新的任务控制器
     let mut task_controller = TaskController::new(get_new_pid())?;
-    // 初始化项目
-    task_controller.init();
 
     // 申请页表存储程序 申请多一页作为栈
     let pages = (program.get_file_size() - 1 + PAGE_SIZE) / PAGE_SIZE;
@@ -436,6 +423,11 @@ pub fn exec(path: &str) -> Result<(), RuntimeError> {
         slice::from_raw_parts_mut(usize::from(phy_start.to_addr()) as *mut u8, pages*PAGE_SIZE)
     };
     program.read_to(buf);
+
+    let stack_addr = PhysAddr::from(PhysPageNum::from(usize::from(phy_start) + pages));
+
+    // 映射栈 
+    task_controller.pmm.add_mapping(stack_addr, VirtAddr::from(0xf0000000), PTEFlags::VRWX | PTEFlags::U)?;
 
     // 读取elf信息
     let elf = xmas_elf::ElfFile::new(buf).unwrap();
@@ -474,22 +466,29 @@ pub fn exec(path: &str) -> Result<(), RuntimeError> {
         }
     }
 
-    let stack_addr = PhysAddr::from(PhysPageNum::from(usize::from(phy_start) + pages));
-
     // 添加参数
     let stack = &mut task_controller.stack;
-    let value_ptr = stack.push_str("alexbd");
-    stack.push(value_ptr);
+    // let value_ptr = stack.push_str("alexbd");
+    // stack.push(value_ptr);
+    
+    // auxv top
+    stack.push(0);
+
+    // envp top
+    stack.push(0);
+
+    // argv top
+    stack.push(0);
+
+    // args
+    stack.push(0);
     stack.push(1);
     
-    // set sp
+    // 设置sp top
     task_controller.context.x[2] = task_controller.stack.get_stack_top();
 
-    // 映射栈 
-    pmm.add_mapping(stack_addr, VirtAddr::from(0xf0000000), PTEFlags::VRWX | PTEFlags::U);
-
     // 映射堆
-    pmm.add_mapping(task_controller.heap.get_addr(), VirtAddr::from(0xf0010000), PTEFlags::VRWX | PTEFlags::U);
+    pmm.add_mapping(task_controller.heap.get_addr(), VirtAddr::from(0xf0010000), PTEFlags::VRWX | PTEFlags::U)?;
 
     // 任务管理器添加任务
     TASK_CONTROLLER_MANAGER.lock().add(task_controller);
@@ -557,15 +556,15 @@ pub fn clone_task(task_controller: &mut TaskController) -> Result<TaskController
 
     for i in 0..pages {
         pmm.add_mapping(PhysAddr::from(PhysPageNum::from(usize::from(phy_start) + i)), 
-            VirtAddr::from(i*0x1000), PTEFlags::VRWX | PTEFlags::U);
+            VirtAddr::from(i*0x1000), PTEFlags::VRWX | PTEFlags::U)?;
     }
 
     // 映射栈 
     pmm.add_mapping(PhysAddr::from(PhysPageNum::from(usize::from(phy_start) + pages)), 
-            VirtAddr::from(0xf0000000), PTEFlags::VRWX | PTEFlags::U);
+            VirtAddr::from(0xf0000000), PTEFlags::VRWX | PTEFlags::U)?;
 
     // 映射堆
-    pmm.add_mapping(task_controller.heap.get_addr(), VirtAddr::from(0xf0010000), PTEFlags::VRWX | PTEFlags::U);
+    pmm.add_mapping(task_controller.heap.get_addr(), VirtAddr::from(0xf0010000), PTEFlags::VRWX | PTEFlags::U)?;
     Ok(task)
 }
 

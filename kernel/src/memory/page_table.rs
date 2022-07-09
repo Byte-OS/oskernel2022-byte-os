@@ -81,7 +81,7 @@ pub struct PageMappingManager {
 
 #[repr(C)]
 #[derive(Clone, Copy)]
-pub struct PageMapping(usize);
+pub struct PageMapping(pub usize);
 
 impl From<usize> for PageMapping {
     fn from(addr: usize) -> Self {
@@ -107,33 +107,30 @@ impl From<PageMapping> for usize {
     }
 }
 
+// PageMapping 
 impl PageMapping {
     pub fn new(addr: PhysAddr) -> PageMapping {
         PageMapping(addr.0)
     }
 
     // 初始化页表
-    pub fn alloc_pte(&self, level: usize) -> Option<PhysPageNum> {
-        match PAGE_ALLOCATOR.lock().alloc() {
-            Some(page) => {
-                let pte = unsafe {
-                    from_raw_parts_mut(usize::from(page.to_addr()) as *mut PageTableEntry, PAGE_PTE_NUM)
-                };
-                for i in 0..PAGE_PTE_NUM {
-                    pte[i] = PageTableEntry::new(PhysPageNum::from(i << (level*9)), PTEFlags::VRWX);
-                }
-                Some(page)
-            }
-            None=>None
+    pub fn alloc_pte(level: usize) -> Result<PhysPageNum, RuntimeError> {
+        let page = PAGE_ALLOCATOR.lock().alloc()?;
+        let pte = unsafe {
+            from_raw_parts_mut(usize::from(page.to_addr()) as *mut PageTableEntry, PAGE_PTE_NUM)
+        };
+        for i in 0..PAGE_PTE_NUM {
+            pte[i] = PageTableEntry::new(PhysPageNum::from(i << (level*9)), PTEFlags::VRWX);
         }
-        
+        Ok(page)
     }
 
     // 添加mapping
-    pub fn add_mapping(&mut self, phy_addr: PhysAddr, virt_addr: VirtAddr, flags:PTEFlags) {
+    pub fn add_mapping(&mut self, phy_addr: PhysAddr, virt_addr: VirtAddr, flags:PTEFlags) -> Result<(), RuntimeError> {
         // 如果没有pte则申请pte
         if usize::from(self.0) == 0 {
-            self.0 = PhysAddr::from(self.alloc_pte(2).unwrap()).into();
+            let pm = Self::alloc_pte(2)?;
+            self.0 = PhysAddr::from(pm).into();
         }
 
         // 得到 列表中的项
@@ -145,7 +142,7 @@ impl PageMapping {
         // 判断 是否是页表项 如果是则申请一个页防止其内容
         if !l2_pte.is_valid_pd() {
             // 创建一个页表放置二级页目录 并写入一级页目录的项中
-            l2_pte = PageTableEntry::new(PhysPageNum::from(PhysAddr::from(self.alloc_pte(1).unwrap())), PTEFlags::V);
+            l2_pte = PageTableEntry::new(PhysPageNum::from(PhysAddr::from(Self::alloc_pte(1).unwrap())), PTEFlags::V);
             // 写入列表
             unsafe {l2_pte_ptr.write(l2_pte)};
         }
@@ -157,7 +154,7 @@ impl PageMapping {
 
         // 判断 是否有指向下一级的页表
         if !l1_pte.is_valid_pd(){
-            l1_pte = PageTableEntry::new(PhysPageNum::from(PhysAddr::from(self.alloc_pte(0).unwrap())), PTEFlags::V);
+            l1_pte = PageTableEntry::new(PhysPageNum::from(PhysAddr::from(Self::alloc_pte(0).unwrap())), PTEFlags::V);
             unsafe{l1_pte_ptr.write(l1_pte)};
         }
         
@@ -165,7 +162,8 @@ impl PageMapping {
         unsafe {
             PageTableEntry::get_mut_ptr_from_phys(PhysAddr::from(l1_pte.ppn()))
                 .add(virt_addr.l0()).write(PageTableEntry::new(PhysPageNum::from(phy_addr), flags));
-        }
+        };
+        Ok(())
     }
 
     // 删除mapping
@@ -184,7 +182,7 @@ impl PageMapping {
         // 判断 是否是页表项 如果是则申请一个页防止其内容
         if !l2_pte.is_valid_pd() {
             // 创建一个页表放置二级页目录 并写入一级页目录的项中
-            l2_pte = PageTableEntry::new(PhysPageNum::from(PhysAddr::from(self.alloc_pte(1).unwrap())), PTEFlags::V);
+            l2_pte = PageTableEntry::new(PhysPageNum::from(PhysAddr::from(Self::alloc_pte(1).unwrap())), PTEFlags::V);
             // 写入列表
             unsafe {l2_pte_ptr.write(l2_pte)};
         }
@@ -196,7 +194,7 @@ impl PageMapping {
 
         // 判断 是否有指向下一级的页表
         if !l1_pte.is_valid_pd(){
-            l1_pte = PageTableEntry::new(PhysPageNum::from(PhysAddr::from(self.alloc_pte(0).unwrap())), PTEFlags::V);
+            l1_pte = PageTableEntry::new(PhysPageNum::from(PhysAddr::from(Self::alloc_pte(0).unwrap())), PTEFlags::V);
             unsafe{l1_pte_ptr.write(l1_pte)};
         }
         
@@ -256,11 +254,10 @@ impl PageMapping {
 
 
 impl PageMappingManager {
-
     pub fn new() -> Self {
         PageMappingManager { 
             paging_mode: PagingMode::Sv39, 
-            pte: PageMapping::from(0)
+            pte: PhysAddr::from(PageMapping::alloc_pte(2).unwrap()).into()
         }
     }
 
@@ -275,11 +272,11 @@ impl PageMappingManager {
         if usize::from(self.pte) != 0 {
             PAGE_ALLOCATOR.lock().dealloc(PhysPageNum::from(self.pte));
         }
-        self.pte = PhysAddr::from(self.pte.alloc_pte(2).unwrap()).into();
+        self.pte = PhysAddr::from(PageMapping::alloc_pte(2).unwrap()).into();
     }
 
     // 添加mapping
-    pub fn add_mapping(&mut self, phy_addr: PhysAddr, virt_addr: VirtAddr, flags:PTEFlags) {
+    pub fn add_mapping(&mut self, phy_addr: PhysAddr, virt_addr: VirtAddr, flags:PTEFlags) -> Result<(), RuntimeError> {
         self.pte.add_mapping(phy_addr, virt_addr, flags)
     }
 
