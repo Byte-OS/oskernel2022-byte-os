@@ -468,7 +468,7 @@ pub fn exec(path: &str) -> Result<(), RuntimeError> {
 
     // 添加参数
     let stack = &mut task_controller.stack;
-    // let value_ptr = stack.push_str("alexbd");
+    let value_ptr = stack.push_str("alexbd");
     // stack.push(value_ptr);
     
     // auxv top

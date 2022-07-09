@@ -35,8 +35,10 @@ impl UserStack {
 
     // 在栈中加入字符串 并且内存对齐
     pub fn push_arr(&mut self, str: &[u8]) -> usize {
-        let str_len = (str.len() + (PTR_SIZE - 1)) / PTR_SIZE;
+        // 设置 总长度
+        let str_len = (str.len() + 1 + (PTR_SIZE - 1)) / PTR_SIZE;
         self.top -= PTR_SIZE * str_len;
+
         let mut phys_ptr = self.pmm.get_phys_addr(self.top.into()).unwrap().0;
         let mut virt_ptr = self.top;
         for i in 0..str.len() {
@@ -50,6 +52,8 @@ impl UserStack {
                 phys_ptr += 1;
             }
         }
+        // 写入 \0 作为结束符
+        unsafe {(phys_ptr as *mut u8).write(0)};
         self.top
     }
 
