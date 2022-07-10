@@ -24,6 +24,7 @@ pub const SYS_READ:  usize  = 63;
 pub const SYS_WRITE: usize  = 64;
 pub const SYS_FSTAT: usize  = 80;
 pub const SYS_EXIT:  usize  = 93;
+pub const SYS_SET_TID_ADDRESS: usize = 96;
 pub const SYS_NANOSLEEP: usize = 101;
 pub const SYS_SCHED_YIELD: usize = 124;
 pub const SYS_TIMES: usize  = 153;
@@ -552,6 +553,15 @@ pub fn sys_call() -> Result<(), RuntimeError> {
         SYS_EXIT => {
             kill_current_task();
         }
+        // 设置tid
+        SYS_SET_TID_ADDRESS => {
+            let pid = current_task.pid;
+            
+            let tid_ptr_addr = pmm.get_phys_addr(VirtAddr::from(context.x[10]))?;
+            let tid_ptr = tid_ptr_addr.0 as *mut u32;
+            unsafe {tid_ptr.write(pid as u32)};
+            context.x[10] = 0;
+        },
         // 文件休眠
         SYS_NANOSLEEP => {
             // 获取文件参数

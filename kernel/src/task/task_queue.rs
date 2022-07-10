@@ -8,6 +8,7 @@ lazy_static! {
     pub static ref TASK_QUEUE: Mutex<Vec<&'static str>> = Mutex::new(vec![
         "runtest.exe"
         // "entry-static.exe"
+        // "entry-dynamic.exe"
     ]);
 }
 

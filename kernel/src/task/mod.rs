@@ -452,26 +452,27 @@ pub fn exec(path: &str) -> Result<(), RuntimeError> {
             let start_va: VirtAddr = ph.virtual_addr().into();
             let alloc_pages = get_pages_num(ph.mem_size() as usize + start_va.0 % 0x1000);
             let phy_start = alloc_more(alloc_pages)?;
-
-            let offset = ph.offset() as usize;
+            
+            let ph_offset = ph.offset() as usize;
+            let offset = ph.offset() as usize % PAGE_SIZE;
             let read_size = ph.file_size() as usize;
-            info!("读取大小 read_size: {}", read_size);
             let temp_buf = get_buf_from_phys_page(phy_start, alloc_pages);
+
 
             let vr_start = ph.virtual_addr() as usize % 0x1000;
             let vr_end = vr_start + read_size;
-            temp_buf[vr_start..vr_end].copy_from_slice(&buf[offset..offset+read_size]);
+            temp_buf[vr_start..vr_end].copy_from_slice(&buf[ph_offset..ph_offset+read_size]);
 
-            pmm.add_mapping_range(PhysAddr::from(phy_start) + PhysAddr::from(ph.offset()), 
+            pmm.add_mapping_range(PhysAddr::from(phy_start) + PhysAddr::from(offset), 
                 start_va, ph.mem_size() as usize, PTEFlags::VRWX | PTEFlags::U)?;
 
+            
             // read flags
             // let ph_flags = ph.flags();
             // ph_flags.is_read() readable
             // ph_flags.is_write() writeable
             // ph_flags.is_execute() executeable
         }
-        
     }
 
     // 添加参数
@@ -479,8 +480,6 @@ pub fn exec(path: &str) -> Result<(), RuntimeError> {
     let platform_ptr = stack.push_str("alexbd");
     let exec_ptr = stack.push_str("riscv");
     
-    info!("elf header: {:#x?}", elf_header.pt2);
-
     // auxv top
     stack.push(0);
     
