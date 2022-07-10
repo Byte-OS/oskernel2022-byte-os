@@ -450,7 +450,7 @@ pub fn exec(path: &str) -> Result<(), RuntimeError> {
         let ph = elf.program_header(i).unwrap();
         if ph.get_type().unwrap() == xmas_elf::program::Type::Load {
             let start_va: VirtAddr = ph.virtual_addr().into();
-            let alloc_pages = get_pages_num(ph.mem_size() as usize);
+            let alloc_pages = get_pages_num(ph.mem_size() as usize + start_va.0 % 0x1000);
             let phy_start = alloc_more(alloc_pages)?;
 
             let offset = ph.offset() as usize;

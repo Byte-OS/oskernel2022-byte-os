@@ -130,7 +130,7 @@ pub fn sys_call() -> Result<(), RuntimeError> {
     // 将 恢复地址 + 4 跳过调用地址
     context.sepc += 4;
 
-    info!("中断号: {}", context.x[17]);
+    info!("中断号: {} 调用地址: {:#x}", context.x[17], context.sepc);
 
     // 匹配系统调用 a7(x17) 作为调用号
     match context.x[17] {
