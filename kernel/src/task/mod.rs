@@ -409,7 +409,7 @@ pub fn get_new_pid() -> usize {
 
 // 执行一个程序 path: 文件名 思路：加入程序准备池  等待执行  每过一个时钟周期就执行一次
 // TODO: 更新exec 添加envp 和 auxiliary vector
-pub fn exec(path: &str) -> Result<(), RuntimeError> {
+pub fn exec(path: &str, args: Vec<&str>) -> Result<(), RuntimeError> {
     // 如果存在write
     let program = FILETREE.lock().open(path)?;
 
@@ -477,8 +477,14 @@ pub fn exec(path: &str) -> Result<(), RuntimeError> {
 
     // 添加参数
     let stack = &mut task_controller.stack;
-    let platform_ptr = stack.push_str("alexbd");
-    let exec_ptr = stack.push_str("riscv");
+    let exec_ptr = stack.push_str(path);
+
+    let mut args_ptr = vec![];
+    let args_len = args.len();
+    for arg in args {
+        args_ptr.push(stack.push_str(arg));
+    }
+    let platform_ptr = stack.push_str("riscv");
     
     // auxv top
     stack.push(0);
@@ -529,8 +535,11 @@ pub fn exec(path: &str) -> Result<(), RuntimeError> {
     stack.push(0);
 
     // args
-    stack.push(0);
-    stack.push(1);
+    for i in args_ptr.iter().rev() {
+        stack.push(i.clone());
+    }
+    stack.push(exec_ptr);
+    stack.push(1 + args_len);
     
     // 设置sp top
     task_controller.context.x[2] =task_controller.stack.get_stack_top();

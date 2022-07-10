@@ -674,7 +674,7 @@ pub fn sys_call() -> Result<(), RuntimeError> {
         SYS_EXECVE => {
             let filename = pmm.get_phys_addr(VirtAddr::from(context.x[10])).unwrap();
             let filename = get_string_from_raw(filename);
-            exec(&filename);
+            exec(&filename, vec![]);
             kill_current_task();
         }
         // 进行文件映射
