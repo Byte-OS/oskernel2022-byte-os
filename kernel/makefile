@@ -21,7 +21,7 @@ K210-BURNER	= ../tools/kflash.py
 
 # all: build
 all: k210
-	cp $(BIN_FILE) os.bin
+	cp $(BIN_FILE) ../os.bin
 
 build: kernel $(BIN_FILE)
 

@@ -1,6 +1,9 @@
 
 .PHONY: doc kernel build clean qemu run k210 flash
 
+all:
+	@cd kernel && make -f makefile all || exit 1;
+
 run:
 	@cd kernel && make -f makefile run || exit 1;
 
