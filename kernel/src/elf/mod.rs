@@ -29,3 +29,23 @@ pub const AT_HWCAP2: usize = 26;
 pub const AT_EXECFN: usize = 31;
 pub const AT_SYSINFO: usize = 32;
 pub const AT_SYSINFO_EHDR: usize = 33;
+
+use xmas_elf::{ElfFile, program::Type};
+
+use crate::memory::addr::{PAGE_SIZE, get_pages_num};
+
+pub trait ElfExtra {
+    fn get_data_size(&self) -> usize;
+}
+
+impl ElfExtra for ElfFile<'_> {
+    // 获取elf加载需要的内存大小
+    fn get_data_size(&self) -> usize {
+        self.program_iter()
+            .filter(|ph| ph.get_type().unwrap() == Type::Load)
+            .map(|ph| get_pages_num((ph.virtual_addr() + ph.mem_size()) as usize))
+            .max()
+            .unwrap_or(0)
+            * PAGE_SIZE
+    }
+}

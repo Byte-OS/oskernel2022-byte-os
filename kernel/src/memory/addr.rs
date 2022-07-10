@@ -1,4 +1,4 @@
-use core::fmt::{self, Debug, Formatter};
+use core::{fmt::{self, Debug, Formatter}, ops::Add, slice};
 
 pub const PAGE_SIZE: usize = 4096;
 pub const PAGE_PTE_NUM: usize = 512;
@@ -40,6 +40,57 @@ impl From<usize> for VirtAddr  {
         VirtAddr(addr)
     }
 }
+
+// 实现从u64转换
+impl From<u64> for PhysAddr  {
+    fn from(addr: u64) -> Self {
+        PhysAddr(addr as usize)
+    }
+}
+
+impl From<u64> for PhysPageNum  {
+    fn from(addr: u64) -> Self {
+        PhysPageNum(addr as usize)
+    }
+}
+
+impl From<u64> for VirtPageNum  {
+    fn from(addr: u64) -> Self {
+        VirtPageNum(addr as usize)
+    }
+}
+
+impl From<u64> for VirtAddr  {
+    fn from(addr: u64) -> Self {
+        VirtAddr(addr as usize)
+    }
+}
+
+// 实现从u64转换
+impl From<u32> for PhysAddr  {
+    fn from(addr: u32) -> Self {
+        PhysAddr(addr as usize)
+    }
+}
+
+impl From<u32> for PhysPageNum  {
+    fn from(addr: u32) -> Self {
+        PhysPageNum(addr as usize)
+    }
+}
+
+impl From<u32> for VirtPageNum  {
+    fn from(addr: u32) -> Self {
+        VirtPageNum(addr as usize)
+    }
+}
+
+impl From<u32> for VirtAddr  {
+    fn from(addr: u32) -> Self {
+        VirtAddr(addr as usize)
+    }
+}
+
 // 实现转换到usize
 impl From<PhysAddr> for usize  {
     fn from(addr: PhysAddr) -> Self {
@@ -114,6 +165,36 @@ impl From<VirtAddr> for VirtPageNum  {
         VirtPageNum(page.0 >> 12)
     }
 }
+
+impl Add for PhysAddr {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self(self.0 + rhs.0)
+    }
+}
+impl Add for PhysPageNum {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self(self.0 + rhs.0)
+    }
+}
+impl Add for VirtAddr {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self(self.0 + rhs.0)
+    }
+}
+impl Add for VirtPageNum {
+    type Output = Self;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Self(self.0 + rhs.0)
+    }
+}
+
 // 获取原始指针
 impl VirtAddr {
     pub fn as_ptr(&self) -> *const u8 {
@@ -162,4 +243,18 @@ impl VirtAddr{
     pub fn l0(&self) -> usize {
         (self.0 >> 12) & 0x1ff
     }
+}
+
+pub fn get_pages_num(size: usize) -> usize {
+    (size + PAGE_SIZE - 1) / PAGE_SIZE
+}
+
+pub fn get_buf_from_phys_addr<'a>(phys_ptr: PhysAddr, size: usize) -> &'a mut[u8] {
+    unsafe {
+        slice::from_raw_parts_mut(usize::from(phys_ptr) as *mut u8, size)
+    }
+}
+
+pub fn get_buf_from_phys_page<'a>(phys_page: PhysPageNum, pages: usize) -> &'a mut[u8] {
+    get_buf_from_phys_addr(phys_page.into(), pages * PAGE_SIZE)
 }

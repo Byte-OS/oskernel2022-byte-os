@@ -681,10 +681,11 @@ pub fn sys_call() -> Result<(), RuntimeError> {
                 let page_num = 2;
                 info!("start: {:#x} len: {:#x} from: {:#x}", start, len, context.sepc);
                 if let Ok(start_page) = PAGE_ALLOCATOR.force_get().alloc_more(page_num) {
+                    let virt_start = 0xe0000000;
                     let start_addr = PhysAddr::from(start_page);
-                    pmm.add_mapping(start_addr, VirtAddr::from(0xe0000000), PTEFlags::VRWX |PTEFlags::U);
+                    pmm.add_mapping(start_addr, virt_start.into(), PTEFlags::VRWX |PTEFlags::U);
                     // 添加映射成功
-                    context.x[10] = 0xe0000000;
+                    context.x[10] = virt_start;
                 } else {
                     context.x[10] = SYS_CALL_ERR;
                 }
@@ -696,7 +697,7 @@ pub fn sys_call() -> Result<(), RuntimeError> {
                             // 如果start为0 则分配空间 暂分配0xd0000000
                             if start == 0 {
                                 // 添加映射
-                                pmm.add_mapping(PhysAddr::from(file_tree_node.get_cluster()), VirtAddr::from(0xd0000000), 
+                                pmm.add_mapping(PhysAddr::from(file_tree_node.get_cluster()), 0xd0000000usize.into(), 
                                     PTEFlags::VRWX | PTEFlags::U);
                                 context.x[10] = 0xd0000000;
                             } else {

@@ -3,7 +3,7 @@ use bitflags::*;
 
 use crate::{memory::addr::PhysAddr, sync::mutex::Mutex, runtime_err::RuntimeError};
 
-use super::{addr::{PhysPageNum,  VirtAddr, PAGE_PTE_NUM}, page::PAGE_ALLOCATOR};
+use super::{addr::{PhysPageNum,  VirtAddr, PAGE_PTE_NUM, PAGE_SIZE}, page::PAGE_ALLOCATOR};
 
 bitflags! {
     pub struct PTEFlags: u8 {
@@ -278,6 +278,19 @@ impl PageMappingManager {
     // 添加mapping
     pub fn add_mapping(&mut self, phy_addr: PhysAddr, virt_addr: VirtAddr, flags:PTEFlags) -> Result<(), RuntimeError> {
         self.pte.add_mapping(phy_addr, virt_addr, flags)
+    }
+
+    // 添加一个范围内的mapping
+    pub fn add_mapping_range(&mut self, phy_addr: PhysAddr, virt_addr: VirtAddr, size: usize, flags:PTEFlags) -> Result<(), RuntimeError> {
+        let end_addr: usize = virt_addr.0 + size;
+        let mut i: usize = virt_addr.0 / PAGE_SIZE * PAGE_SIZE;   // floor get start_page
+        loop {
+            if i > end_addr { break; }
+            let v_offset: usize = i - virt_addr.0;
+            self.add_mapping(PhysAddr::from(phy_addr.0 + v_offset), VirtAddr::from(i), flags)?;
+            i += PAGE_SIZE;
+        }
+        Ok(())
     }
 
     pub fn remove_mapping(&mut self, virt_addr: VirtAddr) {

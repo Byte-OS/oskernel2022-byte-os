@@ -104,6 +104,22 @@ lazy_static! {
     pub static ref PAGE_ALLOCATOR: Mutex<MemoryPageAllocator> = Mutex::new(MemoryPageAllocator::new());
 }
 
+pub fn alloc() -> Result<PhysPageNum, RuntimeError> {
+    PAGE_ALLOCATOR.lock().alloc()
+}
+
+pub fn alloc_more(pages: usize) -> Result<PhysPageNum, RuntimeError> {
+    PAGE_ALLOCATOR.lock().alloc_more(pages)
+}
+
+pub fn dealloc(page: PhysPageNum) {
+    PAGE_ALLOCATOR.lock().dealloc(page)
+}
+
+pub fn dealloc_more(page: PhysPageNum, pages: usize) {
+    PAGE_ALLOCATOR.lock().dealloc_more(page, pages)
+}
+
 pub fn init() {
     extern "C"{
         fn end();
