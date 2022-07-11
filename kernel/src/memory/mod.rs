@@ -4,6 +4,8 @@ mod heap;
 pub mod page;
 pub mod addr;
 pub mod page_table;
+pub mod mem_map;
+pub mod mem_set;
 
 pub const KERNEL_STACK_SIZE: usize = 4096;
 
