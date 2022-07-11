@@ -32,10 +32,11 @@ pub const AT_SYSINFO_EHDR: usize = 33;
 
 use xmas_elf::{ElfFile, program::Type};
 
-use crate::memory::addr::{PAGE_SIZE, get_pages_num};
+use crate::{memory::addr::{PAGE_SIZE, get_pages_num}, runtime_err::RuntimeError};
 
 pub trait ElfExtra {
     fn get_data_size(&self) -> usize;
+    fn get_ph_addr(&self) -> Result<u64, RuntimeError>;
 }
 
 impl ElfExtra for ElfFile<'_> {
@@ -47,5 +48,23 @@ impl ElfExtra for ElfFile<'_> {
             .max()
             .unwrap_or(0)
             * PAGE_SIZE
+    }
+
+    fn get_ph_addr(&self) -> Result<u64, RuntimeError> {
+        if let Some(phdr) = self.program_iter()
+            .find(|ph| ph.get_type() == Ok(Type::Phdr))
+        {
+            // if phdr exists in program header, use it
+            Ok(phdr.virtual_addr())
+        } else if let Some(elf_addr) = self
+            .program_iter()
+            .find(|ph| ph.get_type() == Ok(Type::Load) && ph.offset() == 0)
+        {
+            // otherwise, check if elf is loaded from the beginning, then phdr can be inferred.
+            Ok(elf_addr.virtual_addr() + self.header.pt2.ph_offset())
+        } else {
+            warn!("elf: no phdr found, tls might not work");
+            Err(RuntimeError::NoMatchedAddr)
+        }
     }
 }

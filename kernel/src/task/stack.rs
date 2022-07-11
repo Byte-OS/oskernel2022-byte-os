@@ -1,3 +1,5 @@
+use alloc::{vec::Vec, collections::BTreeMap};
+
 use crate::memory::{page_table::PageMapping, addr::VirtAddr};
 
 
@@ -64,5 +66,28 @@ impl UserStack {
     // 在栈中加入指针 内部调用push 后期可额外处理
     pub fn push_ptr(&mut self, ptr: usize) -> usize {
         self.push(ptr)
+    }
+
+    pub fn init_args(&mut self, args: Vec<&str>, _envp: Vec<&str>, auxv: BTreeMap<usize, usize>) {
+        let args: Vec<usize> = args.iter().map(|x| self.push_str(x)).collect();
+        // auxv top
+        self.push(0);
+
+        for (key, value) in auxv {
+            self.push(value);
+            self.push(key);
+        }
+        // envp top
+        self.push(0);
+
+        // argv top
+        self.push(0);
+
+        // args
+        let args_len = args.len();
+        for i in args.iter().rev() {
+            self.push(i.clone());
+        }
+        self.push(args_len);
     }
 }

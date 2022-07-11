@@ -1,6 +1,6 @@
 use core::arch::global_asm;
 
-use alloc::collections::VecDeque;
+use alloc::collections::{VecDeque, BTreeMap};
 use alloc::slice;
 use alloc::string::String;
 use alloc::sync::Arc;
@@ -11,11 +11,12 @@ use crate::fs::filetree::FileTreeNode;
 use crate::interrupt::{Context, TICKS};
 
 use crate::interrupt::timer::{NEXT_TICKS, TMS, LAST_TICKS};
-use crate::memory::addr::{get_pages_num, get_buf_from_phys_page, get_buf_from_phys_addr};
+use crate::memory::addr::{get_pages_num, get_buf_from_phys_page};
 use crate::memory::page::{alloc, alloc_more};
 use crate::memory::page_table::PagingMode;
 use crate::runtime_err::RuntimeError;
 use crate::sync::mutex::Mutex;
+use crate::task::pid::PidGenerater;
 use crate::{memory::{page_table::{PageMappingManager, PTEFlags}, addr::{PAGE_SIZE, VirtAddr, PhysAddr, PhysPageNum}, page::PAGE_ALLOCATOR}, fs::filetree::FILETREE};
 
 use self::pipe::PipeBuf;
@@ -25,6 +26,8 @@ use self::task_queue::load_next_task;
 pub mod pipe;
 pub mod task_queue;
 pub mod stack;
+pub mod controller;
+pub mod pid;
 
 pub const STDIN: usize = 0;
 pub const STDOUT: usize = 1;
@@ -85,22 +88,6 @@ impl FileDesc {
             writable: true
         };
         (read_pipe, write_pipe)
-    }
-}
-
-// PID生成器
-pub struct PidGenerater(usize);
-
-impl PidGenerater {
-    // 创建进程id生成器
-    pub fn new() -> Self {
-        PidGenerater(1000)
-    }
-    // 切换到下一个pid
-    pub fn next(&mut self) -> usize {
-        let n = self.0;
-        self.0 = n + 1;
-        n
     }
 }
 
@@ -409,7 +396,7 @@ pub fn get_new_pid() -> usize {
 
 // 执行一个程序 path: 文件名 思路：加入程序准备池  等待执行  每过一个时钟周期就执行一次
 // TODO: 更新exec 添加envp 和 auxiliary vector
-pub fn exec(path: &str, args: Vec<&str>) -> Result<(), RuntimeError> {
+pub fn exec<'a>(path: &'a str, mut args: Vec<&'a str>) -> Result<(), RuntimeError> {
     // 如果存在write
     let program = FILETREE.lock().open(path)?;
 
@@ -437,8 +424,7 @@ pub fn exec(path: &str, args: Vec<&str>) -> Result<(), RuntimeError> {
     
     // 创建新的任务控制器 并映射栈
     let mut task_controller = TaskController::new(get_new_pid())?;
-    let stack_addr = PhysAddr::from(stack_num_index);
-    task_controller.pmm.add_mapping(stack_addr, 0xf0000000usize.into(), PTEFlags::VRWX | PTEFlags::U)?;
+    task_controller.pmm.add_mapping(stack_num_index, 0xf0000usize.into(), PTEFlags::VRWX | PTEFlags::U)?;
     task_controller.set_entry_point(entry_point);     // 设置入口地址
     
     // 设置内存管理器
@@ -477,75 +463,26 @@ pub fn exec(path: &str, args: Vec<&str>) -> Result<(), RuntimeError> {
 
     // 添加参数
     let stack = &mut task_controller.stack;
-    let exec_ptr = stack.push_str(path);
-
-    let mut args_ptr = vec![];
-    let args_len = args.len();
-    for arg in args {
-        args_ptr.push(stack.push_str(arg));
-    }
-    let platform_ptr = stack.push_str("riscv");
     
-    // auxv top
-    stack.push(0);
-    
-    stack.push(platform_ptr);
-    stack.push(elf::AT_PLATFORM);
+    args.insert(0, path);
 
-    stack.push(exec_ptr);
-    stack.push(elf::AT_EXECFN);
+    let mut auxv = BTreeMap::new();
+    auxv.insert(elf::AT_PLATFORM, stack.push_str("riscv"));
+    auxv.insert(elf::AT_EXECFN, stack.push_str(path));
+    auxv.insert(elf::AT_PHNUM, elf_header.pt2.ph_count() as usize);
+    auxv.insert(elf::AT_PAGESZ, PAGE_SIZE);
+    auxv.insert(elf::AT_ENTRY, entry_point);
+    auxv.insert(elf::AT_PHENT, elf_header.pt2.ph_entry_size() as usize);
+    auxv.insert(elf::AT_PHDR, elf.get_ph_addr()? as usize);
 
-    stack.push(elf_header.pt2.ph_count() as usize);
-    stack.push(elf::AT_PHNUM);
-
-    stack.push(PAGE_SIZE);
-    stack.push(elf::AT_PAGESZ);
-
-    stack.push(entry_point);
-    stack.push(elf::AT_ENTRY);
-
-    stack.push(elf_header.pt2.ph_entry_size() as usize);
-    stack.push(elf::AT_PHENT);
-
-    // 读取phdr
-    let mut ph_addr = 0;
-    if let Some(phdr) = elf.program_iter()
-            .find(|ph| ph.get_type() == Ok(Type::Phdr))
-    {
-        // if phdr exists in program header, use it
-        ph_addr = phdr.virtual_addr();
-    } else if let Some(elf_addr) = elf
-        .program_iter()
-        .find(|ph| ph.get_type() == Ok(Type::Load) && ph.offset() == 0)
-    {
-        // otherwise, check if elf is loaded from the beginning, then phdr can be inferred.
-        ph_addr = elf_addr.virtual_addr() + elf.header.pt2.ph_offset();
-    } else {
-        warn!("elf: no phdr found, tls might not work");
-        return Err(RuntimeError::NoMatchedAddr);
-    };
-    info!("ph_addr {:#x}", ph_addr);
-    stack.push(ph_addr as usize);
-    stack.push(elf::AT_PHDR);
-
-    // envp top
-    stack.push(0);
-
-    // argv top
-    stack.push(0);
-
-    // args
-    for i in args_ptr.iter().rev() {
-        stack.push(i.clone());
-    }
-    stack.push(exec_ptr);
-    stack.push(1 + args_len);
+    stack.init_args(args, vec![], auxv);
     
     // 设置sp top
     task_controller.context.x[2] =task_controller.stack.get_stack_top();
 
     // 映射堆
-    pmm.add_mapping(task_controller.heap.get_addr(), 0xf0010000usize.into(), PTEFlags::VRWX | PTEFlags::U)?;
+    pmm.add_mapping(task_controller.heap.get_addr().into(), 
+        0xf0010usize.into(), PTEFlags::VRWX | PTEFlags::U)?;
 
     // 释放读取的文件
     PAGE_ALLOCATOR.lock().dealloc_more(elf_phy_start, elf_pages);
@@ -615,16 +552,16 @@ pub fn clone_task(task_controller: &mut TaskController) -> Result<TaskController
     new_buf.copy_from_slice(old_buf);
 
     for i in 0..pages {
-        pmm.add_mapping(PhysAddr::from(PhysPageNum::from(usize::from(phy_start) + i)), 
-            VirtAddr::from(i*0x1000), PTEFlags::VRWX | PTEFlags::U)?;
+        pmm.add_mapping((phy_start.0 + i).into(), 
+            i.into(), PTEFlags::VRWX | PTEFlags::U)?;
     }
 
     // 映射栈 
-    pmm.add_mapping(PhysAddr::from(PhysPageNum::from(usize::from(phy_start) + pages)), 
-    0xf0000000usize.into(), PTEFlags::VRWX | PTEFlags::U)?;
+    pmm.add_mapping((phy_start.0 + pages).into(), 
+    0xf0000usize.into(), PTEFlags::VRWX | PTEFlags::U)?;
 
     // 映射堆
-    pmm.add_mapping(task_controller.heap.get_addr(), 0xf0010000usize.into(), PTEFlags::VRWX | PTEFlags::U)?;
+    pmm.add_mapping(task_controller.heap.get_addr().into(), 0xf0010usize.into(), PTEFlags::VRWX | PTEFlags::U)?;
     Ok(task)
 }
 

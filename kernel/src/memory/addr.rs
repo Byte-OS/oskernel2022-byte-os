@@ -245,6 +245,21 @@ impl VirtAddr{
     }
 }
 
+impl VirtPageNum {
+
+    pub fn default() -> Self {
+        Self(0)
+    }
+
+    pub fn get_l(&self, level: usize) -> usize {
+        (self.0 >> (9 * level)) & 0x1ff
+    }
+
+    pub fn get_l_vec(&self) -> [usize; 3] {
+        [self.get_l(2), self.get_l(1), self.get_l(0)]
+    }
+}
+
 pub fn get_pages_num(size: usize) -> usize {
     (size + PAGE_SIZE - 1) / PAGE_SIZE
 }
