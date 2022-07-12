@@ -252,7 +252,11 @@ impl PageMapping {
     }
 
     pub fn add_mapping_by_map(&mut self, map: &MemMap) -> Result<MemSet, RuntimeError> {
-        self.add_mapping(map.ppn, map.vpn, map.flags)
+        let mut mem_set = MemSet::new();
+        for i in 0..map.page_num {
+            mem_set.append(&mut self.add_mapping(map.ppn + i.into(), map.vpn + i.into(), map.flags)?);
+        }
+        Ok(mem_set)
     }
 }
 
