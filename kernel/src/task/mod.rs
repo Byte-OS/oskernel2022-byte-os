@@ -544,7 +544,9 @@ pub fn clone_task(task_controller: &mut TaskController) -> Result<TaskController
     task.ppid = task_controller.pid;
     task.fd_table = task_controller.fd_table.clone();
 
-    pmm.add_mapping_by_set(&task_controller.mem_set)?;
+    let mem_set = task_controller.mem_set.clone_with_data()?;
+
+    pmm.add_mapping_by_set(&mem_set)?;
 
     // 获取任务对应地址和栈对应地址
     

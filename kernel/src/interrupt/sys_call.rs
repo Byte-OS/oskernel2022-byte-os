@@ -128,10 +128,11 @@ pub fn sys_call() -> Result<(), RuntimeError> {
     // 重新设置current_task 前一个current_task所有权转移
     let mut current_task = current_task_wrap.force_get();
     let mut pmm = PageMapping::from(PhysPageNum(satp::read().bits()).to_addr());
-    // 将 恢复地址 + 4 跳过调用地址
-    context.sepc += 4;
 
     info!("中断号: {} 调用地址: {:#x}", context.x[17], context.sepc);
+
+    // 将 恢复地址 + 4 跳过调用地址
+    context.sepc += 4;
 
     // 匹配系统调用 a7(x17) 作为调用号
     match context.x[17] {
