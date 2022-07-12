@@ -17,6 +17,7 @@ bitflags! {
         const D = 1 << 7;       // 是否被修改过
         const NONE = 0;
         const VRWX = 0xf;
+        const UVRWX = 0x1f;
     }
 }
 
@@ -250,7 +251,7 @@ impl PageMapping {
         Ok(mem_set)
     }
 
-    pub fn add_mapping_by_map(&mut self, map: MemMap) -> Result<MemSet, RuntimeError> {
+    pub fn add_mapping_by_map(&mut self, map: &MemMap) -> Result<MemSet, RuntimeError> {
         self.add_mapping(map.ppn, map.vpn, map.flags)
     }
 }
@@ -281,6 +282,17 @@ impl PageMappingManager {
     // 添加mapping
     pub fn add_mapping(&mut self, ppn: PhysPageNum, vpn: VirtPageNum, flags: PTEFlags) -> Result<MemSet, RuntimeError>{
         self.pte.add_mapping(ppn, vpn, flags)
+    }
+
+    pub fn add_mapping_by_map(&mut self, map: &MemMap) -> Result<MemSet, RuntimeError> {
+        self.pte.add_mapping_by_map(map)
+    }
+
+    pub fn add_mapping_by_set(&mut self, map: &MemSet) -> Result<(), RuntimeError> {
+        for i in &map.0 {
+            self.pte.add_mapping_by_map(i)?;
+        }
+        Ok(())
     }
 
     // 添加一个范围内的mapping

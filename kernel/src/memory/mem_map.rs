@@ -1,6 +1,6 @@
 use crate::runtime_err::RuntimeError;
 
-use super::{addr::{PhysPageNum, VirtPageNum, VirtAddr, PAGE_SIZE}, page::alloc_more, page_table::PTEFlags};
+use super::{addr::{PhysPageNum, VirtPageNum, VirtAddr, PAGE_SIZE, get_buf_from_phys_page}, page::alloc_more, page_table::PTEFlags};
 
 pub struct MemMap {
     pub ppn: PhysPageNum,
@@ -42,6 +42,34 @@ impl MemMap {
             vpn: VirtPageNum::from(start_va),
             page_num,
             flags
+        })
+    }
+
+    // 添加已经映射的页
+    pub fn exists_page(ppn: PhysPageNum, vpn: VirtPageNum, page_num: usize, flags: PTEFlags) -> Self {
+        Self { 
+            ppn, 
+            vpn, 
+            page_num, 
+            flags
+        }
+    }
+
+    pub fn clone_with_data(&self) -> Result<Self, RuntimeError> {
+        let page_num = self.page_num;
+        let phys_num_start = alloc_more(page_num)?;
+
+        // 复制数据
+        let new_data = get_buf_from_phys_page(phys_num_start, self.page_num);
+        let old_data = get_buf_from_phys_page(self.ppn, self.page_num);
+        new_data.clone_from_slice(old_data);
+
+
+        Ok(Self {
+            ppn: phys_num_start,
+            vpn: self.vpn,
+            page_num,
+            flags: self.flags.clone()
         })
     }
 }

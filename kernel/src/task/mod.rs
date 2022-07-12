@@ -12,6 +12,8 @@ use crate::interrupt::{Context, TICKS};
 
 use crate::interrupt::timer::{NEXT_TICKS, TMS, LAST_TICKS};
 use crate::memory::addr::{get_pages_num, get_buf_from_phys_page};
+use crate::memory::mem_map::MemMap;
+use crate::memory::mem_set::MemSet;
 use crate::memory::page::{alloc, alloc_more};
 use crate::memory::page_table::PagingMode;
 use crate::runtime_err::RuntimeError;
@@ -285,6 +287,7 @@ pub struct TaskController {
     pub ppid: usize,                                    // 父进程id
     pub entry_point: VirtAddr,                          // 入口地址
     pub pmm: PageMappingManager,                        // 页表映射控制器
+    pub mem_set: MemSet,                                // 内存集
     pub status: TaskStatus,                             // 任务状态
     pub stack: UserStack,                               // 栈地址
     pub heap: UserHeap,                                 // 堆地址
@@ -304,6 +307,7 @@ impl TaskController {
             pid,
             ppid: 1,
             entry_point: 0usize.into(),
+            mem_set: MemSet::new(),
             pmm,
             status: TaskStatus::READY,
             heap,
@@ -447,6 +451,10 @@ pub fn exec<'a>(path: &'a str, mut args: Vec<&'a str>) -> Result<(), RuntimeErro
 
             let vr_start = ph.virtual_addr() as usize % 0x1000;
             let vr_end = vr_start + read_size;
+            // 添加memset
+            task_controller.mem_set.inner().push(MemMap::exists_page(phy_start, VirtAddr::from(ph.virtual_addr()).into(), 
+                alloc_pages, PTEFlags::VRWX | PTEFlags::U));
+
             temp_buf[vr_start..vr_end].copy_from_slice(&buf[ph_offset..ph_offset+read_size]);
 
             pmm.add_mapping_range(PhysAddr::from(phy_start) + PhysAddr::from(offset), 
@@ -536,32 +544,15 @@ pub fn clone_task(task_controller: &mut TaskController) -> Result<TaskController
     task.ppid = task_controller.pid;
     task.fd_table = task_controller.fd_table.clone();
 
+    pmm.add_mapping_by_set(&task_controller.mem_set)?;
+
     // 获取任务对应地址和栈对应地址
-    let start_addr: PhysAddr = task_controller.pmm.get_phys_addr(0x0usize.into()).unwrap();
-    let stack_addr: PhysAddr = task_controller.pmm.get_phys_addr(0xf0000000usize.into()).unwrap();
-
-    // 获取任务占用的页表数量
-    let pages = (usize::from(stack_addr) - usize::from(start_addr)) / PAGE_SIZE;
     
-    // 申请页表
-    let phy_start = PAGE_ALLOCATOR.force_get().alloc_more(pages + 1)?;
-
-    // 复制任务信息
-    let new_buf = unsafe { slice::from_raw_parts_mut(usize::from(PhysAddr::from(phy_start)) as *mut u8,(pages + 1) * PAGE_SIZE) };
-    let old_buf = unsafe { slice::from_raw_parts_mut(usize::from(PhysAddr::from(start_addr)) as *mut u8, (pages + 1) * PAGE_SIZE) };
-    new_buf.copy_from_slice(old_buf);
-
-    for i in 0..pages {
-        pmm.add_mapping((phy_start.0 + i).into(), 
-            i.into(), PTEFlags::VRWX | PTEFlags::U)?;
-    }
-
     // 映射栈 
-    pmm.add_mapping((phy_start.0 + pages).into(), 
-    0xf0000usize.into(), PTEFlags::VRWX | PTEFlags::U)?;
+    // pmm.add_mapping((phy_start.0 + pages).into(), 0xf0000usize.into(), PTEFlags::UVRWX)?;
 
     // 映射堆
-    pmm.add_mapping(task_controller.heap.get_addr().into(), 0xf0010usize.into(), PTEFlags::VRWX | PTEFlags::U)?;
+    pmm.add_mapping(task_controller.heap.get_addr().into(), 0xf0010usize.into(), PTEFlags::UVRWX)?;
     Ok(task)
 }
 
