@@ -23,6 +23,7 @@ use crate::{memory::{page_table::{PageMappingManager, PTEFlags}, addr::{PAGE_SIZ
 
 use self::pipe::PipeBuf;
 use self::stack::UserStack;
+use self::task::TaskStatus;
 use self::task_queue::load_next_task;
 
 pub mod pipe;
@@ -30,19 +31,12 @@ pub mod task_queue;
 pub mod stack;
 pub mod controller;
 pub mod pid;
+pub mod process;
+pub mod task;
 
 pub const STDIN: usize = 0;
 pub const STDOUT: usize = 1;
 pub const STDERR: usize = 2;
-
-#[derive(Clone, Copy, PartialEq)]
-// 任务状态
-pub enum TaskStatus {
-    READY   = 0,
-    RUNNING = 1,
-    PAUSE   = 2,
-    STOP    = 3,
-}
 
 #[allow(dead_code)]
 // 用户heap
