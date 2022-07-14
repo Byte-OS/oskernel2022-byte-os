@@ -1,6 +1,6 @@
 use crate::runtime_err::RuntimeError;
 
-use super::{addr::{PhysPageNum, VirtPageNum, VirtAddr, PAGE_SIZE, get_buf_from_phys_page}, page::alloc_more, page_table::PTEFlags};
+use super::{addr::{PhysPageNum, VirtPageNum, VirtAddr, PAGE_SIZE, get_buf_from_phys_page}, page::{alloc_more, dealloc_more}, page_table::PTEFlags};
 
 #[derive(Clone)]
 pub struct MemMap {
@@ -81,5 +81,11 @@ impl MemMap {
             page_num,
             flags: self.flags.clone()
         })
+    }
+
+    // 释放map页表资源
+    pub fn release(&self) {
+        get_buf_from_phys_page(self.ppn, self.page_num).fill(0);
+        dealloc_more(self.ppn, self.page_num);
     }
 }

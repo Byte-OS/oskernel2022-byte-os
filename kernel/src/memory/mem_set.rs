@@ -28,4 +28,11 @@ impl MemSet {
         }
         Ok(mem_set)
     }
+
+    // 释放占用的资源
+    pub fn release(&self) {
+        for x in &self.0 {
+            x.release();
+        }
+    }
 }
