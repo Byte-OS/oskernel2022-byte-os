@@ -30,7 +30,7 @@ impl Process {
             memset: MemSet::new(), 
             tasks: vec![], 
             entry: 0usize.into(), 
-            stack: UserStack::new(pte), 
+            stack: UserStack::new(pte)?, 
             heap, 
             workspace: open("/")?.clone(), 
             fd_table: FDTable::new(),

@@ -135,7 +135,7 @@ impl PageMapping {
     }
 
     // 删除mapping
-    pub fn remove_mapping(&mut self, virt_addr: VirtAddr) {
+    pub fn remove_mapping(&self, virt_addr: VirtAddr) {
         // 如果没有pte则申请pte
         if usize::from(self.0) == 0 {
             return;
@@ -219,7 +219,7 @@ impl PageMapping {
         Ok(PhysAddr::from(usize::from(PhysAddr::from(l0_pte.ppn())) + virt_addr.page_offset()))
     }
 
-    pub fn add_mapping(&mut self, ppn: PhysPageNum, vpn: VirtPageNum, flags: PTEFlags) -> Result<MemSet, RuntimeError>{
+    pub fn add_mapping(&self, ppn: PhysPageNum, vpn: VirtPageNum, flags: PTEFlags) -> Result<MemSet, RuntimeError>{
         let mut mem_set = MemSet::new();
         let l_vec = vpn.get_l_vec();
 
@@ -251,7 +251,7 @@ impl PageMapping {
         Ok(mem_set)
     }
 
-    pub fn add_mapping_by_map(&mut self, map: &MemMap) -> Result<MemSet, RuntimeError> {
+    pub fn add_mapping_by_map(&self, map: &MemMap) -> Result<MemSet, RuntimeError> {
         let mut mem_set = MemSet::new();
         for i in 0..map.page_num {
             mem_set.append(&mut self.add_mapping(map.ppn + i.into(), map.vpn + i.into(), map.flags)?);

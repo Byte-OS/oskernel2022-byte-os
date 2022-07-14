@@ -298,7 +298,7 @@ impl TaskController {
         let pmm = PageMappingManager::new()?;
         let heap = UserHeap::new()?;
         let pte = pmm.pte.clone();
-        let mut task = TaskController {
+        let task = TaskController {
             pid,
             ppid: 1,
             entry_point: 0usize.into(),
@@ -306,7 +306,7 @@ impl TaskController {
             pmm,
             status: TaskStatus::READY,
             heap,
-            stack: UserStack::new(pte),
+            stack: UserStack::new(pte)?,
             home_dir: FILETREE.force_get().open("/")?.clone(),
             context: Context::new(),
             fd_table: vec![
@@ -417,12 +417,8 @@ pub fn exec<'a>(path: &'a str, mut args: Vec<&'a str>) -> Result<(), RuntimeErro
     let entry_point = elf.header.pt2.entry_point() as usize;
     assert_eq!(magic, [0x7f, 0x45, 0x4c, 0x46], "invalid elf!");
 
-    // 获取文件大小
-    let stack_num_index = alloc()?;
-    
     // 创建新的任务控制器 并映射栈
     let mut task_controller = TaskController::new(get_new_pid())?;
-    task_controller.pmm.add_mapping(stack_num_index, 0xf0000usize.into(), PTEFlags::VRWX | PTEFlags::U)?;
     task_controller.set_entry_point(entry_point);     // 设置入口地址
     
     // 设置内存管理器
