@@ -15,6 +15,7 @@ pub enum TaskStatus {
 
 
 pub struct Task {
+    tid: usize,
     context: Context,
     process: Weak<Process>,
     status: TaskStatus

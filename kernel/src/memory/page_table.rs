@@ -81,10 +81,10 @@ pub enum PagingMode {
     Sv39 = 8,
     Sv48 = 9
 }
-
 #[derive(Clone)]
 pub struct PageMappingManager {
     pub paging_mode: PagingMode,
+    pub mem_set: MemSet,
     pub pte: PageMapping
 }
 
@@ -262,25 +262,22 @@ impl PageMapping {
 
 
 impl PageMappingManager {
-    pub fn new() -> Self {
-        PageMappingManager { 
+    pub fn new() -> Result<Self, RuntimeError> {
+        let mut mem_set = MemSet::new();
+        let ppn = PageMapping::alloc_pte(2)?;
+
+        mem_set.inner().push(MemMap::pte_page(ppn));
+
+        Ok(PageMappingManager { 
             paging_mode: PagingMode::Sv39, 
-            pte: PhysAddr::from(PageMapping::alloc_pte(2).unwrap()).into()
-        }
+            pte: PhysAddr::from(ppn).into(),
+            mem_set
+        })
     }
 
     // 获取pte
     pub fn get_pte(&self) -> usize {
         self.pte.into()
-    }
-
-    // 初始化pte
-    pub fn init_pte(&mut self) {
-        // 如果没有pte则申请pte
-        if usize::from(self.pte) != 0 {
-            PAGE_ALLOCATOR.lock().dealloc(PhysPageNum::from(self.pte));
-        }
-        self.pte = PhysAddr::from(PageMapping::alloc_pte(2).unwrap()).into();
     }
 
     // 添加mapping
@@ -332,12 +329,11 @@ impl PageMappingManager {
 }
 
 lazy_static! {
-    pub static ref KERNEL_PAGE_MAPPING: Mutex<PageMappingManager> = Mutex::new(PageMappingManager::new());
+    pub static ref KERNEL_PAGE_MAPPING: Mutex<PageMappingManager> = Mutex::new(PageMappingManager::new().unwrap());
 }
 
 // 初始化页面映射
 pub fn init() {
     let mut mapping_manager = KERNEL_PAGE_MAPPING.lock();
-    mapping_manager.init_pte();
     mapping_manager.change_satp();
 }

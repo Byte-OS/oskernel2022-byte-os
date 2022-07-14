@@ -339,3 +339,7 @@ impl FileTreeNode {
         curr_node.parent = Some(self.clone());
     }
 }
+
+pub fn open(path: &str) -> Result<FileTreeNode, RuntimeError> {
+    Ok(FILETREE.force_get().open(path)?)
+}

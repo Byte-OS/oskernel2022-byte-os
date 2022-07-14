@@ -2,6 +2,7 @@ use crate::runtime_err::RuntimeError;
 
 use super::{addr::{PhysPageNum, VirtPageNum, VirtAddr, PAGE_SIZE, get_buf_from_phys_page}, page::alloc_more, page_table::PTEFlags};
 
+#[derive(Clone)]
 pub struct MemMap {
     pub ppn: PhysPageNum,
     pub vpn: VirtPageNum,
@@ -52,6 +53,15 @@ impl MemMap {
             vpn, 
             page_num, 
             flags
+        }
+    }
+
+    pub fn pte_page(ppn: PhysPageNum) -> Self {
+        Self {
+            ppn,
+            vpn: 0usize.into(),
+            page_num: 1,
+            flags: PTEFlags::V
         }
     }
 

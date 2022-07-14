@@ -4,6 +4,7 @@ use crate::runtime_err::RuntimeError;
 
 use super::mem_map::MemMap;
 
+#[derive(Clone)]
 pub struct MemSet(pub Vec<MemMap>);
 
 impl MemSet {

@@ -33,6 +33,7 @@ pub mod controller;
 pub mod pid;
 pub mod process;
 pub mod task;
+pub mod fd_table;
 
 pub const STDIN: usize = 0;
 pub const STDOUT: usize = 1;
@@ -294,9 +295,9 @@ pub struct TaskController {
 impl TaskController {
     // 创建任务控制器
     pub fn new(pid: usize) -> Result<Self, RuntimeError> {
-        let pmm = PageMappingManager::new();
+        let pmm = PageMappingManager::new()?;
         let heap = UserHeap::new()?;
-        let pte = pmm.clone().pte;
+        let pte = pmm.pte.clone();
         let mut task = TaskController {
             pid,
             ppid: 1,
@@ -315,7 +316,6 @@ impl TaskController {
             ],
             tms: TMS::new()
         };
-        task.pmm.init_pte();
         Ok(task)
     }
 
