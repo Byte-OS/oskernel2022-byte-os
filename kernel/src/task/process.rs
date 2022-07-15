@@ -1,3 +1,5 @@
+use core::cell::RefCell;
+
 use alloc::{vec::Vec, sync::Arc};
 
 use crate::{memory::{page_table::PageMappingManager, mem_set::MemSet, addr::VirtAddr}, fs::filetree::{FileTreeNode, open}, sync::mutex::Mutex, runtime_err::RuntimeError, interrupt::timer::TMS};
@@ -9,7 +11,7 @@ pub struct Process {
     pub ppid: usize,                    // 父进程id
     pub pmm: PageMappingManager,        // 内存页映射管理 
     pub memset: MemSet,                 // 内存使用集
-    pub tasks: Vec<Option<Arc<Task>>>,  // 任务管理器
+    pub tasks: Vec<Option<RefCell<Task>>>,// 任务管理器
     pub entry: VirtAddr,                // 入口地址
     pub stack: UserStack,               // 用户栈
     pub heap: UserHeap,                 // 用户堆

@@ -1,4 +1,6 @@
-use alloc::rc::Weak;
+use core::cell::RefCell;
+
+use alloc::{rc::{Weak, Rc}, sync::Arc};
 
 use crate::interrupt::Context;
 
@@ -13,10 +15,14 @@ pub enum TaskStatus {
     STOP    = 3,
 }
 
+pub struct TaskInner {
+    pub context: Context,
+    pub process: Weak<Process>,
+    pub status: TaskStatus
+}
 
+#[derive(Clone)]
 pub struct Task {
-    tid: usize,
-    context: Context,
-    process: Weak<Process>,
-    status: TaskStatus
+    pub tid: usize,
+    pub inner: Rc<RefCell<TaskInner>>
 }

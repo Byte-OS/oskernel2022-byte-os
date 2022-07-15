@@ -69,21 +69,13 @@ run: qemu
 			-kernel $(BIN_FILE) \
 			-nographic \
 			-smp 4 
+	
 
 debug: qemu
-# @tmux new-session -d \
-# "qemu-system-riscv64 -machine virt -nographic -bios $(BOOTLOADER) -drive file=$(FS_IMG),if=none,format=raw,id=x0 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0 -device loader,file=$(BIN_FILE),addr=0x80200000 -s -S" && \
-# tmux split-window -h "riscv64-elf-gdb -ex 'file $(KERNEL_ELF)' -ex 'set arch riscv:rv64' -ex 'target remote localhost:1234'" && \
-# tmux -2 attach-session -d
-	@qemu-system-riscv64 \
-			-machine virt \
-			-bios $(BOOTLOADER) \
-			-device loader,file=$(BIN_FILE),addr=0x80200000 \
-			-drive file=$(FS_IMG),if=none,format=raw,id=x0 \
-			-device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0 \
-			-nographic \
-			-smp 4 \
-			-s -S
+	@tmux new-session -d \
+	"qemu-system-riscv64 -machine virt -nographic -bios $(BOOTLOADER) -drive file=$(FS_IMG),if=none,format=raw,id=x0 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0 -device loader,file=$(BIN_FILE),addr=0x80200000 -s -S && echo '按任意键继续' && read -n 1" && \
+	tmux split-window -h "riscv64-elf-gdb -ex 'file $(KERNEL_ELF)' -ex 'set arch riscv:rv64' -ex 'target remote localhost:1234'" && \
+	tmux -2 attach-session -d
 
 gdb:
 	riscv64-elf-gdb \

@@ -1,11 +1,9 @@
 use core::arch::global_asm;
 
 use alloc::collections::{VecDeque, BTreeMap};
-use alloc::slice;
 use alloc::string::String;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
-use xmas_elf::program::Type;
 use crate::elf::{self, ElfExtra};
 use crate::fs::filetree::FileTreeNode;
 use crate::interrupt::{Context, TICKS};
@@ -34,6 +32,7 @@ pub mod pid;
 pub mod process;
 pub mod task;
 pub mod fd_table;
+pub mod task_scheduler;
 
 pub const STDIN: usize = 0;
 pub const STDOUT: usize = 1;
