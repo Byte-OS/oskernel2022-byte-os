@@ -1,8 +1,10 @@
-use alloc::collections::VecDeque;
+use core::cell::RefCell;
+
+use alloc::{collections::VecDeque, rc::Rc};
 
 use crate::{sync::mutex::Mutex, task::pid::PidGenerater, memory::page_table::switch_to_kernel_page};
 
-use super::{task::{Task, TaskStatus}, task_queue::load_next_task};
+use super::{task::{Task, TaskStatus}, task_queue::load_next_task, get_current_task, process::Process};
 
 // 任务控制器管理器
 pub struct TaskScheduler {
@@ -99,4 +101,10 @@ pub fn start_tasks() {
 
 pub fn add_task_to_scheduler(task: Task) {
     TASK_SCHEDULER.force_get().add_task(task);
+}
+
+pub fn get_current_process() -> Rc<RefCell<Process>> {
+    let current_task = get_current_task().unwrap();
+    let task_inner = current_task.inner.borrow_mut();
+    task_inner.process.clone()
 }

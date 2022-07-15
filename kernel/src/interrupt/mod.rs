@@ -109,8 +109,13 @@ fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) -> us
         Trap::Exception(Exception::StorePageFault) => handle_page_fault(stval),
         // 用户请求
         Trap::Exception(Exception::UserEnvCall) => {
+            // 将 恢复地址 + 4 跳过调用地址
+            context.sepc += 4;
+            let args = [0;6];
+            args.clone_from_slice(&context.x[10..17]);
+            let res = sys_call::sys_call(context.x[17], args);
             // 错误处理
-            if let Err(e) = sys_call::sys_call() {
+            if let Err(e) = res {
                 match e {
                     RuntimeError::FileNotFound => panic!("文件未找到"),
                     RuntimeError::NoEnoughPage => panic!("页表不足"),
