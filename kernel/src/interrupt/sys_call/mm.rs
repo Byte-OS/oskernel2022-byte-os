@@ -1,9 +1,10 @@
-use crate::{runtime_err::RuntimeError, task::{process, task_scheduler::get_current_process, FileDescEnum}, memory::{page::PAGE_ALLOCATOR, page_table::PTEFlags, addr::{VirtAddr, PhysAddr}}};
+use crate::{runtime_err::RuntimeError, task::{task_scheduler::get_current_process, FileDescEnum}, memory::{page::PAGE_ALLOCATOR, page_table::PTEFlags, addr::{VirtAddr, PhysAddr}}};
 
 use super::SYS_CALL_ERR;
 
 pub fn sys_brk(top_pos: usize) -> Result<usize, RuntimeError> {
-    let process = get_current_process().borrow_mut();
+    let process = get_current_process();
+    let mut process = process.borrow_mut();
     // 如果是0 返回堆顶 否则设置为新的堆顶
     if top_pos == 0 {
         Ok(process.heap.get_heap_size())
@@ -15,7 +16,8 @@ pub fn sys_brk(top_pos: usize) -> Result<usize, RuntimeError> {
 
 pub fn sys_mmap(start: usize, len: usize, prot: usize, 
     flags: usize, fd: usize, offset: usize) -> Result<usize, RuntimeError> {
-    let process = get_current_process().borrow();
+    let process = get_current_process();
+    let mut process = process.borrow_mut();
 
     if fd == SYS_CALL_ERR { // 如果是匿名映射
         // let page_num = (len + 4095) / 4096;
@@ -55,7 +57,8 @@ pub fn sys_mmap(start: usize, len: usize, prot: usize,
 }
 
 pub fn sys_munmap(start: usize, len: usize) -> Result<usize, RuntimeError> {
-    let process = get_current_process().borrow();
+    let process = get_current_process();
+    let mut process = process.borrow_mut();
     process.pmm.remove_mapping(start.into());
     Ok(0)
 }

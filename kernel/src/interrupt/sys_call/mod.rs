@@ -139,30 +139,30 @@ pub fn write_string_to_raw(target: &mut [u8], str: &str) {
 }
 
 // 系统调用
-pub fn sys_call(call_type: usize, args: [usize; 6]) -> Result<usize, RuntimeError> {
+pub fn sys_call(call_type: usize, args: [usize; 7]) -> Result<usize, RuntimeError> {
     info!("中断号: {} 调用地址: {:#x}", call_type, sepc::read());
 
 
     // 匹配系统调用 a7(x17) 作为调用号
     match call_type {
         // 获取文件路径
-        SYS_GETCWD => get_cwd(args[10], args[11]),
+        SYS_GETCWD => get_cwd(args[0], args[1]),
         // 复制文件描述符
-        SYS_DUP => sys_dup(args[10]),
+        SYS_DUP => sys_dup(args[0]),
         // 复制文件描述符
-        SYS_DUP3 => sys_dup3(args[10], args[11]),
+        SYS_DUP3 => sys_dup3(args[0], args[1]),
         // 创建文件夹
-        SYS_MKDIRAT => sys_mkdirat(args[10], args[11], args[12]),
+        SYS_MKDIRAT => sys_mkdirat(args[0], args[1], args[2]),
         // 取消link
-        SYS_UNLINKAT => sys_unlinkat(args[10], args[11], args[12]),
+        SYS_UNLINKAT => sys_unlinkat(args[0], args[1], args[2]),
         // umount设备
         SYS_UMOUNT2 => Ok(0),
         // mount设备
         SYS_MOUNT => Ok(0),
         // 改变文件信息
-        SYS_CHDIR => sys_chdir(args[10]),
+        SYS_CHDIR => sys_chdir(args[0]),
         // 打开文件地址
-        SYS_OPENAT => sys_openat(args[10], args[11], args[12], args[13]),
+        SYS_OPENAT => sys_openat(args[0], args[1], args[2], args[3]),
         // 关闭文件描述符
         SYS_CLOSE => sys_close(args[0]),
         // 进行PIPE

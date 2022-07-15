@@ -2,13 +2,14 @@ use core::slice;
 
 use alloc::sync::Arc;
 
-use crate::{task::{get_current_task, task_scheduler::get_current_process, FileDescEnum, process, FileDesc}, memory::addr::VirtAddr, fs::{filetree::FILETREE, file::Kstat}, sync::mutex::Mutex, console::puts, runtime_err::RuntimeError};
+use crate::{task::{task_scheduler::get_current_process, FileDescEnum, FileDesc}, memory::addr::VirtAddr, fs::{filetree::FILETREE, file::Kstat}, sync::mutex::Mutex, console::puts, runtime_err::RuntimeError};
 
 use super::{SYS_CALL_ERR, get_string_from_raw, OpenFlags, write_string_to_raw, Dirent, sys_write_wrap};
 
 // 获取当前路径
 pub fn get_cwd(buf: usize, size: usize) -> Result<usize, RuntimeError> {
-    let process = get_current_process().borrow_mut();
+    let process = get_current_process();
+    let mut process = process.borrow_mut();
 
     // 获取参数
     let mut buf = process.pmm.get_phys_addr(VirtAddr::from(buf)).unwrap();
@@ -23,7 +24,8 @@ pub fn get_cwd(buf: usize, size: usize) -> Result<usize, RuntimeError> {
 }
 
 pub fn sys_dup(fd: usize) -> Result<usize, RuntimeError> {
-    let process = get_current_process().borrow_mut();
+    let process = get_current_process();
+    let mut process = process.borrow_mut();
     // 申请文件描述符空间
     let new_fd = process.fd_table.alloc();
     // 判断文件描述符是否存在
@@ -36,7 +38,8 @@ pub fn sys_dup(fd: usize) -> Result<usize, RuntimeError> {
 }
 
 pub fn sys_dup3(fd: usize, new_fd: usize) -> Result<usize, RuntimeError> {
-    let process = get_current_process().borrow_mut();
+    let process = get_current_process();
+    let mut process = process.borrow_mut();
     // 判断是否存在文件描述符
     if let Some(tree_node) = process.fd_table.get(fd).clone() {
         // 申请空间 判断是否申请成功
@@ -52,7 +55,8 @@ pub fn sys_dup3(fd: usize, new_fd: usize) -> Result<usize, RuntimeError> {
 }
 
 pub fn sys_mkdirat(dirfd: usize, filename: usize, flags: usize) -> Result<usize, RuntimeError> {
-    let process = get_current_process().borrow_mut();
+    let process = get_current_process();
+    let mut process = process.borrow_mut();
 
     let filename = process.pmm.get_phys_addr(VirtAddr::from(filename)).unwrap();
     let filename = get_string_from_raw(filename);
@@ -82,7 +86,8 @@ pub fn sys_mkdirat(dirfd: usize, filename: usize, flags: usize) -> Result<usize,
 }
 
 pub fn sys_unlinkat(fd: usize, filename: usize, flags: usize) -> Result<usize, RuntimeError> {
-    let process = get_current_process().borrow_mut();
+    let process = get_current_process();
+    let mut process = process.borrow_mut();
 
     // 获取参数
     let filename = process.pmm.get_phys_addr(VirtAddr::from(filename)).unwrap();
@@ -125,7 +130,8 @@ pub fn sys_unlinkat(fd: usize, filename: usize, flags: usize) -> Result<usize, R
 }
 
 pub fn sys_chdir(filename: usize) -> Result<usize, RuntimeError> {
-    let process = get_current_process().borrow_mut();
+    let process = get_current_process();
+    let mut process = process.borrow_mut();
     let filename = process.pmm.get_phys_addr(VirtAddr::from(filename)).unwrap();
     let filename = get_string_from_raw(filename);
 
@@ -138,7 +144,8 @@ pub fn sys_chdir(filename: usize) -> Result<usize, RuntimeError> {
 }
 
 pub fn sys_openat(fd: usize, filename: usize, flags: usize, open_mod: usize) -> Result<usize, RuntimeError> {
-    let process = get_current_process().borrow_mut();
+    let process = get_current_process();
+    let mut process = process.borrow_mut();
 
     // 获取文件信息
     let filename = process.pmm.get_phys_addr(VirtAddr::from(filename)).unwrap();
@@ -186,7 +193,8 @@ pub fn sys_openat(fd: usize, filename: usize, flags: usize, open_mod: usize) -> 
 }
 
 pub fn sys_close(fd: usize) -> Result<usize, RuntimeError> {
-    let process = get_current_process().borrow_mut();
+    let process = get_current_process();
+    let mut process = process.borrow_mut();
 
     if process.fd_table.get(fd).is_some() {
         process.fd_table.set(fd, None);
@@ -197,7 +205,8 @@ pub fn sys_close(fd: usize) -> Result<usize, RuntimeError> {
 }
 
 pub fn sys_pipe2(req_ptr: usize) -> Result<usize, RuntimeError> {
-    let process = get_current_process().borrow_mut();
+    let process = get_current_process();
+    let mut process = process.borrow_mut();
     // 匹配文件参数
     let req_ptr = usize::from(process.pmm.get_phys_addr(req_ptr.into()).unwrap()) as *mut u32;
     // 创建pipe
@@ -216,7 +225,8 @@ pub fn sys_pipe2(req_ptr: usize) -> Result<usize, RuntimeError> {
 }
 
 pub fn sys_getdents(fd: usize, ptr: usize, len: usize) -> Result<usize, RuntimeError> {
-    let process = get_current_process().borrow_mut();
+    let process = get_current_process();
+    let mut process = process.borrow_mut();
 
     // 获取参数
     let start_ptr = usize::from(process.pmm.get_phys_addr(VirtAddr::from(ptr)).unwrap());
@@ -288,7 +298,8 @@ pub fn sys_getdents(fd: usize, ptr: usize, len: usize) -> Result<usize, RuntimeE
 }
 
 pub fn sys_read(fd: usize, buf_ptr: usize, count: usize) -> Result<usize, RuntimeError> {
-    let process = get_current_process().borrow_mut();
+    let process = get_current_process();
+    let mut process = process.borrow_mut();
 
     // 获取参数
     let mut buf = process.pmm.get_phys_addr(buf_ptr.into()).unwrap();
@@ -315,7 +326,8 @@ pub fn sys_read(fd: usize, buf_ptr: usize, count: usize) -> Result<usize, Runtim
 }
 
 pub fn sys_write(fd: usize, buf_ptr: usize, count: usize) -> Result<usize, RuntimeError> {
-    let process = get_current_process().borrow_mut();
+    let process = get_current_process();
+    let mut process = process.borrow_mut();
     
     // 获取参数
     let buf = process.pmm.get_phys_addr(buf_ptr.into()).unwrap();
@@ -356,7 +368,8 @@ pub fn sys_write(fd: usize, buf_ptr: usize, count: usize) -> Result<usize, Runti
 }
 
 pub fn sys_fstat(fd: usize, buf_ptr: usize) -> Result<usize, RuntimeError> {
-    let process = get_current_process().borrow_mut();
+    let process = get_current_process();
+    let mut process = process.borrow_mut();
 
     // 获取参数
     let kstat_ptr = unsafe {

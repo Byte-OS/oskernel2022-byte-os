@@ -10,7 +10,8 @@ pub fn sys_exit() -> Result<usize, RuntimeError> {
 }
 
 pub fn sys_set_tid_address(tid_ptr: usize) -> Result<usize, RuntimeError> {
-    let process = get_current_process().borrow_mut();
+    let process = get_current_process();
+    let mut process = process.borrow_mut();
     let tid_ptr_addr = process.pmm.get_phys_addr(tid_ptr.into())?;
     let tid_ptr = tid_ptr_addr.0 as *mut u32;
     unsafe {tid_ptr.write(process.pid as u32)};
@@ -23,7 +24,8 @@ pub fn sys_sched_yield() -> Result<usize, RuntimeError> {
 }
 
 pub fn sys_uname(ptr: usize) -> Result<usize, RuntimeError> {
-    let process = get_current_process().borrow_mut();
+    let process = get_current_process();
+    let mut process = process.borrow_mut();
 
     // 获取参数
     let sys_info = usize::from(process.pmm.get_phys_addr(ptr.into()).unwrap()) as *mut UTSname;
@@ -43,7 +45,8 @@ pub fn sys_getpid() -> Result<usize, RuntimeError> {
 }
 
 pub fn sys_getppid() -> Result<usize, RuntimeError> {
-    let process = get_current_process().borrow();
+    let process = get_current_process();
+    let process = process.borrow();
 
     Ok(match &process.parent {
         Some(parent) => parent.borrow().pid,
@@ -66,7 +69,8 @@ pub fn sys_clone(flags: usize, new_sp: usize, ptid: usize, tls: usize, ctid: usi
 }
 
 pub fn sys_execve(filename: usize, argv: usize) -> Result<usize, RuntimeError> {
-    let process = get_current_process().borrow();
+    let process = get_current_process();
+    let process = process.borrow_mut();
     let filename = process.pmm.get_phys_addr(filename.into()).unwrap();
     let filename = get_string_from_raw(filename);
     let argv_ptr = process.pmm.get_phys_addr(argv.into()).unwrap();
@@ -85,7 +89,8 @@ pub fn sys_execve(filename: usize, argv: usize) -> Result<usize, RuntimeError> {
 }
 
 pub fn sys_wait4(pid: usize, ptr: usize, options: usize) -> Result<usize, RuntimeError> {
-    let process = get_current_process().borrow_mut();
+    let process = get_current_process();
+    let mut process = process.borrow_mut();
     let ptr = usize::from(process.pmm.get_phys_addr(ptr.into()).unwrap()) as *mut u16;
     // wait_task中进行上下文大小
     wait_task(pid, ptr, options);
