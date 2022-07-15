@@ -1,12 +1,14 @@
 use alloc::collections::VecDeque;
 
+use crate::{sync::mutex::Mutex, task::pid::PidGenerater};
+
 use super::{task::{Task, TaskStatus}, task_queue::load_next_task};
 
 // 任务控制器管理器
 pub struct TaskScheduler {
-    current: Option<Task>,          // 当前任务
-    queue: VecDeque<Task>,    // 准备队列
-    is_run: bool                    // 任务运行标志
+    pub current: Option<Task>,          // 当前任务
+    pub queue: VecDeque<Task>,          // 准备队列
+    pub is_run: bool                    // 任务运行标志
 }
 
 impl TaskScheduler {
@@ -56,6 +58,32 @@ impl TaskScheduler {
             self.current = Some(task);
         } else {
             load_next_task();
+            
         }
     }
+
+    // 执行第一个任务
+    pub fn run_first(&mut self) {
+        if self.current.is_none() {
+            self.run_next();
+        }
+
+        let task = self.current.clone().unwrap();
+
+        task.run();
+    }
+}
+
+lazy_static! {
+    // 任务管理器和pid生成器
+    pub static ref TASK_SCHEDULER: Mutex<TaskScheduler> = Mutex::new(TaskScheduler::new());
+    pub static ref NEXT_PID: Mutex<PidGenerater> = Mutex::new(PidGenerater::new());
+}
+
+pub fn start_tasks() {
+    TASK_SCHEDULER.force_get().run_first();
+}
+
+pub fn add_task_to_scheduler(task: Task) {
+    TASK_SCHEDULER.force_get().add_task(task);
 }

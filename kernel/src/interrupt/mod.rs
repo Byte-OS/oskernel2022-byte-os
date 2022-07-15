@@ -28,7 +28,7 @@ impl Context {
         }
     }
     // 从另一个上下文复制
-    pub fn clone_from(&mut self, target: &mut Self) {
+    pub fn clone_from(&mut self, target: &Self) {
         for i in 0..32 {
             self.x[i] = target.x[i];
         }
@@ -91,13 +91,15 @@ fn kernel_callback(context: &mut Context, scause: Scause, stval: usize) -> usize
 fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) -> usize {
     // 如果当前有任务则选择任务复制到context
     if let Some(current_task) = get_current_task() {
-        current_task.force_get().context.clone_from(context);
+        current_task.inner.borrow_mut().context.clone_from(context);
+        info!("中断发生");
         // 处理进程时间
-        current_task.force_get().tms.tms_cutime += unsafe { TICKS - LAST_TICKS } as u64;
+        // current_task.force_get().tms.tms_cutime += unsafe { TICKS - LAST_TICKS } as u64;
         unsafe {
             LAST_TICKS = TICKS;
         }
     }
+
     // 匹配中断原因
     match scause.cause(){
         // 断点中断
@@ -130,8 +132,8 @@ fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) -> us
     }
     // 如果当前有任务则选择任务复制到context
     if let Some(current_task) = get_current_task() {
-        context.clone_from(&mut current_task.force_get().context);
-        current_task.force_get().tms.tms_cstime += unsafe { TICKS - LAST_TICKS } as u64;
+        context.clone_from(&current_task.inner.borrow_mut().context);
+        // current_task.force_get().tms.tms_cstime += unsafe { TICKS - LAST_TICKS } as u64;
         unsafe {
             LAST_TICKS = TICKS;
         }

@@ -122,12 +122,15 @@ pub fn write_string_to_raw(target: &mut [u8], str: &str) {
 // 系统调用
 pub fn sys_call() -> Result<(), RuntimeError> {
     // 读取当前任务和任务的寄存器上下文
-    let current_task_wrap = get_current_task().unwrap();
-    let mut current_task = current_task_wrap.force_get();
-    let context: &mut Context = &mut current_task.context;
+    let current_task = get_current_task().unwrap();
+    let mut task_inner = current_task.inner.borrow_mut();
+    let process = task_inner.process.clone();
+    let mut process = process.borrow_mut();
+    let context: &mut Context = &mut task_inner.context;
     // 重新设置current_task 前一个current_task所有权转移
-    let mut current_task = current_task_wrap.force_get();
-    let mut pmm = PageMapping::from(PhysPageNum(satp::read().bits()).to_addr());
+    let pmm = PageMapping::from(PhysPageNum(satp::read().bits()).to_addr());
+
+    
 
     info!("中断号: {} 调用地址: {:#x}", context.x[17], context.sepc);
 
@@ -144,7 +147,7 @@ pub fn sys_call() -> Result<(), RuntimeError> {
             // 设置缓冲区地址
             let buf = unsafe { slice::from_raw_parts_mut(buf.as_mut_ptr(), size) };
             // 获取路径
-            let pwd = current_task.home_dir.get_pwd();
+            let pwd = process.workspace.get_pwd();
             let pwd_buf = pwd.as_bytes();
             // 将路径复制到缓冲区
             buf[..pwd_buf.len()].copy_from_slice(pwd_buf);
@@ -155,10 +158,11 @@ pub fn sys_call() -> Result<(), RuntimeError> {
             // 获取寄存器信息
             let fd = context.x[10];
             // 申请文件描述符空间
-            let new_fd = current_task.alloc_fd();
+            let new_fd = process.fd_table.alloc();
             // 判断文件描述符是否存在
-            if let Some(tree_node) = current_task.fd_table[fd].clone() {
-                current_task.fd_table[new_fd] = Some(tree_node);
+            if let Some(tree_node) = process.fd_table.get(fd).clone() {
+                // current_task.fd_table[new_fd] = Some(tree_node);
+                process.fd_table.set(new_fd, Some(tree_node));
                 context.x[10] = new_fd;
             } else {
                 context.x[10] = SYS_CALL_ERR;
@@ -170,12 +174,12 @@ pub fn sys_call() -> Result<(), RuntimeError> {
             let fd = context.x[10];
             let new_fd = context.x[11];
             // 判断是否存在文件描述符
-            if let Some(tree_node) = current_task.fd_table[fd].clone() {
+            if let Some(tree_node) = process.fd_table.get(fd).clone() {
                 // 申请空间 判断是否申请成功
-                if current_task.alloc_fd_with_size(new_fd) == SYS_CALL_ERR {
+                if process.fd_table.alloc_fixed_index(new_fd) == SYS_CALL_ERR {
                     context.x[10] = SYS_CALL_ERR;
                 } else {
-                    current_task.fd_table[new_fd] = Some(tree_node);
+                    process.fd_table.set(new_fd, Some(tree_node));
                     context.x[10] = new_fd;
                 }
             } else {
@@ -193,11 +197,11 @@ pub fn sys_call() -> Result<(), RuntimeError> {
             // 判断文件描述符是否存在
             if dirfd == 0xffffffffffffff9c {
                 // 在用户根据目录创建
-                current_task.home_dir.mkdir(&filename, flags as u16);
+                process.workspace.mkdir(&filename, flags as u16);
                 context.x[10] = 0;
             } else {
                 // 判度是否存在节点
-                if let Some(tree_node) = current_task.fd_table[dirfd].clone() {
+                if let Some(tree_node) = process.fd_table.get(dirfd).clone() {
                     // 匹配文件节点
                     match &mut tree_node.lock().target {
                         FileDescEnum::File(tree_node) => {
@@ -233,7 +237,7 @@ pub fn sys_call() -> Result<(), RuntimeError> {
                     context.x[10] = -1 as isize as usize;
                 }
             } else {
-                if let Some(tree_node) = current_task.fd_table[fd].clone() {
+                if let Some(tree_node) = process.fd_table.get(fd).clone() {
                     // 匹配目标 判断文件类型
                     match &mut tree_node.lock().target {
                         FileDescEnum::File(tree_node) => {
@@ -284,7 +288,7 @@ pub fn sys_call() -> Result<(), RuntimeError> {
             let filename = get_string_from_raw(filename);
 
             if let Ok(file) = FILETREE.lock().open(&filename) {
-                current_task.home_dir = file.clone();
+                process.workspace = file.clone();
                 context.x[10] = 0;
             } else {
                 context.x[10] = SYS_CALL_ERR;
@@ -306,17 +310,17 @@ pub fn sys_call() -> Result<(), RuntimeError> {
             if fd == 0xffffffffffffff9c {
                 // 根据文件类型匹配
                 if flags.contains(OpenFlags::CREATE) {
-                    current_task.home_dir.create(&filename);
+                    process.workspace.create(&filename);
                 }
-                if let Ok(file) = current_task.home_dir.open(&filename) {
-                    let fd = current_task.alloc_fd();
-                    current_task.fd_table[fd] = Some(Arc::new(Mutex::new(FileDesc::new(FileDescEnum::File(file.clone())))));
+                if let Ok(file) = process.workspace.open(&filename) {
+                    let fd = process.fd_table.alloc();
+                    process.fd_table.set(fd, Some(Arc::new(Mutex::new(FileDesc::new(FileDescEnum::File(file.clone()))))));
                     context.x[10] = fd;
                 } else {
                     context.x[10] = SYS_CALL_ERR;
                 }
             } else {
-                if let Some(tree_node) = current_task.fd_table[fd].clone() {
+                if let Some(tree_node) = process.fd_table.get(fd).clone() {
                     // 匹配文件类型
                     match &mut tree_node.lock().target {
                         FileDescEnum::File(tree_node) => {
@@ -324,8 +328,8 @@ pub fn sys_call() -> Result<(), RuntimeError> {
                                 tree_node.create(&filename);
                             }
                             if let Ok(file) = tree_node.open(&filename) {
-                                let fd = current_task.alloc_fd();
-                                current_task.fd_table[fd] = Some(Arc::new(Mutex::new(FileDesc::new(FileDescEnum::File(file.clone())))));
+                                let fd = process.fd_table.alloc();
+                                process.fd_table.set(fd, Some(Arc::new(Mutex::new(FileDesc::new(FileDescEnum::File(file.clone()))))));
                                 context.x[10] = fd;
                             } else {
                                 context.x[10] = SYS_CALL_ERR;
@@ -344,8 +348,8 @@ pub fn sys_call() -> Result<(), RuntimeError> {
         SYS_CLOSE => {
             // 获取文件参数
             let fd = context.x[10];
-            if let Some(_) = current_task.fd_table[fd].clone() {
-                current_task.fd_table[fd] = None;
+            if process.fd_table.get(fd).is_some() {
+                process.fd_table.set(fd, None);
                 context.x[10] = 0;
             } else {
                 context.x[10] = SYS_CALL_ERR;
@@ -358,10 +362,8 @@ pub fn sys_call() -> Result<(), RuntimeError> {
             // 创建pipe
             let (read_pipe, write_pipe) = FileDesc::new_pipe();
             // 写入数据
-            let read_fd = current_task.alloc_fd();
-            current_task.fd_table[read_fd] = Some(Arc::new(Mutex::new(read_pipe)));
-            let write_fd = current_task.alloc_fd();
-            current_task.fd_table[write_fd] = Some(Arc::new(Mutex::new(write_pipe)));
+            let read_fd = process.fd_table.push(Some(Arc::new(Mutex::new(read_pipe))));
+            let write_fd = process.fd_table.push(Some(Arc::new(Mutex::new(write_pipe))));
             // 写入文件数据
             unsafe {
                 req_ptr.write(read_fd as u32);
@@ -378,7 +380,7 @@ pub fn sys_call() -> Result<(), RuntimeError> {
             let start_ptr = usize::from(pmm.get_phys_addr(VirtAddr::from(context.x[11])).unwrap());
             let len = context.x[12];
             let mut buf_ptr = start_ptr;
-            if let Some(file_tree_node) = current_task.fd_table[fd].clone() {
+            if let Some(file_tree_node) = process.fd_table.get(fd) {
                 match &mut file_tree_node.lock().target {
                     FileDescEnum::File(file_tree_node) => {
                         // 添加 . 和 ..
@@ -452,7 +454,7 @@ pub fn sys_call() -> Result<(), RuntimeError> {
             let buf = unsafe { slice::from_raw_parts_mut(buf.as_mut_ptr(), count) };
 
             // 判断文件描述符是否存在
-            if let Some(file_tree_node) = current_task.fd_table[fd].clone() {
+            if let Some(file_tree_node) = process.fd_table.get(fd) {
                 // 匹配文件目标类型
                 match &mut file_tree_node.lock().target {
                     FileDescEnum::File(file_tree_node) => {
@@ -481,7 +483,7 @@ pub fn sys_call() -> Result<(), RuntimeError> {
             let buf = unsafe {slice::from_raw_parts_mut(usize::from(buf) as *mut u8, count)};
 
             // 判断文件描述符是否存在
-            if let Some(file_tree_node) = current_task.fd_table[fd].clone() {
+            if let Some(file_tree_node) = process.fd_table.get(fd) {
                 // 判断文件描述符类型
                 match &mut file_tree_node.lock().target {
                     FileDescEnum::File(file_tree) => {
@@ -519,7 +521,7 @@ pub fn sys_call() -> Result<(), RuntimeError> {
                 (usize::from(pmm.get_phys_addr(VirtAddr::from(context.x[11])).unwrap()) as *mut Kstat).as_mut().unwrap()
             };
             // 判断文件描述符是否存在
-            if let Some(tree_node) = current_task.fd_table[fd].clone() {
+            if let Some(tree_node) = process.fd_table.get(fd) {
                 match &mut tree_node.lock().target {
                     FileDescEnum::File(tree_node) => {
                         let tree_node = tree_node.0.borrow_mut();
@@ -555,12 +557,10 @@ pub fn sys_call() -> Result<(), RuntimeError> {
             kill_current_task();
         }
         // 设置tid
-        SYS_SET_TID_ADDRESS => {
-            let pid = current_task.pid;
-            
+        SYS_SET_TID_ADDRESS => {            
             let tid_ptr_addr = pmm.get_phys_addr(VirtAddr::from(context.x[10]))?;
             let tid_ptr = tid_ptr_addr.0 as *mut u32;
-            unsafe {tid_ptr.write(pid as u32)};
+            unsafe {tid_ptr.write(process.pid as u32)};
             context.x[10] = 0;
         },
         // 文件休眠
@@ -602,8 +602,8 @@ pub fn sys_call() -> Result<(), RuntimeError> {
             let tms = unsafe { tms.as_mut().unwrap() };
 
             // 写入文件时间
-            tms.tms_cstime = current_task.tms.tms_cstime;
-            tms.tms_cutime = current_task.tms.tms_cutime;
+            tms.tms_cstime = process.tms.tms_cstime;
+            tms.tms_cutime = process.tms.tms_cutime;
             context.x[10] = unsafe {TICKS};
         }
         // 获取系统信息
@@ -629,24 +629,23 @@ pub fn sys_call() -> Result<(), RuntimeError> {
         // 获取进程信息
         SYS_GETPID => {
             // 当前任务
-            let current_task_wrap = get_current_task().unwrap();
-            let current_task = current_task_wrap.force_get();
-            context.x[10] = current_task.pid;
+            context.x[10] = process.pid;
         }
         // 获取进程父进程
         SYS_GETPPID => {
-            let current_task_wrap = get_current_task().unwrap();
-            let current_task = current_task_wrap.force_get();
-            context.x[10] = current_task.ppid;
+            context.x[10] = match &process.parent {
+                Some(parent) => parent.borrow().pid,
+                None => SYS_CALL_ERR
+            }
         }
         // 申请堆空间
         SYS_BRK => {
             let top_pos = context.x[10];
             // 如果是0 返回堆顶 否则设置为新的堆顶
             if top_pos == 0 {
-                context.x[10] = get_current_task().unwrap().lock().get_heap_size();
+                context.x[10] = process.heap.get_heap_size();
             } else {
-                let top = get_current_task().unwrap().lock().set_heap_top(top_pos);
+                let top = process.heap.set_heap_top(top_pos);
                 context.x[10] = top;
             }
         }
@@ -658,18 +657,19 @@ pub fn sys_call() -> Result<(), RuntimeError> {
             let _tls = context.x[13];
             let _ctid = context.x[14];
 
-            let mut task = clone_task(&mut current_task_wrap.force_get())?;
+            // let mut task = clone_task(&mut current_task_wrap.force_get())?;
             
-            // 如果指定了栈 则设置栈
-            if stack_addr > 0 {
-                task.context.x[2] = stack_addr;
-            }
+            // // 如果指定了栈 则设置栈
+            // if stack_addr > 0 {
+            //     task.context.x[2] = stack_addr;
+            // }
 
-            task.context.x[10] = 0;
-            context.x[10] = task.pid;
-            // 加入调度信息
-            TASK_CONTROLLER_MANAGER.force_get().add(task);
-            suspend_and_run_next();
+            // task.context.x[10] = 0;
+            // context.x[10] = task.pid;
+            // // 加入调度信息
+            // TASK_CONTROLLER_MANAGER.force_get().add(task);
+            // suspend_and_run_next();
+            context.x[10] = 0;
         }
         // 执行文件
         SYS_EXECVE => {
@@ -702,7 +702,7 @@ pub fn sys_call() -> Result<(), RuntimeError> {
                 }
                 // context.x[10] = 0;
             } else {
-                if let Some(file_tree_node) = current_task.fd_table[fd].clone() {
+                if let Some(file_tree_node) = process.fd_table.get(fd) {
                     match &mut file_tree_node.lock().target {
                         FileDescEnum::File(file_tree_node) => {
                             // 如果start为0 则分配空间 暂分配0xd0000000
