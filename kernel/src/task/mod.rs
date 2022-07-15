@@ -25,7 +25,7 @@ use self::pipe::PipeBuf;
 use self::stack::UserStack;
 use self::task::{TaskStatus, Task};
 use self::task_queue::load_next_task;
-use self::task_scheduler::TASK_SCHEDULER;
+use self::task_scheduler::{TASK_SCHEDULER, TaskScheduler};
 
 pub mod pipe;
 pub mod task_queue;
@@ -623,8 +623,7 @@ pub fn wait_task(pid: usize, status: *mut u16, _options: usize) {
 
 // 杀死当前任务
 pub fn kill_current_task() {
-    TASK_CONTROLLER_MANAGER.force_get().kill_current();
-    TASK_CONTROLLER_MANAGER.force_get().switch_to_next();
+    TASK_SCHEDULER.force_get().kill_current();
 }
 
 // clone任务

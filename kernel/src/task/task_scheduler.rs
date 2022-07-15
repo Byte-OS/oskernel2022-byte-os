@@ -1,6 +1,6 @@
 use alloc::collections::VecDeque;
 
-use crate::{sync::mutex::Mutex, task::pid::PidGenerater};
+use crate::{sync::mutex::Mutex, task::pid::PidGenerater, memory::page_table::switch_to_kernel_page};
 
 use super::{task::{Task, TaskStatus}, task_queue::load_next_task};
 
@@ -44,6 +44,8 @@ impl TaskScheduler {
                 let mut task_inner = task.inner.borrow_mut();
                 if task_inner.status == TaskStatus::READY {
                     task_inner.status = TaskStatus::RUNNING;
+                    let process = task_inner.process.borrow();
+                    process.pmm.change_satp();
                     break Some(task.clone());
                 } else {
                     index += 1;
@@ -71,6 +73,17 @@ impl TaskScheduler {
         let task = self.current.clone().unwrap();
 
         task.run();
+    }
+
+    // 关闭当前任务
+    pub fn kill_current(&mut self) {
+        switch_to_kernel_page();
+        if let Some(current_task) = self.current.clone() {
+            current_task.exit();
+        }
+        self.current = None;
+        self.run_next();
+        
     }
 }
 

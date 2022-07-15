@@ -62,7 +62,7 @@ impl Task {
         
         let pte_ppn = usize::from(PhysPageNum::from(PhysAddr::from(process.pmm.get_pte())));
         let context_ptr = &inner.context as *const Context as usize;
-        
+
         drop(process);
         drop(inner);
 

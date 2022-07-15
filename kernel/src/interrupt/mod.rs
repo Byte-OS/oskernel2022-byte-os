@@ -92,7 +92,6 @@ fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) -> us
     // 如果当前有任务则选择任务复制到context
     if let Some(current_task) = get_current_task() {
         current_task.inner.borrow_mut().context.clone_from(context);
-        info!("中断发生");
         // 处理进程时间
         // current_task.force_get().tms.tms_cutime += unsafe { TICKS - LAST_TICKS } as u64;
         unsafe {
@@ -130,6 +129,7 @@ fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) -> us
         // 其他情况，终止当前线程
         _ => fault(context, scause, stval),
     }
+
     // 如果当前有任务则选择任务复制到context
     if let Some(current_task) = get_current_task() {
         context.clone_from(&current_task.inner.borrow_mut().context);
@@ -138,6 +138,7 @@ fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) -> us
             LAST_TICKS = TICKS;
         }
     }
+
     context as *const Context as usize
 }
 

@@ -334,6 +334,10 @@ lazy_static! {
 
 // 初始化页面映射
 pub fn init() {
-    let mut mapping_manager = KERNEL_PAGE_MAPPING.lock();
+    switch_to_kernel_page();
+}
+
+pub fn switch_to_kernel_page() {
+    let mapping_manager = KERNEL_PAGE_MAPPING.lock();
     mapping_manager.change_satp();
 }

@@ -554,6 +554,8 @@ pub fn sys_call() -> Result<(), RuntimeError> {
         }
         // 退出文件信息
         SYS_EXIT => {
+            drop(process);
+            drop(task_inner);
             kill_current_task();
         }
         // 设置tid
@@ -675,7 +677,10 @@ pub fn sys_call() -> Result<(), RuntimeError> {
         SYS_EXECVE => {
             let filename = pmm.get_phys_addr(VirtAddr::from(context.x[10])).unwrap();
             let filename = get_string_from_raw(filename);
+            info!("执行文件: {}", filename);
             exec(&filename, vec![]);
+            drop(process);
+            drop(task_inner);
             kill_current_task();
         }
         // 进行文件映射
