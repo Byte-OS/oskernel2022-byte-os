@@ -1,6 +1,6 @@
 use core::slice;
 
-use alloc::{string::String, sync::Arc};
+use alloc::{string::String, sync::Arc, vec::Vec};
 use riscv::register::satp;
 
 use crate::{console::puts, task::{kill_current_task, get_current_task, exec, clone_task, TASK_CONTROLLER_MANAGER, suspend_and_run_next, wait_task, FileDescEnum, FileDesc}, memory::{page_table::{PageMapping, PTEFlags}, addr::{VirtAddr, PhysPageNum, PhysAddr}, page::PAGE_ALLOCATOR}, fs::{filetree::{FILETREE, FileTreeNode}, file::{Kstat, FileType}},  interrupt::TICKS, sync::mutex::Mutex, runtime_err::RuntimeError};
@@ -96,10 +96,11 @@ pub fn sys_write(fd: FileTreeNode, buf: usize, count: usize) -> usize {
 
 // 从内存中获取字符串 目前仅支持ascii码
 pub fn get_string_from_raw(addr: PhysAddr) -> String {
+
     let mut ptr = addr.as_ptr();
     let mut str: String = String::new();
     loop {
-        let ch = unsafe { *ptr };
+        let ch = unsafe { ptr.read() };
         if ch == 0 {
             break;
         }
@@ -107,6 +108,19 @@ pub fn get_string_from_raw(addr: PhysAddr) -> String {
         unsafe { ptr = ptr.add(1) };
     }
     str
+}
+
+// 从内存中获取数字直到0
+pub fn get_usize_vec_from_raw(addr: PhysAddr) -> Vec<usize> {
+    let mut usize_vec = vec![];
+    let mut usize_vec_ptr = addr.0 as *const usize;
+    loop {
+        let value = unsafe { usize_vec_ptr.read() };
+        if value == 0 {break;}
+        usize_vec.push(value);
+        usize_vec_ptr = unsafe { usize_vec_ptr.add(1) };
+    }
+    usize_vec
 }
 
 // 将字符串写入内存 目前仅支持ascii码
@@ -653,11 +667,21 @@ pub fn sys_call() -> Result<(), RuntimeError> {
         }
         // 复制进程信息
         SYS_CLONE => {
-            let _flag = context.x[10];
+            let flags = context.x[10];
             let stack_addr = context.x[11];
-            let _ptid = context.x[12];
-            let _tls = context.x[13];
-            let _ctid = context.x[14];
+            let ptid = context.x[12];
+            let tls = context.x[13];
+            let ctid = context.x[14];
+
+            info!(
+                "clone: flags={:#x}, newsp={:#x}, parent_tid={:#x}, child_tid={:#x}, newtls={:#x}",
+                flags, stack_addr, ptid, tls, ctid
+            );
+
+            if flags == 0x4111 || flags == 0x11 {
+                // VFORK | VM | SIGCHILD
+                warn!("sys_clone is calling sys_fork instead, ignoring other args");
+            }
 
             // let mut task = clone_task(&mut current_task_wrap.force_get())?;
             
@@ -677,8 +701,16 @@ pub fn sys_call() -> Result<(), RuntimeError> {
         SYS_EXECVE => {
             let filename = pmm.get_phys_addr(VirtAddr::from(context.x[10])).unwrap();
             let filename = get_string_from_raw(filename);
-            info!("执行文件: {}", filename);
-            exec(&filename, vec![]);
+            let argv_ptr = pmm.get_phys_addr(VirtAddr::from(context.x[11])).unwrap();
+            let args = get_usize_vec_from_raw(argv_ptr);
+            let args: Vec<PhysAddr> = args.iter().map(
+                |x| pmm.get_phys_addr(VirtAddr::from(x.clone())).expect("can't transfer")
+            ).collect();
+            let args: Vec<String> = args.iter().map(|x| get_string_from_raw(x.clone())).collect();
+            let args: Vec<&str> = args.iter().map(AsRef::as_ref).collect();
+            
+            exec(&filename, args);
+            // exec(&filename, vec![]);
             drop(process);
             drop(task_inner);
             kill_current_task();

@@ -15,7 +15,7 @@ lazy_static! {
 
 pub fn exec_by_str(str: &str) {
     let args: Vec<&str> = str.split(" ").collect();
-    exec(args[0], args[1..].to_vec());
+    exec(args[0], args[0..].to_vec());
 }
 
 // 加载下一个任务

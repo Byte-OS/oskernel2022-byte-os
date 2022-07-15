@@ -405,104 +405,7 @@ pub fn get_new_pid() -> usize {
 }
 
 // 执行一个程序 path: 文件名 思路：加入程序准备池  等待执行  每过一个时钟周期就执行一次
-// TODO: 更新exec 添加envp 和 auxiliary vector
-// pub fn exec<'a>(path: &'a str, mut args: Vec<&'a str>) -> Result<(), RuntimeError> {
-//     // 如果存在write
-//     let program = FILETREE.lock().open(path)?;
-
-//     // 读取文件到内存
-//     // 申请页表存储程序
-//     let elf_pages = get_pages_num(program.get_file_size());
-
-//     // 申请页表
-//     let elf_phy_start = alloc_more(elf_pages)?;
-
-//     // 获取缓冲区地址并读取
-//     let buf = get_buf_from_phys_page(elf_phy_start, elf_pages);
-//     program.read_to(buf);
-
-//     // 读取elf信息
-//     let elf = xmas_elf::ElfFile::new(buf).unwrap();
-//     let elf_header = elf.header;    
-//     let magic = elf_header.pt1.magic;
-
-//     let entry_point = elf.header.pt2.entry_point() as usize;
-//     assert_eq!(magic, [0x7f, 0x45, 0x4c, 0x46], "invalid elf!");
-
-//     // 创建新的任务控制器 并映射栈
-//     let mut task_controller = TaskController::new(get_new_pid())?;
-//     task_controller.set_entry_point(entry_point);     // 设置入口地址
-    
-//     // 设置内存管理器
-//     let pmm = &mut task_controller.pmm;
-
-//     // 重新映射内存 并设置头
-//     let ph_count = elf_header.pt2.ph_count();
-//     for i in 0..ph_count {
-//         let ph = elf.program_header(i).unwrap();
-//         if ph.get_type().unwrap() == xmas_elf::program::Type::Load {
-//             let start_va: VirtAddr = ph.virtual_addr().into();
-//             let alloc_pages = get_pages_num(ph.mem_size() as usize + start_va.0 % 0x1000);
-//             let phy_start = alloc_more(alloc_pages)?;
-            
-//             let ph_offset = ph.offset() as usize;
-//             let offset = ph.offset() as usize % PAGE_SIZE;
-//             let read_size = ph.file_size() as usize;
-//             let temp_buf = get_buf_from_phys_page(phy_start, alloc_pages);
-
-
-//             let vr_start = ph.virtual_addr() as usize % 0x1000;
-//             let vr_end = vr_start + read_size;
-//             // 添加memset
-//             task_controller.mem_set.inner().push(MemMap::exists_page(phy_start, VirtAddr::from(ph.virtual_addr()).into(), 
-//                 alloc_pages, PTEFlags::VRWX | PTEFlags::U));
-
-//             temp_buf[vr_start..vr_end].copy_from_slice(&buf[ph_offset..ph_offset+read_size]);
-
-//             pmm.add_mapping_range(PhysAddr::from(phy_start) + PhysAddr::from(offset), 
-//                 start_va, ph.mem_size() as usize, PTEFlags::VRWX | PTEFlags::U)?;
-
-            
-//             // read flags
-//             // let ph_flags = ph.flags();
-//             // ph_flags.is_read() readable
-//             // ph_flags.is_write() writeable
-//             // ph_flags.is_execute() executeable
-//         }
-//     }
-
-//     // 添加参数
-//     let stack = &mut task_controller.stack;
-    
-//     args.insert(0, path);
-
-//     let mut auxv = BTreeMap::new();
-//     auxv.insert(elf::AT_PLATFORM, stack.push_str("riscv"));
-//     auxv.insert(elf::AT_EXECFN, stack.push_str(path));
-//     auxv.insert(elf::AT_PHNUM, elf_header.pt2.ph_count() as usize);
-//     auxv.insert(elf::AT_PAGESZ, PAGE_SIZE);
-//     auxv.insert(elf::AT_ENTRY, entry_point);
-//     auxv.insert(elf::AT_PHENT, elf_header.pt2.ph_entry_size() as usize);
-//     auxv.insert(elf::AT_PHDR, elf.get_ph_addr()? as usize);
-
-//     stack.init_args(args, vec![], auxv);
-    
-//     // 设置sp top
-//     task_controller.context.x[2] =task_controller.stack.get_stack_top();
-
-//     // 映射堆
-//     pmm.add_mapping(task_controller.heap.get_addr().into(), 
-//         0xf0010usize.into(), PTEFlags::VRWX | PTEFlags::U)?;
-
-//     // 释放读取的文件
-//     PAGE_ALLOCATOR.lock().dealloc_more(elf_phy_start, elf_pages);
-
-//     // 任务管理器添加任务
-//     TASK_CONTROLLER_MANAGER.lock().add(task_controller);
-//     Ok(())
-// }
-
-pub fn exec<'a>(path: &'a str, mut args: Vec<&'a str>) -> Result<(), RuntimeError> {
+pub fn exec<'a>(path: &'a str, args: Vec<&'a str>) -> Result<(), RuntimeError> {
     // 如果存在write
     let program = FILETREE.lock().open(path)?;
 
@@ -559,8 +462,6 @@ pub fn exec<'a>(path: &'a str, mut args: Vec<&'a str>) -> Result<(), RuntimeErro
     // 添加参数
     let stack = &mut process.stack;
     
-    args.insert(0, path);
-
     let mut auxv = BTreeMap::new();
     auxv.insert(elf::AT_PLATFORM, stack.push_str("riscv"));
     auxv.insert(elf::AT_EXECFN, stack.push_str(path));
@@ -582,7 +483,7 @@ pub fn exec<'a>(path: &'a str, mut args: Vec<&'a str>) -> Result<(), RuntimeErro
     let heap_ppn = process.heap.get_addr().into();
 
     process.pmm.add_mapping(heap_ppn, 
-        0xf0010usize.into(), PTEFlags::VRWX | PTEFlags::U)?;
+        0xf0110usize.into(), PTEFlags::VRWX | PTEFlags::U)?;
 
     drop(process);
     // 释放读取的文件
