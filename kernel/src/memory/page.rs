@@ -55,36 +55,53 @@ impl MemoryPageAllocator {
     // 申请多个页
     pub fn alloc_more(&mut self, pages: usize) -> Result<PhysPageNum, RuntimeError> {
         let mut i = 0;
+        // loop {
+        //     if i >= self.pages.len() {
+        //         break;
+        //     }
+
+        //     if !self.pages[i] {
+        //         let mut is_ok = true;
+        //         // 判断后面是否连续未被使用
+        //         for j in 1..pages {
+        //             if self.pages[i+j] {
+        //                 is_ok = false;
+        //                 i=i+j;
+        //             }
+        //         }
+        //         if is_ok {
+        //             self.pages[i..i+pages].fill(true);
+        //             return Ok(PhysPageNum::from((self.start >> 12) + i));
+        //         }
+        //     }
+
+        //     // 进行下一个计算
+        //     i+=1;
+        // }
+        let mut value = 0;
         loop {
             if i >= self.pages.len() {
                 break;
             }
 
             if !self.pages[i] {
-                let mut is_ok = true;
-                // 判断后面是否连续未被使用
-                for j in 1..pages {
-                    if self.pages[i+j] {
-                        is_ok = false;
-                        i=i+j;
-                    }
-                }
-                if is_ok {
-                   for j in 0..pages {
-                       self.pages[i+j] = true;
-                   } 
-                   return Ok(PhysPageNum::from((self.start >> 12) + i));
-                }
+                value += 1;
+            } else {
+                value = 0;
+            }
+
+            if value >= pages {
+                info!("i: {}", i);
+                i -= pages;
+                self.pages[i..i+pages].fill(true);
+                // panic!("end");
+                info!("start: {:#x}", self.start);
+                // panic!("end");
+                return Ok(PhysPageNum::from((self.start >> 12) + i));
             }
 
             // 进行下一个计算
             i+=1;
-        }
-        for i in 0..self.pages.len() {
-            if !self.pages[i] {
-                self.pages[i] = true;
-                return Ok(PhysPageNum::from((self.start >> 12) + i));
-            }
         }
         Err(RuntimeError::NoEnoughPage)
     }

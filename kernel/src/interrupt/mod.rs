@@ -54,7 +54,6 @@ fn fault(_context: &mut Context, scause: Scause, stval: usize) {
 // 处理缺页异常
 fn handle_page_fault(stval: usize) {
     warn!("缺页中断触发 缺页地址: {:#x} 触发地址:{:#x} 已同步映射", stval, sepc::read());
-    panic!("用户缺页 退出");
     KERNEL_PAGE_MAPPING.lock().add_mapping(PhysAddr::from(stval).into(), 
         VirtAddr::from(stval).into(), PTEFlags::VRWX).expect("缺页处理异常");
     unsafe{
@@ -76,6 +75,7 @@ fn kernel_callback(context: &mut Context, scause: Scause, stval: usize) -> usize
         Trap::Exception(Exception::LoadPageFault) => {
             panic!("加载权限异常 地址:{:#x}", stval)
         },
+        Trap::Exception(Exception::InstructionPageFault) => handle_page_fault(stval),
         // 页面未对齐异常
         Trap::Exception(Exception::StoreMisaligned) => {
             info!("页面未对齐");

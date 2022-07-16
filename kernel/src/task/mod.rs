@@ -9,7 +9,7 @@ use crate::fs::filetree::FileTreeNode;
 use crate::interrupt::timer::NEXT_TICKS;
 use crate::memory::addr::{get_pages_num, get_buf_from_phys_page};
 use crate::memory::mem_map::MemMap;
-use crate::memory::page::{alloc_more, dealloc_more};
+use crate::memory::page::{alloc_more, dealloc_more, get_free_page_num};
 use crate::runtime_err::RuntimeError;
 use crate::task::process::Process;
 use crate::task::task_scheduler::{start_tasks, add_task_to_scheduler};
@@ -149,8 +149,10 @@ pub fn exec<'a>(path: &'a str, args: Vec<&'a str>) -> Result<(), RuntimeError> {
         if ph.get_type().unwrap() == xmas_elf::program::Type::Load {
             let start_va: VirtAddr = ph.virtual_addr().into();
             let alloc_pages = get_pages_num(ph.mem_size() as usize + start_va.0 % 0x1000);
+            info!("申请pages: {}", alloc_pages);
+            info!("剩余页表: {}", get_free_page_num());
             let phy_start = alloc_more(alloc_pages)?;
-            
+
             let ph_offset = ph.offset() as usize;
             let offset = ph.offset() as usize % PAGE_SIZE;
             let read_size = ph.file_size() as usize;

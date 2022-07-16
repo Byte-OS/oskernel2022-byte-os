@@ -1,6 +1,6 @@
 use alloc::{vec::Vec, string::String};
 
-use crate::{task::{kill_current_task, task_scheduler::{get_current_process, get_tasks_len}, suspend_and_run_next, exec, wait_task, get_current_task}, runtime_err::RuntimeError, memory::addr::{PhysAddr, VirtAddr}};
+use crate::{task::{kill_current_task, task_scheduler::get_current_process, suspend_and_run_next, exec, wait_task, get_current_task}, runtime_err::RuntimeError, memory::addr::{PhysAddr, VirtAddr}};
 
 use super::{UTSname, write_string_to_raw, SYS_CALL_ERR, get_string_from_raw, get_usize_vec_from_raw};
 

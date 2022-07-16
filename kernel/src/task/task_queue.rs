@@ -1,6 +1,7 @@
 use alloc::vec::Vec;
 
-use crate::{sync::mutex::Mutex, memory::page::{PAGE_ALLOCATOR, get_free_page_num}};
+use crate::{sync::mutex::Mutex, memory::page::get_free_page_num};
+
 
 use super::exec;
 

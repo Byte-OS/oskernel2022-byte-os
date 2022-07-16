@@ -338,7 +338,7 @@ pub fn init() {
 }
 
 pub fn switch_to_kernel_page() {
-    let mapping_manager = KERNEL_PAGE_MAPPING.lock();
+    let mapping_manager = KERNEL_PAGE_MAPPING.force_get();
     mapping_manager.change_satp();
 }
 
