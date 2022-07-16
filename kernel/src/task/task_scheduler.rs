@@ -1,6 +1,6 @@
 use core::cell::RefCell;
 
-use alloc::{collections::VecDeque, rc::Rc};
+use alloc::{collections::VecDeque, rc::Rc, vec::Vec};
 
 use crate::{sync::mutex::Mutex, task::pid::PidGenerater, memory::page_table::switch_to_kernel_page};
 
@@ -28,6 +28,8 @@ impl TaskScheduler {
         let mut task_inner = task.inner.borrow_mut();
         if self.current.is_none() {
             task_inner.status = TaskStatus::RUNNING;
+            let process = task_inner.process.borrow();
+            process.pmm.change_satp();
             self.current = Some(task.clone());
         } else {
             task_inner.status = TaskStatus::READY;
@@ -61,8 +63,7 @@ impl TaskScheduler {
         if let Some(task) = task {
             self.current = Some(task);
         } else {
-            load_next_task();
-            
+            load_next_task(); 
         }
     }
 
@@ -85,7 +86,24 @@ impl TaskScheduler {
         }
         self.current = None;
         self.run_next();
-        
+    }
+
+    // 暂停当前任务
+    pub fn suspend_current(&mut self) {
+        match &self.current {
+            Some(task) => {
+                let mut task_inner = task.inner.borrow_mut();
+                task_inner.status = TaskStatus::READY;
+                self.queue.push_back(task.clone());
+            }
+            None => {}
+        }
+        self.current = None;
+    }
+
+    // 关闭进程
+    pub fn kill_pid(&mut self, pid: usize) {
+        self.queue = self.queue.clone().into_iter().filter(|x| x.pid != pid).collect();
     }
 }
 
@@ -107,4 +125,15 @@ pub fn get_current_process() -> Rc<RefCell<Process>> {
     let current_task = get_current_task().unwrap();
     let task_inner = current_task.inner.borrow_mut();
     task_inner.process.clone()
+}
+ 
+// 当前任务进入调度
+pub fn scheduler_to_next() {
+    let mut scheduler = TASK_SCHEDULER.force_get();
+    scheduler.suspend_current();
+    scheduler.run_next();
+}
+
+pub fn kill_pid(pid: usize) {
+    TASK_SCHEDULER.force_get().kill_pid(pid);
 }

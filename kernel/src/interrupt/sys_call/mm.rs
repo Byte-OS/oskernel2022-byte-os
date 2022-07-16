@@ -14,8 +14,8 @@ pub fn sys_brk(top_pos: usize) -> Result<usize, RuntimeError> {
     }
 }
 
-pub fn sys_mmap(start: usize, len: usize, prot: usize, 
-    flags: usize, fd: usize, offset: usize) -> Result<usize, RuntimeError> {
+pub fn sys_mmap(start: usize, _len: usize, _prot: usize, 
+    _flags: usize, fd: usize, _offset: usize) -> Result<usize, RuntimeError> {
     let process = get_current_process();
     let mut process = process.borrow_mut();
 
@@ -25,7 +25,7 @@ pub fn sys_mmap(start: usize, len: usize, prot: usize,
         if let Ok(start_page) = PAGE_ALLOCATOR.force_get().alloc_more(page_num) {
             let virt_start = 0xe0000000;
             process.pmm.add_mapping(start_page, VirtAddr::from(virt_start).into(), 
-                PTEFlags::VRWX |PTEFlags::U);
+                PTEFlags::VRWX |PTEFlags::U)?;
             // 添加映射成功
             Ok(virt_start)
         } else {
@@ -40,7 +40,7 @@ pub fn sys_mmap(start: usize, len: usize, prot: usize,
                     if start == 0 {
                         // 添加映射
                         process.pmm.add_mapping(PhysAddr::from(file_tree_node.get_cluster()).into(), 
-                            0xd0000usize.into(), PTEFlags::VRWX | PTEFlags::U);
+                            0xd0000usize.into(), PTEFlags::VRWX | PTEFlags::U)?;
                         Ok(0xd0000000)
                     } else {
                         Ok(0)
@@ -56,7 +56,7 @@ pub fn sys_mmap(start: usize, len: usize, prot: usize,
     }
 }
 
-pub fn sys_munmap(start: usize, len: usize) -> Result<usize, RuntimeError> {
+pub fn sys_munmap(start: usize, _len: usize) -> Result<usize, RuntimeError> {
     let process = get_current_process();
     let mut process = process.borrow_mut();
     process.pmm.remove_mapping(start.into());

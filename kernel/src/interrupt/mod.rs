@@ -6,11 +6,12 @@ mod sys_call;
 
 pub use timer::TICKS;
 
-use crate::{memory::{addr::{VirtAddr, PhysAddr},  page_table::{PTEFlags, KERNEL_PAGE_MAPPING}}, task::get_current_task, runtime_err::RuntimeError};
+use crate::{memory::{addr::{VirtAddr, PhysAddr},  page_table::{PTEFlags, KERNEL_PAGE_MAPPING, switch_to_kernel_page, switch_to_user_page}}, task::get_current_task, runtime_err::RuntimeError};
 
 use self::timer::LAST_TICKS;
 
 #[repr(C)]
+#[derive(Debug)]
 // 上下文
 pub struct Context {
     pub x: [usize; 32],     // 32 个通用寄存器
@@ -55,7 +56,7 @@ fn handle_page_fault(stval: usize) {
     warn!("缺页中断触发 缺页地址: {:#x} 触发地址:{:#x} 已同步映射", stval, sepc::read());
     panic!("用户缺页 退出");
     KERNEL_PAGE_MAPPING.lock().add_mapping(PhysAddr::from(stval).into(), 
-        VirtAddr::from(stval).into(), PTEFlags::VRWX);
+        VirtAddr::from(stval).into(), PTEFlags::VRWX).expect("缺页处理异常");
     unsafe{
         asm!("sfence.vma {x}", x = in(reg) stval)
     };
@@ -89,6 +90,7 @@ fn kernel_callback(context: &mut Context, scause: Scause, stval: usize) -> usize
 // 用户中断回调
 #[no_mangle]
 fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) -> usize {
+    switch_to_kernel_page();
     // 如果当前有任务则选择任务复制到context
     if let Some(current_task) = get_current_task() {
         current_task.inner.borrow_mut().context.clone_from(context);
@@ -98,6 +100,7 @@ fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) -> us
             LAST_TICKS = TICKS;
         }
     }
+
 
     // 匹配中断原因
     match scause.cause(){
@@ -148,7 +151,7 @@ fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) -> us
             LAST_TICKS = TICKS;
         }
     }
-
+    switch_to_user_page();
     context as *const Context as usize
 }
 

@@ -1,7 +1,7 @@
 use core::{arch::asm, slice::{from_raw_parts_mut, self}};
 use bitflags::*;
 
-use crate::{memory::addr::PhysAddr, sync::mutex::Mutex, runtime_err::RuntimeError};
+use crate::{memory::addr::PhysAddr, sync::mutex::Mutex, runtime_err::RuntimeError, task::task_scheduler::get_current_process};
 
 use super::{addr::{PhysPageNum,  VirtAddr, PAGE_PTE_NUM, PAGE_SIZE, VirtPageNum}, page::PAGE_ALLOCATOR, mem_map::MemMap, mem_set::MemSet};
 
@@ -340,4 +340,8 @@ pub fn init() {
 pub fn switch_to_kernel_page() {
     let mapping_manager = KERNEL_PAGE_MAPPING.lock();
     mapping_manager.change_satp();
+}
+
+pub fn switch_to_user_page() {
+    get_current_process().borrow_mut().pmm.change_satp();
 }

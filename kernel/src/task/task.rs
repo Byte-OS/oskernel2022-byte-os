@@ -1,4 +1,4 @@
-use core::cell::{RefCell, RefMut};
+use core::cell::RefCell;
 
 use alloc::rc::Rc;
 
@@ -13,6 +13,7 @@ pub enum TaskStatus {
     RUNNING = 1,
     PAUSE   = 2,
     STOP    = 3,
+    EXIT    = 4,
     WAITING = 5,
 }
 
@@ -25,14 +26,17 @@ pub struct TaskInner {
 #[derive(Clone)]
 pub struct Task {
     pub tid: usize,
+    pub pid: usize,
     pub inner: Rc<RefCell<TaskInner>>
 }
 
 impl Task {
     // 创建进程
     pub fn new(tid: usize, process: Rc<RefCell<Process>>) -> Self {
+        let pid = process.borrow().pid;
         Self {
             tid,
+            pid, 
             inner: Rc::new(RefCell::new(TaskInner { 
                 context: Context::new(), 
                 process, 
@@ -43,7 +47,8 @@ impl Task {
 
     // 退出进程
     pub fn exit(&self) {
-        let inner = self.inner.borrow_mut();
+        let mut inner = self.inner.borrow_mut();
+        inner.status = TaskStatus::EXIT;
         // 如果是tid 为 0 回收process资源 
         // 暂不处理线程退出
         if self.tid == 0 {

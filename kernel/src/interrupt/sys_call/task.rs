@@ -1,10 +1,19 @@
 use alloc::{vec::Vec, string::String};
 
-use crate::{task::{kill_current_task, process, task_scheduler::get_current_process, suspend_and_run_next, exec, wait_task, get_current_task}, runtime_err::RuntimeError, memory::addr::{PhysAddr, VirtAddr}};
+use crate::{task::{kill_current_task, task_scheduler::get_current_process, suspend_and_run_next, exec, wait_task, get_current_task}, runtime_err::RuntimeError, memory::addr::{PhysAddr, VirtAddr}};
 
 use super::{UTSname, write_string_to_raw, SYS_CALL_ERR, get_string_from_raw, get_usize_vec_from_raw};
 
 pub fn sys_exit() -> Result<usize, RuntimeError> {
+    kill_current_task();
+    Ok(0)
+}
+
+pub fn sys_exit_group(exit_code: usize) -> Result<usize, RuntimeError> {
+    let process = get_current_process();
+    let mut process = process.borrow_mut();
+    process.exit(exit_code);
+    drop(process);
     kill_current_task();
     Ok(0)
 }
@@ -26,7 +35,7 @@ pub fn sys_sched_yield() -> Result<usize, RuntimeError> {
 
 pub fn sys_uname(ptr: usize) -> Result<usize, RuntimeError> {
     let process = get_current_process();
-    let mut process = process.borrow_mut();
+    let process = process.borrow_mut();
 
     // 获取参数
     let sys_info = usize::from(process.pmm.get_phys_addr(ptr.into()).unwrap()) as *mut UTSname;
@@ -82,10 +91,15 @@ pub fn sys_execve(filename: usize, argv: usize) -> Result<usize, RuntimeError> {
     let args: Vec<String> = args.iter().map(|x| get_string_from_raw(x.clone())).collect();
     let args: Vec<&str> = args.iter().map(AsRef::as_ref).collect();
     
-    exec(&filename, args);
+    exec(&filename, args)?;
     // exec(&filename, vec![]);
     drop(process);
     kill_current_task();
+
+    let task = get_current_task().unwrap();
+    let mut task_inner = task.inner.borrow_mut();
+    task_inner.context.sepc -= 4;
+    info!("task spec: {:#x}", task_inner.context.sepc);
     Ok(0)
 }
 

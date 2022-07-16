@@ -4,7 +4,7 @@ use alloc::{vec::Vec, rc::{Rc, Weak}};
 
 use crate::{memory::{page_table::PageMappingManager, mem_set::MemSet, addr::VirtAddr}, fs::filetree::{FileTreeNode, open}, runtime_err::RuntimeError, interrupt::timer::TMS};
 
-use super::{task::{Task, TaskStatus}, stack::UserStack, UserHeap, fd_table::FDTable};
+use super::{task::{Task, TaskStatus}, stack::UserStack, UserHeap, fd_table::FDTable, task_scheduler::kill_pid};
 
 pub struct Process {
     pub pid: usize,                             // 进程id
@@ -88,8 +88,14 @@ impl Process {
                 let parent_process_ref = parent_process.borrow_mut();
                 if parent_process_ref.is_waiting() {
                     let task = self.get_task(0);
-                    task.borrow().inner.borrow_mut().status = TaskStatus::READY;
+                    let task = task.borrow();
+                    let mut task_inner = task.inner.borrow_mut();
+                    task_inner.status = TaskStatus::READY;
+                    task_inner.context.x[10] = exit_code;
+                    // 资源释放
                     self.release();
+                    // 进程回收
+                    kill_pid(task.pid);
                 }
             },
             None => {

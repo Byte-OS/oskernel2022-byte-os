@@ -25,7 +25,7 @@ use self::pipe::PipeBuf;
 use self::stack::UserStack;
 use self::task::{TaskStatus, Task};
 use self::task_queue::load_next_task;
-use self::task_scheduler::{TASK_SCHEDULER, TaskScheduler};
+use self::task_scheduler::{TASK_SCHEDULER, TaskScheduler, NEXT_PID, scheduler_to_next};
 
 pub mod pipe;
 pub mod task_queue;
@@ -90,156 +90,6 @@ impl FileDesc {
     }
 }
 
-extern "C" {
-    // 改变任务
-    fn change_task(pte: usize, stack: usize);
-}
-
-lazy_static! {
-    // 任务管理器和pid生成器
-    pub static ref TASK_CONTROLLER_MANAGER: Mutex<TaskControllerManager> = Mutex::new(TaskControllerManager::new());
-    pub static ref NEXT_PID: Mutex<PidGenerater> = Mutex::new(PidGenerater::new());
-}
-
-// 任务控制器管理器
-pub struct TaskControllerManager {
-    current: Option<Arc<Mutex<TaskController>>>,        // 当前任务
-    ready_queue: VecDeque<Arc<Mutex<TaskController>>>,  // 准备队列
-    wait_queue: Vec<WaitQueueItem>,                     // 等待队列
-    killed_queue: Vec<Arc<Mutex<TaskController>>>,      // 僵尸进程队列
-    is_run: bool                                        // 任务运行标志
-}
-
-impl TaskControllerManager {
-    // 创建任务管理器
-    pub fn new() -> Self {
-        TaskControllerManager {
-            current: None,
-            ready_queue: VecDeque::new(),
-            wait_queue: vec![],
-            killed_queue: vec![],
-            is_run: false
-        }
-    }
-
-    // 添加任务
-    pub fn add(&mut self, task: TaskController) {
-        if let Some(_) = self.current {
-            self.ready_queue.push_back(Arc::new(Mutex::new(task)));
-        } else {
-            let task = Arc::new(Mutex::new(task));
-            task.force_get().pmm.change_satp();
-            self.current = Some(task);
-        }
-    }
-
-    // 删除当前任务
-    pub fn kill_current(&mut self) {
-        let self_wrap = self.current.clone().unwrap();
-        let self_task = self_wrap.force_get();
-        let ppid = self_task.ppid;
-        let pid = self_task.pid;
-        // 如果当前任务的父进程不是内核 则考虑唤醒进程
-        if ppid != 1 {
-            // 子进程处理
-            let mut wait_queue_index = -1 as isize as usize;
-            // 判断是否在等待任务中存在
-            for i in 0..self.wait_queue.len() {
-                let x = self.wait_queue[i].clone();
-                if x.task.force_get().pid == ppid && (x.wait == (-1 as isize as usize) || x.wait == pid) {
-                    // 加入等待进程
-                    let ready_task = x.task.clone();
-                    ready_task.lock().context.x[10] = self_task.pid;
-                    unsafe {x.callback.write((self_task.context.x[10] << 8) as u16)};
-                    self.ready_queue.push_back(ready_task);
-                    wait_queue_index = i;
-                    break;
-                }
-            }
-            // 如果存在移出 不存在则加入killed_queue
-            if wait_queue_index == -1 as isize as usize {
-                self.killed_queue.push(self_wrap.clone())
-            } else {
-                self.wait_queue.remove(wait_queue_index);
-            }
-        } else {
-            // 如果是父进程是内核  则清空相关进程树
-        }
-        self.current = None;
-    }
-
-    // 切换到下一个任务
-    pub fn switch_to_next(&mut self) {
-        if let Some(current_task) = self.current.clone() {
-            current_task.force_get().update_status(TaskStatus::READY);
-            self.current = None;
-            self.ready_queue.push_back(current_task);
-        }
-        if let Some(next_task) = self.ready_queue.pop_front() {
-            next_task.force_get().update_status(TaskStatus::RUNNING);
-            next_task.force_get().pmm.change_satp();
-            self.current = Some(next_task.clone());
-        } else {
-            // 当无任务时加载下一个任务
-            load_next_task();
-            // panic!("无任务");
-        }
-    }
-
-    // 获取当前的进程
-    pub fn get_current_processor(&self) -> Option<Arc<Mutex<TaskController>>> {
-        self.current.clone()
-    }
-
-    // 当前进程等待运行
-    pub fn wait_pid(&mut self, callback: *mut u16,pid: usize) {
-        // 将 当前任务加入等待队列
-        let task = self.current.clone().unwrap();
-        // 判断killed_queue中是否存在任务
-        let mut killed_index = -1 as isize as usize;
-        for i in 0..self.killed_queue.len() {
-            let ctask = self.killed_queue[i].force_get();
-            if ctask.ppid == task.lock().pid && (pid == -1 as isize as usize || ctask.pid == pid) {
-                killed_index = i;
-                break;
-            }
-        }
-        // 如果没有任务 则加入wait list
-        if killed_index == -1 as isize as usize {
-            let wait_item = WaitQueueItem::new(task.clone(), callback, pid);
-            self.wait_queue.push(wait_item);
-            // 清除当前任务
-            self.current = None;
-            self.switch_to_next();
-        } else {
-            // 从killed列表中获取任务
-            let killed_task_wrap = self.killed_queue[killed_index].clone();
-            let killed_task = killed_task_wrap.lock();
-            self.killed_queue.remove(killed_index);
-            
-            unsafe {callback.write((killed_task.context.x[10] << 8) as u16)};
-            task.lock().context.x[10] = killed_task.pid;
-        }
-    }
-
-    // 开始运行任务
-    pub fn run(&mut self) {
-        unsafe {
-            LAST_TICKS = TICKS;
-        }
-        loop {
-            if let Some(current_task) = self.current.clone() {
-                self.is_run = true;
-                current_task.force_get().run_current();
-                break;
-            } else {
-                // 当无任务时加载下一个任务
-                load_next_task();
-            }
-        }
-    }
-}
-
 impl UserHeap {
     // 创建heap
     pub fn new() -> Result<Self, RuntimeError> {
@@ -268,136 +118,6 @@ impl UserHeap {
     }
 }
 
-#[derive(Clone)]
-// 等待队列
-pub struct WaitQueueItem {
-    pub task: Arc<Mutex<TaskController>>,
-    pub callback: *mut u16,
-    pub wait: usize
-}
-
-impl WaitQueueItem {
-    // 创建等待队列项
-    pub fn new(task: Arc<Mutex<TaskController>>, callback: *mut u16,wait: usize) -> Self {
-        WaitQueueItem {
-            task,
-            callback,
-            wait
-        }
-    }
-}
-
-#[allow(dead_code)]
-// 任务控制器
-pub struct TaskController {
-    pub pid: usize,                                     // 进程id
-    pub ppid: usize,                                    // 父进程id
-    pub entry_point: VirtAddr,                          // 入口地址
-    pub pmm: PageMappingManager,                        // 页表映射控制器
-    pub mem_set: MemSet,                                // 内存集
-    pub status: TaskStatus,                             // 任务状态
-    pub stack: UserStack,                               // 栈地址
-    pub heap: UserHeap,                                 // 堆地址
-    pub context: Context,                               // 寄存器上下文
-    pub home_dir: FileTreeNode,                         // 家地址
-    pub fd_table: Vec<Option<Arc<Mutex<FileDesc>>>>,    // 任务描述符地址
-    pub tms: TMS                                        // 时间地址
-}
-
-impl TaskController {
-    // 创建任务控制器
-    pub fn new(pid: usize) -> Result<Self, RuntimeError> {
-        let pmm = PageMappingManager::new()?;
-        let heap = UserHeap::new()?;
-        let pte = pmm.pte.clone();
-        let task = TaskController {
-            pid,
-            ppid: 1,
-            entry_point: 0usize.into(),
-            mem_set: MemSet::new(),
-            pmm,
-            status: TaskStatus::READY,
-            heap,
-            stack: UserStack::new(pte)?,
-            home_dir: FILETREE.force_get().open("/")?.clone(),
-            context: Context::new(),
-            fd_table: vec![
-                Some(Arc::new(Mutex::new(FileDesc::new(FileDescEnum::Device(String::from("STDIN")))))),
-                Some(Arc::new(Mutex::new(FileDesc::new(FileDescEnum::Device(String::from("STDOUT")))))),
-                Some(Arc::new(Mutex::new(FileDesc::new(FileDescEnum::Device(String::from("STDERR"))))))
-            ],
-            tms: TMS::new()
-        };
-        Ok(task)
-    }
-
-    // 更新用户状态
-    pub fn update_status(&mut self, status: TaskStatus) {
-        self.status = status;
-    }
-
-    pub fn set_entry_point(&mut self, entry_point: usize) {
-        self.context.sepc = entry_point;
-    }
-
-    // 申请堆地址
-    pub fn alloc_heap(&mut self, size: usize) -> usize {
-        let top = self.heap.pointer;
-        self.heap.pointer = top + size;
-        top
-    }
-
-    // 设置堆顶地址
-    pub fn set_heap_top(&mut self, top: usize) -> usize {
-        let origin_top = self.heap.pointer;
-        self.heap.pointer = top;
-        origin_top
-    }
-
-    // 获取heap大小
-    pub fn get_heap_size(&self) -> usize {
-        self.heap.pointer
-    }
-
-    // 申请文件描述符
-    pub fn alloc_fd(&mut self) -> usize {
-        if let Some(fd) = (0..self.fd_table.len()).find(|fd| self.fd_table[*fd].is_none()) {
-            fd
-        } else {
-            self.fd_table.push(None);
-            self.fd_table.len() - 1
-        }
-    }
-
-    // 申请固定大小的文件描述符
-    pub fn alloc_fd_with_size(&mut self, new_size: usize) -> usize {
-        if self.fd_table.len() > new_size {
-            if self.fd_table[new_size].is_none() {
-                new_size
-            } else {
-                -1 as isize as usize
-            }
-        } else {
-            let alloc_size = new_size + 1 - self.fd_table.len();
-            for _ in 0..alloc_size {
-                self.fd_table.push(None);
-            }
-            new_size
-        }
-    }
-
-    // 运行当前任务
-    pub fn run_current(&mut self) {
-        // 切换satp
-        self.pmm.change_satp();
-
-        // 切换为运行状态
-        self.status = TaskStatus::RUNNING;
-        
-        // 恢复自身状态
-        unsafe { change_task((PagingMode::Sv39 as usize) << 60 | usize::from(PhysPageNum::from(PhysAddr::from(self.pmm.get_pte()))), &self.context as *const Context as usize) };
-    }
-}
 
 // 获取pid
 pub fn get_new_pid() -> usize {
@@ -498,17 +218,13 @@ pub fn exec<'a>(path: &'a str, args: Vec<&'a str>) -> Result<(), RuntimeError> {
 
 // 等待当前任务并切换到下一个任务
 pub fn suspend_and_run_next() {
-    if !TASK_CONTROLLER_MANAGER.force_get().is_run {
+    let task_scheduler = TASK_SCHEDULER.force_get();
+    if !task_scheduler.is_run {
         return;
     }
     // 刷新下一个调度的时间
     NEXT_TICKS.force_get().refresh();
-    TASK_CONTROLLER_MANAGER.force_get().switch_to_next();
-}
-
-// 运行第一个任务
-pub fn run_first() {
-    TASK_CONTROLLER_MANAGER.force_get().run();
+    scheduler_to_next();
 }
 
 // 获取当前任务
@@ -518,8 +234,7 @@ pub fn get_current_task() ->Option<Task> {
 
 // 等待任务
 pub fn wait_task(pid: usize, status: *mut u16, _options: usize) {
-    TASK_CONTROLLER_MANAGER.force_get().wait_pid(status, pid );
-    // TASK_CONTROLLER_MANAGER.force_get().switch_to_next();
+    
 }
 
 // 杀死当前任务
@@ -528,32 +243,32 @@ pub fn kill_current_task() {
 }
 
 // clone任务
-pub fn clone_task(task_controller: &mut TaskController) -> Result<TaskController, RuntimeError> {
-    // 创建任务并复制文件信息
-    let mut task = TaskController::new(get_new_pid())?;
-    let mut pmm = task.pmm.clone();
+// pub fn clone_task(task_controller: &mut TaskController) -> Result<TaskController, RuntimeError> {
+//     // 创建任务并复制文件信息
+//     let mut task = TaskController::new(get_new_pid())?;
+//     let mut pmm = task.pmm.clone();
 
-    // 设置任务信息
-    task.context.clone_from(&mut task_controller.context);
-    task.entry_point = task_controller.entry_point;
-    task.ppid = task_controller.pid;
-    task.fd_table = task_controller.fd_table.clone();
+//     // 设置任务信息
+//     task.context.clone_from(&mut task_controller.context);
+//     task.entry_point = task_controller.entry_point;
+//     task.ppid = task_controller.pid;
+//     task.fd_table = task_controller.fd_table.clone();
 
-    let mem_set = task_controller.mem_set.clone_with_data()?;
+//     let mem_set = task_controller.mem_set.clone_with_data()?;
 
-    pmm.add_mapping_by_set(&mem_set)?;
-    task.mem_set = mem_set;
+//     pmm.add_mapping_by_set(&mem_set)?;
+//     task.mem_set = mem_set;
 
-    // 获取任务对应地址和栈对应地址
-    let addr = pmm.get_phys_addr(VirtAddr::from(0x13240usize))?;
+//     // 获取任务对应地址和栈对应地址
+//     let addr = pmm.get_phys_addr(VirtAddr::from(0x13240usize))?;
     
-    // 映射栈 
-    pmm.add_mapping(PhysAddr::from(task_controller.stack.top).into(), 0xf0000usize.into(), PTEFlags::UVRWX)?;
+//     // 映射栈 
+//     pmm.add_mapping(PhysAddr::from(task_controller.stack.top).into(), 0xf0000usize.into(), PTEFlags::UVRWX)?;
 
-    // 映射堆
-    pmm.add_mapping(task_controller.heap.get_addr().into(), 0xf0010usize.into(), PTEFlags::UVRWX)?;
-    Ok(task)
-}
+//     // 映射堆
+//     pmm.add_mapping(task_controller.heap.get_addr().into(), 0xf0010usize.into(), PTEFlags::UVRWX)?;
+//     Ok(task)
+// }
 
 
 // 包含更换任务代码

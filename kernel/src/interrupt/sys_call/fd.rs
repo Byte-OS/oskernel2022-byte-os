@@ -9,7 +9,7 @@ use super::{SYS_CALL_ERR, get_string_from_raw, OpenFlags, write_string_to_raw, D
 // 获取当前路径
 pub fn get_cwd(buf: usize, size: usize) -> Result<usize, RuntimeError> {
     let process = get_current_process();
-    let mut process = process.borrow_mut();
+    let process = process.borrow_mut();
 
     // 获取参数
     let mut buf = process.pmm.get_phys_addr(VirtAddr::from(buf)).unwrap();
@@ -85,9 +85,9 @@ pub fn sys_mkdirat(dirfd: usize, filename: usize, flags: usize) -> Result<usize,
     }
 }
 
-pub fn sys_unlinkat(fd: usize, filename: usize, flags: usize) -> Result<usize, RuntimeError> {
+pub fn sys_unlinkat(fd: usize, filename: usize, _flags: usize) -> Result<usize, RuntimeError> {
     let process = get_current_process();
-    let mut process = process.borrow_mut();
+    let process = process.borrow_mut();
 
     // 获取参数
     let filename = process.pmm.get_phys_addr(VirtAddr::from(filename)).unwrap();
@@ -143,7 +143,7 @@ pub fn sys_chdir(filename: usize) -> Result<usize, RuntimeError> {
     }
 }
 
-pub fn sys_openat(fd: usize, filename: usize, flags: usize, open_mod: usize) -> Result<usize, RuntimeError> {
+pub fn sys_openat(fd: usize, filename: usize, flags: usize, _open_mod: usize) -> Result<usize, RuntimeError> {
     let process = get_current_process();
     let mut process = process.borrow_mut();
 
@@ -157,7 +157,7 @@ pub fn sys_openat(fd: usize, filename: usize, flags: usize, open_mod: usize) -> 
     if fd == 0xffffffffffffff9c {
         // 根据文件类型匹配
         if flags.contains(OpenFlags::CREATE) {
-            process.workspace.create(&filename);
+            process.workspace.create(&filename)?;
         }
         if let Ok(file) = process.workspace.open(&filename) {
             let fd = process.fd_table.alloc();
@@ -172,7 +172,7 @@ pub fn sys_openat(fd: usize, filename: usize, flags: usize, open_mod: usize) -> 
             match &mut tree_node.lock().target {
                 FileDescEnum::File(tree_node) => {
                     if flags.contains(OpenFlags::CREATE) {
-                        tree_node.create(&filename);
+                        tree_node.create(&filename)?;
                     }
                     if let Ok(file) = tree_node.open(&filename) {
                         let fd = process.fd_table.alloc();
@@ -226,7 +226,7 @@ pub fn sys_pipe2(req_ptr: usize) -> Result<usize, RuntimeError> {
 
 pub fn sys_getdents(fd: usize, ptr: usize, len: usize) -> Result<usize, RuntimeError> {
     let process = get_current_process();
-    let mut process = process.borrow_mut();
+    let process = process.borrow_mut();
 
     // 获取参数
     let start_ptr = usize::from(process.pmm.get_phys_addr(VirtAddr::from(ptr)).unwrap());
@@ -299,7 +299,7 @@ pub fn sys_getdents(fd: usize, ptr: usize, len: usize) -> Result<usize, RuntimeE
 
 pub fn sys_read(fd: usize, buf_ptr: usize, count: usize) -> Result<usize, RuntimeError> {
     let process = get_current_process();
-    let mut process = process.borrow_mut();
+    let process = process.borrow_mut();
 
     // 获取参数
     let mut buf = process.pmm.get_phys_addr(buf_ptr.into()).unwrap();
@@ -327,7 +327,7 @@ pub fn sys_read(fd: usize, buf_ptr: usize, count: usize) -> Result<usize, Runtim
 
 pub fn sys_write(fd: usize, buf_ptr: usize, count: usize) -> Result<usize, RuntimeError> {
     let process = get_current_process();
-    let mut process = process.borrow_mut();
+    let process = process.borrow_mut();
     
     // 获取参数
     let buf = process.pmm.get_phys_addr(buf_ptr.into()).unwrap();
@@ -369,7 +369,7 @@ pub fn sys_write(fd: usize, buf_ptr: usize, count: usize) -> Result<usize, Runti
 
 pub fn sys_fstat(fd: usize, buf_ptr: usize) -> Result<usize, RuntimeError> {
     let process = get_current_process();
-    let mut process = process.borrow_mut();
+    let process = process.borrow_mut();
 
     // 获取参数
     let kstat_ptr = unsafe {

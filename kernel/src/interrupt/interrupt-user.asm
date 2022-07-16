@@ -12,7 +12,7 @@ int_callback_entry:
     # 保存x3寄存器
     sd x3, 3*8(sp)
     # 保存x5-想1寄存器
-    .set n, 5
+    .set n, 4
     .rept 27
         SAVE_N %n
         .set n, n+1
@@ -46,7 +46,7 @@ int_callback_entry:
     # 恢复寄存器信息
     ld x1, 1*8(sp)
     ld x3, 3*8(sp)
-    .set n, 5
+    .set n, 4
     .rept 27
         LOAD_N %n
         .set n, n+1

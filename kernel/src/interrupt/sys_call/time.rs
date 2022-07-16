@@ -1,8 +1,8 @@
-use crate::{runtime_err::RuntimeError, task::{process, task_scheduler::get_current_process, suspend_and_run_next, get_current_task}, interrupt::{TICKS, timer::{TimeSpec, TMS}}};
+use crate::{runtime_err::RuntimeError, task::{task_scheduler::get_current_process, suspend_and_run_next, get_current_task}, interrupt::{TICKS, timer::{TimeSpec, TMS}}};
 
 pub fn sys_nanosleep(req_ptr: usize, rem_ptr: usize) -> Result<usize, RuntimeError> {
     let process = get_current_process();
-    let mut process = process.borrow_mut();
+    let process = process.borrow_mut();
     let task = get_current_task().unwrap();
     let mut task_inner = task.inner.borrow_mut();
 
@@ -37,7 +37,7 @@ pub fn sys_nanosleep(req_ptr: usize, rem_ptr: usize) -> Result<usize, RuntimeErr
 
 pub fn sys_times(tms_ptr: usize) -> Result<usize, RuntimeError> {
     let process = get_current_process();
-    let mut process = process.borrow_mut();
+    let process = process.borrow_mut();
     // 等待添加
     let tms = usize::from(process.pmm.get_phys_addr(tms_ptr.into()).unwrap()) 
         as *mut TMS;

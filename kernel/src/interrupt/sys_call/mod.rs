@@ -3,7 +3,7 @@ use core::slice;
 use alloc::{string::String, vec::Vec};
 use riscv::register::{satp, sepc};
 
-use crate::{memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum, PhysAddr}}, fs::{filetree::{FileTreeNode}, file::{FileType}},  interrupt::{sys_call::{fd::{get_cwd, sys_dup, sys_dup3, sys_mkdirat, sys_unlinkat, sys_chdir, sys_openat, sys_close, sys_pipe2, sys_getdents, sys_read, sys_write, sys_fstat}, task::{sys_exit, sys_set_tid_address, sys_sched_yield, sys_uname, sys_getpid, sys_getppid, sys_clone, sys_execve, sys_wait4, sys_kill}, time::{sys_nanosleep, sys_times, sys_gettimeofday}, mm::{sys_brk, sys_mmap, sys_munmap}}}, runtime_err::RuntimeError};
+use crate::{memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum, PhysAddr}}, fs::{filetree::{FileTreeNode}, file::{FileType}},  interrupt::{sys_call::{fd::{get_cwd, sys_dup, sys_dup3, sys_mkdirat, sys_unlinkat, sys_chdir, sys_openat, sys_close, sys_pipe2, sys_getdents, sys_read, sys_write, sys_fstat}, task::{sys_exit, sys_set_tid_address, sys_sched_yield, sys_uname, sys_getpid, sys_getppid, sys_clone, sys_execve, sys_wait4, sys_kill, sys_exit_group}, time::{sys_nanosleep, sys_times, sys_gettimeofday}, mm::{sys_brk, sys_mmap, sys_munmap}}}, runtime_err::RuntimeError};
 
 
 
@@ -29,6 +29,7 @@ pub const SYS_READ:  usize  = 63;
 pub const SYS_WRITE: usize  = 64;
 pub const SYS_FSTAT: usize  = 80;
 pub const SYS_EXIT:  usize  = 93;
+pub const SYS_EXIT_GROUP: usize = 94;
 pub const SYS_SET_TID_ADDRESS: usize = 96;
 pub const SYS_NANOSLEEP: usize = 101;
 pub const SYS_SCHED_YIELD: usize = 124;
@@ -178,12 +179,15 @@ pub fn sys_call(call_type: usize, args: [usize; 7]) -> Result<usize, RuntimeErro
         SYS_FSTAT => sys_fstat(args[0], args[1]),
         // 退出文件信息
         SYS_EXIT => sys_exit(),
+        // 退出组
+        SYS_EXIT_GROUP => sys_exit_group(args[0]),
         // 设置tid
         SYS_SET_TID_ADDRESS => sys_set_tid_address(args[0]),
         // 文件休眠
         SYS_NANOSLEEP => sys_nanosleep(args[0], args[1]),
         // 转移文件权限
         SYS_SCHED_YIELD => sys_sched_yield(),
+        // 结束进程
         SYS_KILL => sys_kill(args[0], args[1]),
         // 获取文件时间
         SYS_TIMES => sys_times(args[0]),
