@@ -93,7 +93,7 @@ impl Process {
 // 在Drop中进行垃圾回收
 impl Drop for Process {
     fn drop(&mut self) {
-        info!("release page while Droping Process");
+        info!("release page while Droping Process, pid: {}", self.pid);
         self.release();
     }
 }

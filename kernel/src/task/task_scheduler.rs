@@ -41,6 +41,7 @@ impl TaskScheduler {
     pub fn run_next(&mut self) {
         let mut index = 0;
         let len = self.queue.len();
+
         let task = loop {
             if index >= len { break None; }
 
@@ -68,19 +69,18 @@ impl TaskScheduler {
     }
 
     // 执行第一个任务
-    pub fn run_first(&mut self) {
+    pub fn run_first(&mut self) -> (usize, usize) {
         if self.current.is_none() {
             self.run_next();
         }
 
         let task = self.current.clone().unwrap();
         self.is_run = true;
-        task.run();
+        task.run()
     }
 
     // 关闭当前任务
     pub fn kill_current(&mut self) {
-        switch_to_kernel_page();
         if let Some(current_task) = self.current.clone() {
             current_task.exit();
         }
@@ -103,11 +103,6 @@ impl TaskScheduler {
 
     // 关闭进程
     pub fn kill_pid(&mut self, pid: usize) {
-        if let Some(current_task) = &self.current {
-            if current_task.pid == pid {
-                self.current = None;
-            }
-        }
         self.queue = self.queue.clone().into_iter().filter(|x| x.pid != pid).collect();
     }
 }
@@ -119,8 +114,14 @@ lazy_static! {
 }
 
 pub fn start_tasks() {
+    extern "C" {
+        // 改变任务
+        fn change_task(pte: usize, stack: usize);
+    }
+
     let mut task_scheduler = TASK_SCHEDULER.force_get();
-    task_scheduler.run_first();
+    let (pte, context_ptr) = task_scheduler.run_first();
+    unsafe { change_task(pte, context_ptr) };
 }
 
 pub fn add_task_to_scheduler(task: Rc<Task>) {
@@ -142,4 +143,8 @@ pub fn scheduler_to_next() {
 
 pub fn kill_pid(pid: usize) {
     TASK_SCHEDULER.force_get().kill_pid(pid);
+}
+
+pub fn get_tasks_len() -> usize {
+    TASK_SCHEDULER.force_get().queue.len()
 }

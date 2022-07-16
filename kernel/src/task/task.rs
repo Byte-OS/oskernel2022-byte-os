@@ -23,12 +23,6 @@ pub struct TaskInner {
     pub status: TaskStatus
 }
 
-impl Drop for TaskInner {
-    fn drop(&mut self) {
-        info!("drop task_inner");
-    }
-}
-
 #[derive(Clone)]
 pub struct Task {
     pub tid: usize,
@@ -55,16 +49,16 @@ impl Task {
     pub fn exit(&self) {
         let mut inner = self.inner.borrow_mut();
         inner.status = TaskStatus::EXIT;
+        drop(inner);
         // 如果是tid 为 0 回收process资源 
         // 暂不处理线程退出
         if self.tid == 0 {
-            let pid = inner.context.x[10];
-            kill_pid(pid);
+            kill_pid(self.pid);
         }
     }
 
     // 运行当前任务
-    pub fn run(&self) {
+    pub fn run(&self) -> (usize, usize) {
         let inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
 
@@ -73,11 +67,11 @@ impl Task {
         
         let pte_ppn = usize::from(PhysPageNum::from(PhysAddr::from(process.pmm.get_pte())));
         let context_ptr = &inner.context as *const Context as usize;
+        // 释放资源
         drop(process);
         drop(inner);
-
-        // 恢复自身状态
-        unsafe { change_task((PagingMode::Sv39 as usize) << 60 | pte_ppn, context_ptr) };
+        
+        ((PagingMode::Sv39 as usize) << 60 | pte_ppn, context_ptr)
     }
 }
 
@@ -86,11 +80,6 @@ impl Task {
 
 impl Drop for Task {
     fn drop(&mut self) {
-        info!("drop task");
+        info!("drop task pid: {}, tid: {}", self.pid, self.tid);
     }
-}
-
-extern "C" {
-    // 改变任务
-    fn change_task(pte: usize, stack: usize);
 }

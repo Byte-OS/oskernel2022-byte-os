@@ -155,8 +155,6 @@ pub fn exec<'a>(path: &'a str, args: Vec<&'a str>) -> Result<(), RuntimeError> {
             let offset = ph.offset() as usize % PAGE_SIZE;
             let read_size = ph.file_size() as usize;
             let temp_buf = get_buf_from_phys_page(phy_start, alloc_pages);
-            temp_buf.fill(0);
-
 
             let vr_start = ph.virtual_addr() as usize % 0x1000;
             let vr_end = vr_start + read_size;
@@ -164,6 +162,9 @@ pub fn exec<'a>(path: &'a str, args: Vec<&'a str>) -> Result<(), RuntimeError> {
             process.mem_set.inner().push(MemMap::exists_page(phy_start, VirtAddr::from(ph.virtual_addr()).into(), 
                 alloc_pages, PTEFlags::VRWX | PTEFlags::U));
 
+            // 初始化
+            temp_buf[..vr_start].fill(0);
+            temp_buf[vr_end..].fill(0);
             temp_buf[vr_start..vr_end].copy_from_slice(&buf[ph_offset..ph_offset+read_size]);
 
             process.pmm.add_mapping_range(PhysAddr::from(phy_start) + PhysAddr::from(offset), 
