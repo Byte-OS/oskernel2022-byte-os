@@ -120,6 +120,16 @@ pub fn dealloc_more(page: PhysPageNum, pages: usize) {
     PAGE_ALLOCATOR.lock().dealloc_more(page, pages)
 }
 
+pub fn get_free_page_num() -> usize {
+    let mut last_pages = 0;
+    for i in PAGE_ALLOCATOR.lock().pages.clone() {
+        if !i {
+            last_pages=last_pages+1;
+        }
+    }
+    last_pages
+}
+
 pub fn init() {
     extern "C"{
         fn end();

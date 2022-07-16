@@ -1,6 +1,6 @@
 use alloc::vec::Vec;
 
-use crate::{sync::mutex::Mutex, memory::page::PAGE_ALLOCATOR};
+use crate::{sync::mutex::Mutex, memory::page::{PAGE_ALLOCATOR, get_free_page_num}};
 
 use super::exec;
 
@@ -24,13 +24,7 @@ pub fn load_next_task() {
     if let Some(pro_name) = TASK_QUEUE.lock().pop() {
         exec_by_str(pro_name)
     } else {
-        let mut last_pages = 0;
-        for i in PAGE_ALLOCATOR.lock().pages.clone() {
-            if !i {
-                last_pages=last_pages+1;
-            }
-        }
-        info!("剩余页表: {}", last_pages);
+        info!("剩余页表: {}", get_free_page_num());
         panic!("已无任务");
     }
 }
