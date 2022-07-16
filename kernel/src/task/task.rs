@@ -1,10 +1,10 @@
 use core::cell::RefCell;
 
-use alloc::rc::Rc;
+use alloc::{rc::Rc, sync::Arc};
 
 use crate::{interrupt::Context, memory::{page_table::PagingMode, addr::{PhysPageNum, PhysAddr}}};
 
-use super::process::Process;
+use super::{process::Process, task_scheduler::kill_pid};
 
 #[derive(Clone, Copy, PartialEq)]
 // 任务状态
@@ -38,9 +38,9 @@ pub struct Task {
 
 impl Task {
     // 创建进程
-    pub fn new(tid: usize, process: Rc<RefCell<Process>>) -> Self {
+    pub fn new(tid: usize, process: Rc<RefCell<Process>>) -> Rc<Self> {
         let pid = process.borrow().pid;
-        Self {
+        Rc::new(Self {
             tid,
             pid, 
             inner: Rc::new(RefCell::new(TaskInner { 
@@ -48,7 +48,7 @@ impl Task {
                 process, 
                 status: TaskStatus::READY
             }))
-        }
+        })
     }
 
     // 退出进程
@@ -58,8 +58,8 @@ impl Task {
         // 如果是tid 为 0 回收process资源 
         // 暂不处理线程退出
         if self.tid == 0 {
-            let mut process = inner.process.borrow_mut();
-            process.exit(inner.context.x[10]);
+            let pid = inner.context.x[10];
+            kill_pid(pid);
         }
     }
 
@@ -73,7 +73,6 @@ impl Task {
         
         let pte_ppn = usize::from(PhysPageNum::from(PhysAddr::from(process.pmm.get_pte())));
         let context_ptr = &inner.context as *const Context as usize;
-
         drop(process);
         drop(inner);
 
@@ -84,6 +83,12 @@ impl Task {
 
 // 包含更换任务代码
 // global_asm!(include_str!("change_task.asm"));
+
+impl Drop for Task {
+    fn drop(&mut self) {
+        info!("drop task");
+    }
+}
 
 extern "C" {
     // 改变任务

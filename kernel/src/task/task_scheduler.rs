@@ -1,6 +1,6 @@
 use core::cell::RefCell;
 
-use alloc::{collections::VecDeque, rc::Rc, vec::Vec};
+use alloc::{collections::VecDeque, rc::Rc, vec::Vec, sync::Arc};
 
 use crate::{sync::mutex::Mutex, task::pid::PidGenerater, memory::page_table::switch_to_kernel_page};
 
@@ -8,8 +8,8 @@ use super::{task::{Task, TaskStatus}, task_queue::load_next_task, get_current_ta
 
 // 任务控制器管理器
 pub struct TaskScheduler {
-    pub current: Option<Task>,          // 当前任务
-    pub queue: VecDeque<Task>,          // 准备队列
+    pub current: Option<Rc<Task>>,          // 当前任务
+    pub queue: VecDeque<Rc<Task>>,          // 准备队列
     pub is_run: bool                    // 任务运行标志
 }
 
@@ -24,7 +24,7 @@ impl TaskScheduler {
     }
 
     // 添加任务调度器
-    pub fn add_task(&mut self, task: Task) {
+    pub fn add_task(&mut self, task: Rc<Task>) {
         let mut task_inner = task.inner.borrow_mut();
         if self.current.is_none() {
             task_inner.status = TaskStatus::RUNNING;
@@ -41,7 +41,7 @@ impl TaskScheduler {
     pub fn run_next(&mut self) {
         let mut index = 0;
         let len = self.queue.len();
-        let task: Option<Task> = loop {
+        let task = loop {
             if index >= len { break None; }
 
             if let Some(task) = self.queue.pop_front() {
@@ -74,7 +74,7 @@ impl TaskScheduler {
         }
 
         let task = self.current.clone().unwrap();
-
+        self.is_run = true;
         task.run();
     }
 
@@ -103,6 +103,11 @@ impl TaskScheduler {
 
     // 关闭进程
     pub fn kill_pid(&mut self, pid: usize) {
+        if let Some(current_task) = &self.current {
+            if current_task.pid == pid {
+                self.current = None;
+            }
+        }
         self.queue = self.queue.clone().into_iter().filter(|x| x.pid != pid).collect();
     }
 }
@@ -114,10 +119,11 @@ lazy_static! {
 }
 
 pub fn start_tasks() {
-    TASK_SCHEDULER.force_get().run_first();
+    let mut task_scheduler = TASK_SCHEDULER.force_get();
+    task_scheduler.run_first();
 }
 
-pub fn add_task_to_scheduler(task: Task) {
+pub fn add_task_to_scheduler(task: Rc<Task>) {
     TASK_SCHEDULER.force_get().add_task(task);
 }
 

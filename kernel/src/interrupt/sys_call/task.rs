@@ -13,8 +13,7 @@ pub fn sys_exit_group(exit_code: usize) -> Result<usize, RuntimeError> {
     let process = get_current_process();
     let mut process = process.borrow_mut();
     process.exit(exit_code);
-    drop(process);
-    kill_current_task();
+    suspend_and_run_next();
     let task = get_current_task().unwrap();
     let task_inner = task.inner.borrow_mut();
     info!("task spec: {:#x}", task_inner.context.sepc);

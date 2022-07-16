@@ -11,7 +11,7 @@ pub struct Process {
     pub parent: Option<Rc<RefCell<Process>>>,   // 父进程
     pub pmm: PageMappingManager,                // 内存页映射管理 
     pub mem_set: MemSet,                        // 内存使用集
-    pub tasks: Vec<Weak<RefCell<Task>>>,        // 任务管理器
+    pub tasks: Vec<Weak<Task>>,                 // 任务管理器
     pub entry: VirtAddr,                        // 入口地址
     pub stack: UserStack,                       // 用户栈
     pub heap: UserHeap,                         // 用户堆
@@ -21,7 +21,7 @@ pub struct Process {
 }
 
 impl Process {
-    pub fn new(pid: usize, parent: Option<Rc<RefCell<Process>>>) -> Result<(Rc<RefCell<Process>>, Task), RuntimeError> {
+    pub fn new(pid: usize, parent: Option<Rc<RefCell<Process>>>) -> Result<(Rc<RefCell<Process>>, Rc<Task>), RuntimeError> {
         let pmm = PageMappingManager::new()?;
         let heap = UserHeap::new()?;
         let pte = pmm.pte.clone();
@@ -41,14 +41,14 @@ impl Process {
         // 创建默认任务
         let process = Rc::new(RefCell::new(process));
         let task = Task::new(0, process.clone());
-        process.borrow_mut().tasks.push(Rc::downgrade(&Rc::new(RefCell::new(task.clone()))));
+        process.borrow_mut().tasks.push(Rc::downgrade(&task));
         Ok((process, task))
     }
 
     // 进程进行等待
     pub fn wait(&self) {
         let task = self.get_task(0);
-        task.borrow().inner.borrow_mut().status = TaskStatus::WAITING;
+        task.inner.borrow_mut().status = TaskStatus::WAITING;
     }
 
     // 释放进程资源
@@ -63,7 +63,7 @@ impl Process {
         // tasks的len 一定大于 0
         let task = self.get_task(0);
         // 如果父进程在等待 则直接释放资源 并改变父进程的状态
-        if task.borrow().inner.borrow().status == TaskStatus::WAITING {
+        if task.inner.borrow().status == TaskStatus::WAITING {
             true
         } else {
             false
@@ -71,42 +71,29 @@ impl Process {
     }
 
     // 获取task 任务
-    pub fn get_task(&self, index: usize) -> Rc<RefCell<Task>> {
+    pub fn get_task(&self, index: usize) -> Rc<Task> {
         if index >= self.tasks.len() {
             panic!("in process.rs index >= task.len()");
         }
         self.tasks[0].upgrade().unwrap()
     }
 
-
-
     // 结束进程
     pub fn exit(&mut self, exit_code: usize) {
-        // 如果没有父进程则直接回收资源， 如果有父进程等待也进行回收， 否则等待waitpid进行资源回收
-        match &self.parent {
-            Some(parent_process) => {
-                let parent_process_ref = parent_process.borrow_mut();
-                if parent_process_ref.is_waiting() {
-                    let task = self.get_task(0);
-                    let task = task.borrow();
-                    let mut task_inner = task.inner.borrow_mut();
-                    task_inner.status = TaskStatus::READY;
-                    task_inner.context.x[10] = exit_code;
-                    // 资源释放
-                    self.release();
-                    // 进程回收
-                    kill_pid(task.pid);
-                }
-            },
-            None => {
-                self.release();
-            }
-        }
+        // 如果没有子进程
+        let task = self.get_task(0);
+        let mut task_inner = task.inner.borrow_mut();
+        task_inner.status = TaskStatus::READY;
+        task_inner.context.x[10] = exit_code;
+        // 进程回收
+        kill_pid(task.pid);
     }
 }
 
+// 在Drop中进行垃圾回收
 impl Drop for Process {
     fn drop(&mut self) {
-        info!("drop process");
+        info!("release page while Droping Process");
+        self.release();
     }
 }

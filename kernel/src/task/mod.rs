@@ -1,31 +1,22 @@
 use core::arch::global_asm;
 
-use alloc::collections::{VecDeque, BTreeMap};
+use alloc::collections::BTreeMap;
+use alloc::rc::Rc;
 use alloc::string::String;
-use alloc::sync::Arc;
 use alloc::vec::Vec;
 use crate::elf::{self, ElfExtra};
 use crate::fs::filetree::FileTreeNode;
-use crate::interrupt::{Context, TICKS};
-
-use crate::interrupt::timer::{NEXT_TICKS, TMS, LAST_TICKS};
+use crate::interrupt::timer::NEXT_TICKS;
 use crate::memory::addr::{get_pages_num, get_buf_from_phys_page};
 use crate::memory::mem_map::MemMap;
-use crate::memory::mem_set::MemSet;
-use crate::memory::page::{alloc, alloc_more, dealloc_more};
-use crate::memory::page_table::PagingMode;
+use crate::memory::page::{alloc_more, dealloc_more};
 use crate::runtime_err::RuntimeError;
-use crate::sync::mutex::Mutex;
-use crate::task::pid::PidGenerater;
 use crate::task::process::Process;
 use crate::task::task_scheduler::{start_tasks, add_task_to_scheduler};
-use crate::{memory::{page_table::{PageMappingManager, PTEFlags}, addr::{PAGE_SIZE, VirtAddr, PhysAddr, PhysPageNum}, page::PAGE_ALLOCATOR}, fs::filetree::FILETREE};
-
+use crate::{memory::{page_table::PTEFlags, addr::{PAGE_SIZE, VirtAddr, PhysAddr, PhysPageNum}, page::PAGE_ALLOCATOR}, fs::filetree::FILETREE};
 use self::pipe::PipeBuf;
-use self::stack::UserStack;
-use self::task::{TaskStatus, Task};
-use self::task_queue::load_next_task;
-use self::task_scheduler::{TASK_SCHEDULER, TaskScheduler, NEXT_PID, scheduler_to_next};
+use self::task::Task;
+use self::task_scheduler::{TASK_SCHEDULER, NEXT_PID, scheduler_to_next};
 
 pub mod pipe;
 pub mod task_queue;
@@ -125,7 +116,7 @@ pub fn get_new_pid() -> usize {
 }
 
 // 执行一个程序 path: 文件名 思路：加入程序准备池  等待执行  每过一个时钟周期就执行一次
-pub fn exec<'a>(path: &'a str, args: Vec<&'a str>) -> Result<(), RuntimeError> {
+pub fn exec<'a>(path: &'a str, args: Vec<&'a str>) -> Result<(), RuntimeError> {    
     // 如果存在write
     let program = FILETREE.lock().open(path)?;
 
@@ -164,6 +155,7 @@ pub fn exec<'a>(path: &'a str, args: Vec<&'a str>) -> Result<(), RuntimeError> {
             let offset = ph.offset() as usize % PAGE_SIZE;
             let read_size = ph.file_size() as usize;
             let temp_buf = get_buf_from_phys_page(phy_start, alloc_pages);
+            temp_buf.fill(0);
 
 
             let vr_start = ph.virtual_addr() as usize % 0x1000;
@@ -228,7 +220,7 @@ pub fn suspend_and_run_next() {
 }
 
 // 获取当前任务
-pub fn get_current_task() ->Option<Task> {
+pub fn get_current_task() ->Option<Rc<Task>> {
     TASK_SCHEDULER.force_get().current.clone()
 }
 
