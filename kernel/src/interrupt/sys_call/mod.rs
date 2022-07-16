@@ -3,7 +3,7 @@ use core::slice;
 use alloc::{string::String, vec::Vec};
 use riscv::register::{satp, sepc};
 
-use crate::{memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum, PhysAddr}}, fs::{filetree::{FileTreeNode}, file::{FileType}},  interrupt::{sys_call::{fd::{get_cwd, sys_dup, sys_dup3, sys_mkdirat, sys_unlinkat, sys_chdir, sys_openat, sys_close, sys_pipe2, sys_getdents, sys_read, sys_write, sys_fstat}, task::{sys_exit, sys_set_tid_address, sys_sched_yield, sys_uname, sys_getpid, sys_getppid, sys_clone, sys_execve, sys_wait4}, time::{sys_nanosleep, sys_times, sys_gettimeofday}, mm::{sys_brk, sys_mmap, sys_munmap}}}, runtime_err::RuntimeError};
+use crate::{memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum, PhysAddr}}, fs::{filetree::{FileTreeNode}, file::{FileType}},  interrupt::{sys_call::{fd::{get_cwd, sys_dup, sys_dup3, sys_mkdirat, sys_unlinkat, sys_chdir, sys_openat, sys_close, sys_pipe2, sys_getdents, sys_read, sys_write, sys_fstat}, task::{sys_exit, sys_set_tid_address, sys_sched_yield, sys_uname, sys_getpid, sys_getppid, sys_clone, sys_execve, sys_wait4, sys_kill}, time::{sys_nanosleep, sys_times, sys_gettimeofday}, mm::{sys_brk, sys_mmap, sys_munmap}}}, runtime_err::RuntimeError};
 
 
 
@@ -32,6 +32,7 @@ pub const SYS_EXIT:  usize  = 93;
 pub const SYS_SET_TID_ADDRESS: usize = 96;
 pub const SYS_NANOSLEEP: usize = 101;
 pub const SYS_SCHED_YIELD: usize = 124;
+pub const SYS_KILL: usize = 129;
 pub const SYS_TIMES: usize  = 153;
 pub const SYS_UNAME: usize  = 160;
 pub const SYS_GETTIMEOFDAY: usize= 169;
@@ -183,6 +184,7 @@ pub fn sys_call(call_type: usize, args: [usize; 7]) -> Result<usize, RuntimeErro
         SYS_NANOSLEEP => sys_nanosleep(args[0], args[1]),
         // 转移文件权限
         SYS_SCHED_YIELD => sys_sched_yield(),
+        SYS_KILL => sys_kill(args[0], args[1]),
         // 获取文件时间
         SYS_TIMES => sys_times(args[0]),
         // 获取系统信息

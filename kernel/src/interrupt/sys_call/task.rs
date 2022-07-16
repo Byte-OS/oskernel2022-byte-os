@@ -1,6 +1,6 @@
 use alloc::{vec::Vec, string::String};
 
-use crate::{task::{kill_current_task, process, task_scheduler::get_current_process, suspend_and_run_next, exec, wait_task}, runtime_err::RuntimeError, memory::addr::{PhysAddr, VirtAddr}};
+use crate::{task::{kill_current_task, process, task_scheduler::get_current_process, suspend_and_run_next, exec, wait_task, get_current_task}, runtime_err::RuntimeError, memory::addr::{PhysAddr, VirtAddr}};
 
 use super::{UTSname, write_string_to_raw, SYS_CALL_ERR, get_string_from_raw, get_usize_vec_from_raw};
 
@@ -10,11 +10,12 @@ pub fn sys_exit() -> Result<usize, RuntimeError> {
 }
 
 pub fn sys_set_tid_address(tid_ptr: usize) -> Result<usize, RuntimeError> {
+    let task = get_current_task().unwrap();
     let process = get_current_process();
-    let mut process = process.borrow_mut();
+    let process = process.borrow_mut();
     let tid_ptr_addr = process.pmm.get_phys_addr(tid_ptr.into())?;
     let tid_ptr = tid_ptr_addr.0 as *mut u32;
-    unsafe {tid_ptr.write(process.pid as u32)};
+    unsafe {tid_ptr.write(task.tid as u32)};
     Ok(0)
 }
 
@@ -65,7 +66,7 @@ pub fn sys_clone(flags: usize, new_sp: usize, ptid: usize, tls: usize, ctid: usi
         // VFORK | VM | SIGCHILD
         warn!("sys_clone is calling sys_fork instead, ignoring other args");
     }
-    Ok(10)
+    Ok(0)
 }
 
 pub fn sys_execve(filename: usize, argv: usize) -> Result<usize, RuntimeError> {
@@ -90,9 +91,20 @@ pub fn sys_execve(filename: usize, argv: usize) -> Result<usize, RuntimeError> {
 
 pub fn sys_wait4(pid: usize, ptr: usize, options: usize) -> Result<usize, RuntimeError> {
     let process = get_current_process();
-    let mut process = process.borrow_mut();
+    let process = process.borrow_mut();
+    info!("wait pid: {}, current pid: {}", pid, process.pid);
     let ptr = usize::from(process.pmm.get_phys_addr(ptr.into()).unwrap()) as *mut u16;
     // wait_task中进行上下文大小
     wait_task(pid, ptr, options);
     Ok(0)
+}
+
+pub fn sys_kill(pid: usize, signum: usize) -> Result<usize, RuntimeError> {
+    info!(
+        "kill: thread {} kill process {} with signal {:?}",
+        0,
+        pid,
+        signum
+    );
+    Ok(1)
 }
