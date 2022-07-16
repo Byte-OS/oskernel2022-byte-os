@@ -127,7 +127,6 @@ fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) -> us
                 
             }
             if let Some(current_task) = get_current_task() {
-                current_task.inner.borrow_mut().context.sepc += 4;
                 current_task.inner.borrow_mut().context.x[10] = res.unwrap();
             }
         },

@@ -3,7 +3,7 @@ use core::slice;
 use alloc::{string::String, vec::Vec};
 use riscv::register::{satp, sepc};
 
-use crate::{memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum, PhysAddr}}, fs::{filetree::{FileTreeNode}, file::{FileType}},  interrupt::{sys_call::{fd::{get_cwd, sys_dup, sys_dup3, sys_mkdirat, sys_unlinkat, sys_chdir, sys_openat, sys_close, sys_pipe2, sys_getdents, sys_read, sys_write, sys_fstat}, task::{sys_exit, sys_set_tid_address, sys_sched_yield, sys_uname, sys_getpid, sys_getppid, sys_clone, sys_execve, sys_wait4, sys_kill, sys_exit_group}, time::{sys_nanosleep, sys_times, sys_gettimeofday}, mm::{sys_brk, sys_mmap, sys_munmap}}}, runtime_err::RuntimeError};
+use crate::{memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum, PhysAddr}}, fs::{filetree::{FileTreeNode}, file::{FileType}},  interrupt::{sys_call::{fd::{get_cwd, sys_dup, sys_dup3, sys_mkdirat, sys_unlinkat, sys_chdir, sys_openat, sys_close, sys_pipe2, sys_getdents, sys_read, sys_write, sys_fstat}, task::{sys_exit, sys_set_tid_address, sys_sched_yield, sys_uname, sys_getpid, sys_getppid, sys_clone, sys_execve, sys_wait4, sys_kill, sys_exit_group}, time::{sys_nanosleep, sys_times, sys_gettimeofday}, mm::{sys_brk, sys_mmap, sys_munmap}}}, runtime_err::RuntimeError, task::get_current_task};
 
 
 
@@ -144,6 +144,12 @@ pub fn write_string_to_raw(target: &mut [u8], str: &str) {
 pub fn sys_call(call_type: usize, args: [usize; 7]) -> Result<usize, RuntimeError> {
     info!("中断号: {} 调用地址: {:#x}", call_type, sepc::read());
 
+    // 对sepc + 4
+    let task = get_current_task().unwrap();
+    let mut task_inner = task.inner.borrow_mut();
+    task_inner.context.sepc += 4;
+    drop(task_inner);
+    drop(task);
 
     // 匹配系统调用 a7(x17) 作为调用号
     match call_type {

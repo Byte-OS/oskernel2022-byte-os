@@ -15,6 +15,9 @@ pub fn sys_exit_group(exit_code: usize) -> Result<usize, RuntimeError> {
     process.exit(exit_code);
     drop(process);
     kill_current_task();
+    let task = get_current_task().unwrap();
+    let task_inner = task.inner.borrow_mut();
+    info!("task spec: {:#x}", task_inner.context.sepc);
     Ok(0)
 }
 
@@ -95,11 +98,6 @@ pub fn sys_execve(filename: usize, argv: usize) -> Result<usize, RuntimeError> {
     // exec(&filename, vec![]);
     drop(process);
     kill_current_task();
-
-    let task = get_current_task().unwrap();
-    let mut task_inner = task.inner.borrow_mut();
-    task_inner.context.sepc -= 4;
-    info!("task spec: {:#x}", task_inner.context.sepc);
     Ok(0)
 }
 

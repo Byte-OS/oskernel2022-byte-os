@@ -104,3 +104,9 @@ impl Process {
         }
     }
 }
+
+impl Drop for Process {
+    fn drop(&mut self) {
+        info!("drop process");
+    }
+}

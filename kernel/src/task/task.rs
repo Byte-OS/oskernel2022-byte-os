@@ -23,6 +23,12 @@ pub struct TaskInner {
     pub status: TaskStatus
 }
 
+impl Drop for TaskInner {
+    fn drop(&mut self) {
+        info!("drop task_inner");
+    }
+}
+
 #[derive(Clone)]
 pub struct Task {
     pub tid: usize,

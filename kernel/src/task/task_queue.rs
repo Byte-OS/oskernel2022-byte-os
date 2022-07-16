@@ -6,15 +6,16 @@ use super::exec;
 
 lazy_static! {
     pub static ref TASK_QUEUE: Mutex<Vec<&'static str>> = Mutex::new(vec![
-        "./runtest.exe -w entry-static.exe argv"
         // "runtest.exe"
-        // "entry-static.exe argv"
+        "runtest.exe -w entry-static.exe argv",
+        "entry-static.exe argv"
         // "entry-dynamic.exe"
     ]);
 }
 
 pub fn exec_by_str(str: &str) {
     let args: Vec<&str> = str.split(" ").collect();
+    info!("执行任务: {}", str);
     exec(args[0], args[0..].to_vec());
 }
 
