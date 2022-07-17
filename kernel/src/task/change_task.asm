@@ -26,11 +26,26 @@
     .section .text
     .global change_task
 change_task:
-    csrw satp, a0
-    sfence.vma
+    # 申请栈空间
+    addi sp, sp, -32*8
+    # 保存x1寄存器
+    SAVE_N 1
+    # 保存x3寄存器
+    SAVE_N 3
+    # 保存x5-想1寄存器
+    .set n, 4
+    .rept 27
+        SAVE_N %n
+        .set n, n+1
+    .endr
+    
+    csrrw a0, satp, a0
 
-    la a0, int_callback_entry
+    la a0, __task_restore
     csrw stvec, a0
+
+    # la a0, int_callback_entry
+    # csrw stvec, a0
 
     csrw sscratch, sp
     mv sp, a1
@@ -57,4 +72,28 @@ change_task:
     # 恢复 sp（又名 x2）这里最后恢复是为了上面可以正常使用 LOAD 宏
     LOAD    x2, 2
     # csrrw sp, sscratch, sp
+    sfence.vma
     sret
+
+.global __task_restore
+__task_restore:
+    csrrw a0, satp, a0
+    sfence.vma
+
+    la a0, int_callback_entry
+    csrw stvec, a0
+
+
+    csrrw sp, sscratch, sp
+    ld ra, 0(sp)
+    # 恢复信息
+    LOAD_N 1
+    LOAD_N 3
+    .set n, 4
+    .rept 27
+        LOAD_N %n
+        .set n, n+1
+    .endr
+
+    addi sp, sp, 32*8
+    ret

@@ -119,10 +119,12 @@ pub fn start_tasks() {
         fn change_task(pte: usize, stack: usize);
     }
     // 刷新下一个调度时间
+    // info!("开始任务");
     task_time_refresh();
     let mut task_scheduler = TASK_SCHEDULER.force_get();
     let (pte, context_ptr) = task_scheduler.run_first();
     unsafe { change_task(pte, context_ptr) };
+    info!("恢复任务");
 }
 
 pub fn add_task_to_scheduler(task: Rc<Task>) {
