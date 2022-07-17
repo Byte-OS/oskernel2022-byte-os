@@ -116,7 +116,8 @@ pub fn get_new_pid() -> usize {
 }
 
 // 执行一个程序 path: 文件名 思路：加入程序准备池  等待执行  每过一个时钟周期就执行一次
-pub fn exec<'a>(path: &'a str, args: Vec<&'a str>) -> Result<(), RuntimeError> {    
+pub fn exec<'a>(path: &'a str, args: Vec<&'a str>) -> Result<(), RuntimeError> { 
+    warn!("exec start");   
     // 如果存在write
     let program = FILETREE.lock().open(path)?;
 
@@ -160,6 +161,7 @@ pub fn exec<'a>(path: &'a str, args: Vec<&'a str>) -> Result<(), RuntimeError> {
 
             let vr_start = ph.virtual_addr() as usize % 0x1000;
             let vr_end = vr_start + read_size;
+
             // 添加memset
             process.mem_set.inner().push(MemMap::exists_page(phy_start, VirtAddr::from(ph.virtual_addr()).into(), 
                 alloc_pages, PTEFlags::VRWX | PTEFlags::U));
@@ -206,7 +208,7 @@ pub fn exec<'a>(path: &'a str, args: Vec<&'a str>) -> Result<(), RuntimeError> {
     
     // 任务管理器添加任务
     add_task_to_scheduler(task);
-    
+    warn!("end");  
     Ok(())
 }
 

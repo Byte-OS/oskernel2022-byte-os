@@ -54,6 +54,7 @@ fn fault(_context: &mut Context, scause: Scause, stval: usize) {
 // 处理缺页异常
 fn handle_page_fault(stval: usize) {
     warn!("缺页中断触发 缺页地址: {:#x} 触发地址:{:#x} 已同步映射", stval, sepc::read());
+    panic!("end");
     KERNEL_PAGE_MAPPING.lock().add_mapping(PhysAddr::from(stval).into(), 
         VirtAddr::from(stval).into(), PTEFlags::VRWX).expect("缺页处理异常");
     unsafe{

@@ -89,3 +89,10 @@ impl MemMap {
         dealloc_more(self.ppn, self.page_num);
     }
 }
+
+impl Drop for MemMap {
+    fn drop(&mut self) {
+        info!("释放mem_map: {} size: {}", self.ppn.0, self.page_num);
+        dealloc_more(self.ppn, self.page_num);
+    }
+}

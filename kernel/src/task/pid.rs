@@ -1,5 +1,7 @@
 use crate::sync::mutex::Mutex;
 
+use super::task_scheduler::NEXT_PID;
+
 // PID生成器
 pub struct PidGenerater(usize);
 
@@ -14,4 +16,8 @@ impl PidGenerater {
         self.0 = n + 1;
         n
     }
+}
+
+pub fn get_next_pid() -> usize {
+    NEXT_PID.force_get().next()
 }

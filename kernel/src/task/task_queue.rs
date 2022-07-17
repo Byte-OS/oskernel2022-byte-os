@@ -8,8 +8,9 @@ use super::exec;
 lazy_static! {
     pub static ref TASK_QUEUE: Mutex<Vec<&'static str>> = Mutex::new(vec![
         "runtest.exe -w entry-static.exe argv",
+        // "runtest.exe -w entry-static.exe basename",
         // "runtest.exe"
-        "entry-static.exe argv",
+        // "entry-static.exe argv",
         // "entry-dynamic.exe"
     ]);
 }

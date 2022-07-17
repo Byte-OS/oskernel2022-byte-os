@@ -1,4 +1,5 @@
 use core::{arch::asm, slice::{from_raw_parts_mut, self}};
+use _core::cell::RefCell;
 use bitflags::*;
 
 use crate::{memory::addr::PhysAddr, sync::mutex::Mutex, runtime_err::RuntimeError, task::task_scheduler::get_current_process};
@@ -84,7 +85,7 @@ pub enum PagingMode {
 #[derive(Clone)]
 pub struct PageMappingManager {
     pub paging_mode: PagingMode,
-    pub mem_set: MemSet,
+    pub mem_set: RefCell<MemSet>,
     pub pte: PageMapping
 }
 
@@ -271,7 +272,7 @@ impl PageMappingManager {
         Ok(PageMappingManager { 
             paging_mode: PagingMode::Sv39, 
             pte: PhysAddr::from(ppn).into(),
-            mem_set
+            mem_set: RefCell::new(mem_set)
         })
     }
 
@@ -281,15 +282,16 @@ impl PageMappingManager {
     }
 
     // 添加mapping
-    pub fn add_mapping(&mut self, ppn: PhysPageNum, vpn: VirtPageNum, flags: PTEFlags) -> Result<MemSet, RuntimeError>{
+    pub fn add_mapping(&self, ppn: PhysPageNum, vpn: VirtPageNum, flags: PTEFlags) -> Result<MemSet, RuntimeError>{
+        info!("add mapping");
         self.pte.add_mapping(ppn, vpn, flags)
     }
 
-    pub fn add_mapping_by_map(&mut self, map: &MemMap) -> Result<MemSet, RuntimeError> {
+    pub fn add_mapping_by_map(&self, map: &MemMap) -> Result<MemSet, RuntimeError> {
         self.pte.add_mapping_by_map(map)
     }
 
-    pub fn add_mapping_by_set(&mut self, map: &MemSet) -> Result<(), RuntimeError> {
+    pub fn add_mapping_by_set(&self, map: &MemSet) -> Result<(), RuntimeError> {
         for i in &map.0 {
             self.pte.add_mapping_by_map(i)?;
         }
@@ -297,7 +299,7 @@ impl PageMappingManager {
     }
 
     // 添加一个范围内的mapping
-    pub fn add_mapping_range(&mut self, phy_addr: PhysAddr, virt_addr: VirtAddr, size: usize, flags:PTEFlags) -> Result<(), RuntimeError> {
+    pub fn add_mapping_range(&self, phy_addr: PhysAddr, virt_addr: VirtAddr, size: usize, flags:PTEFlags) -> Result<(), RuntimeError> {
         let end_addr: usize = virt_addr.0 + size;
         let mut i: usize = virt_addr.0 / PAGE_SIZE * PAGE_SIZE;   // floor get start_page
         loop {
@@ -309,7 +311,7 @@ impl PageMappingManager {
         Ok(())
     }
 
-    pub fn remove_mapping(&mut self, virt_addr: VirtAddr) {
+    pub fn remove_mapping(&self, virt_addr: VirtAddr) {
         self.pte.remove_mapping(virt_addr)
     }
 

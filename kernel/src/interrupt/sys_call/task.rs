@@ -1,6 +1,6 @@
 use alloc::{vec::Vec, string::String};
 
-use crate::{task::{kill_current_task, task_scheduler::get_current_process, suspend_and_run_next, exec, wait_task, get_current_task}, runtime_err::RuntimeError, memory::addr::{PhysAddr, VirtAddr}};
+use crate::{task::{kill_current_task, task_scheduler::{get_current_process, add_task_to_scheduler}, suspend_and_run_next, exec, wait_task, get_current_task, process::Process, pid::get_next_pid}, runtime_err::RuntimeError, memory::addr::{PhysAddr, VirtAddr}};
 
 use super::{UTSname, write_string_to_raw, SYS_CALL_ERR, get_string_from_raw, get_usize_vec_from_raw};
 
@@ -65,6 +65,29 @@ pub fn sys_getppid() -> Result<usize, RuntimeError> {
     })
 }
 
+pub fn sys_fork() -> Result<usize, RuntimeError> {
+    let task = get_current_task().unwrap();
+    let task_inner = task.inner.borrow_mut();
+
+    let process = task_inner.process.clone();
+    let (child_process, child_task) = Process::new(get_next_pid(), Some(process.clone()))?;
+    let mut process = process.borrow_mut();
+
+    let mut child_task_inner = child_task.inner.borrow_mut();
+    child_task_inner.context.clone_from(&task_inner.context);
+    child_task_inner.context.x[10] = 0;
+    drop(child_task_inner);
+    add_task_to_scheduler(child_task.clone());
+    let cpid = child_task.pid;
+    drop(task_inner);
+    
+    let mut child_process = child_process.borrow_mut();
+    child_process.mem_set = process.mem_set.clone_with_data()?;
+    child_process.stack = process.stack.clone_with_data(child_process.pmm.pte)?;
+
+    Ok(cpid)
+}
+
 pub fn sys_clone(flags: usize, new_sp: usize, ptid: usize, tls: usize, ctid: usize) -> Result<usize, RuntimeError> {
 
     info!(
@@ -75,6 +98,7 @@ pub fn sys_clone(flags: usize, new_sp: usize, ptid: usize, tls: usize, ctid: usi
     if flags == 0x4111 || flags == 0x11 {
         // VFORK | VM | SIGCHILD
         warn!("sys_clone is calling sys_fork instead, ignoring other args");
+        return sys_fork();
     }
     Ok(0)
 }

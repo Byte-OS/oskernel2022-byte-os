@@ -4,12 +4,12 @@ use alloc::{vec::Vec, rc::{Rc, Weak}};
 
 use crate::{memory::{page_table::PageMappingManager, mem_set::MemSet, addr::VirtAddr}, fs::filetree::{FileTreeNode, open}, runtime_err::RuntimeError, interrupt::timer::TMS};
 
-use super::{task::{Task, TaskStatus}, stack::UserStack, UserHeap, fd_table::FDTable, task_scheduler::kill_pid};
+use super::{task::{Task, TaskStatus}, stack::UserStack, UserHeap, fd_table::FDTable, task_scheduler::{kill_pid, NEXT_PID}, pid::PidGenerater};
 
 pub struct Process {
     pub pid: usize,                             // 进程id
     pub parent: Option<Rc<RefCell<Process>>>,   // 父进程
-    pub pmm: PageMappingManager,                // 内存页映射管理 
+    pub pmm: Rc<PageMappingManager>,            // 内存页映射管理 
     pub mem_set: MemSet,                        // 内存使用集
     pub tasks: Vec<Weak<Task>>,                 // 任务管理器
     pub entry: VirtAddr,                        // 入口地址
@@ -22,7 +22,7 @@ pub struct Process {
 
 impl Process {
     pub fn new(pid: usize, parent: Option<Rc<RefCell<Process>>>) -> Result<(Rc<RefCell<Process>>, Rc<Task>), RuntimeError> {
-        let pmm = PageMappingManager::new()?;
+        let pmm = Rc::new(PageMappingManager::new()?);
         let heap = UserHeap::new()?;
         let pte = pmm.pte.clone();
         let process = Self { 
@@ -49,13 +49,6 @@ impl Process {
     pub fn wait(&self) {
         let task = self.get_task(0);
         task.inner.borrow_mut().status = TaskStatus::WAITING;
-    }
-
-    // 释放进程资源
-    pub fn release(&self) {
-        self.mem_set.release();
-        self.pmm.mem_set.release();
-        self.stack.mem_set.release();
     }
 
     // 判断是否在等待状态
@@ -94,6 +87,5 @@ impl Process {
 impl Drop for Process {
     fn drop(&mut self) {
         info!("release page while Droping Process, pid: {}", self.pid);
-        self.release();
     }
 }

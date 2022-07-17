@@ -96,4 +96,18 @@ impl UserStack {
         }
         self.push(args_len);
     }
+
+    // 复制数据
+    pub fn clone_with_data(&self, pmm: PageMapping) -> Result<Self, RuntimeError> {
+        let mut mem_set = self.mem_set.clone_with_data()?;
+        let mem_map = MemMap::new(0xeffffusize.into(), 2, PTEFlags::UVRWX)?;
+        pmm.add_mapping_by_map(&mem_map)?;
+        mem_set.inner().push(mem_map);
+        Ok(UserStack { 
+            bottom: self.bottom, 
+            top: self.top,
+            pmm,
+            mem_set
+        })
+    }
 }
