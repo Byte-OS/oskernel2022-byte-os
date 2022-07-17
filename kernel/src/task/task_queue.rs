@@ -30,3 +30,8 @@ pub fn load_next_task() {
         panic!("已无任务");
     }
 }
+
+// 注意 后面的机会 是对Task实现Syscall 
+// 这样在 可以在impl 内部使用self 作为task 
+// 但是需要一个task外的函数 作为调度 可以顺利抛出函数
+// 使用change_task 返回函数主体， 可以让过程更加完善 更像写一个程序 而不是分离开
