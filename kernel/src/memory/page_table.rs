@@ -282,24 +282,28 @@ impl PageMappingManager {
     }
 
     // 添加mapping
-    pub fn add_mapping(&self, ppn: PhysPageNum, vpn: VirtPageNum, flags: PTEFlags) -> Result<MemSet, RuntimeError>{
-        info!("add mapping");
-        self.pte.add_mapping(ppn, vpn, flags)
+    pub fn add_mapping(&self, ppn: PhysPageNum, vpn: VirtPageNum, flags: PTEFlags) -> Result<(), RuntimeError>{
+        let mut target = self.pte.add_mapping(ppn, vpn, flags)?;
+        self.add_mem_set(&mut target);
+        Ok(())
     }
 
-    pub fn add_mapping_by_map(&self, map: &MemMap) -> Result<MemSet, RuntimeError> {
-        self.pte.add_mapping_by_map(map)
+    pub fn add_mapping_by_map(&self, map: &MemMap) -> Result<(), RuntimeError> {
+        let mut target = self.pte.add_mapping_by_map(map)?;
+        self.add_mem_set(&mut target);
+        Ok(())
     }
 
     pub fn add_mapping_by_set(&self, map: &MemSet) -> Result<(), RuntimeError> {
         for i in &map.0 {
-            self.pte.add_mapping_by_map(i)?;
+            let mut target = self.pte.add_mapping_by_map(i)?;
+            self.add_mem_set(&mut target);
         }
         Ok(())
     }
 
     // 添加一个范围内的mapping
-    pub fn add_mapping_range(&self, phy_addr: PhysAddr, virt_addr: VirtAddr, size: usize, flags:PTEFlags) -> Result<(), RuntimeError> {
+    pub fn add_mapping_range(&self, phy_addr: PhysAddr, virt_addr: VirtAddr, size: usize, flags:PTEFlags) -> Result<(), RuntimeError> {        
         let end_addr: usize = virt_addr.0 + size;
         let mut i: usize = virt_addr.0 / PAGE_SIZE * PAGE_SIZE;   // floor get start_page
         loop {
@@ -327,6 +331,12 @@ impl PageMappingManager {
             asm!("csrw satp, a0",
             "sfence.vma", in("a0") satp_addr)
         }
+    }
+
+    // 添加内存set
+    pub fn add_mem_set(&self, target_mem_set: &mut MemSet) {
+        let mut mem_set = self.mem_set.borrow_mut();
+        mem_set.append(target_mem_set);
     }
 }
 

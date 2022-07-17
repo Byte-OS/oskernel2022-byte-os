@@ -1,6 +1,6 @@
-use alloc::{vec::Vec, collections::BTreeMap};
+use alloc::{vec::Vec, collections::BTreeMap, rc::Rc};
 
-use crate::{memory::{page_table::{PageMapping, PTEFlags}, addr::VirtAddr, mem_set::{MemSet, self}, mem_map::MemMap}, runtime_err::RuntimeError};
+use crate::{memory::{page_table::{PageMapping, PTEFlags, PageMappingManager}, addr::VirtAddr, mem_set::{MemSet, self}, mem_map::MemMap}, runtime_err::RuntimeError};
 
 
 const PTR_SIZE: usize = 8;
@@ -8,13 +8,13 @@ const PTR_SIZE: usize = 8;
 pub struct UserStack {
     pub bottom: usize,
     pub top: usize,
-    pub pmm: PageMapping,
+    pub pmm: Rc<PageMappingManager>,
     pub mem_set: MemSet
 }
 
 impl UserStack {
     // 创建新的栈
-    pub fn new(pmm: PageMapping) -> Result<Self, RuntimeError> {
+    pub fn new(pmm: Rc<PageMappingManager>) -> Result<Self, RuntimeError> {
         let mut mem_set = MemSet::new();
         let mem_map = MemMap::new(0xeffffusize.into(), 2, PTEFlags::UVRWX)?;
         pmm.add_mapping_by_map(&mem_map)?;
@@ -98,10 +98,11 @@ impl UserStack {
     }
 
     // 复制数据
-    pub fn clone_with_data(&self, pmm: PageMapping) -> Result<Self, RuntimeError> {
+    pub fn clone_with_data(&self, pmm: Rc<PageMappingManager>) -> Result<Self, RuntimeError> {
         let mut mem_set = self.mem_set.clone_with_data()?;
         let mem_map = MemMap::new(0xeffffusize.into(), 2, PTEFlags::UVRWX)?;
         pmm.add_mapping_by_map(&mem_map)?;
+
         mem_set.inner().push(mem_map);
         Ok(UserStack { 
             bottom: self.bottom, 

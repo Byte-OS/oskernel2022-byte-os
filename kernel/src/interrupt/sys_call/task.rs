@@ -67,11 +67,11 @@ pub fn sys_getppid() -> Result<usize, RuntimeError> {
 
 pub fn sys_fork() -> Result<usize, RuntimeError> {
     let task = get_current_task().unwrap();
-    let task_inner = task.inner.borrow_mut();
+    let mut task_inner = task.inner.borrow_mut();
 
     let process = task_inner.process.clone();
     let (child_process, child_task) = Process::new(get_next_pid(), Some(process.clone()))?;
-    let mut process = process.borrow_mut();
+    let process = process.borrow_mut();
 
     let mut child_task_inner = child_task.inner.borrow_mut();
     child_task_inner.context.clone_from(&task_inner.context);
@@ -79,13 +79,17 @@ pub fn sys_fork() -> Result<usize, RuntimeError> {
     drop(child_task_inner);
     add_task_to_scheduler(child_task.clone());
     let cpid = child_task.pid;
+    task_inner.context.x[10] = cpid;
     drop(task_inner);
     
     let mut child_process = child_process.borrow_mut();
     child_process.mem_set = process.mem_set.clone_with_data()?;
-    child_process.stack = process.stack.clone_with_data(child_process.pmm.pte)?;
+    child_process.stack = process.stack.clone_with_data(child_process.pmm.clone())?;
 
-    Ok(cpid)
+    child_process.pmm.add_mapping_by_set(&child_process.mem_set)?;
+    drop(child_process);
+    suspend_and_run_next();
+    Ok(0)
 }
 
 pub fn sys_clone(flags: usize, new_sp: usize, ptid: usize, tls: usize, ctid: usize) -> Result<usize, RuntimeError> {

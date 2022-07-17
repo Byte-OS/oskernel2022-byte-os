@@ -24,15 +24,14 @@ impl Process {
     pub fn new(pid: usize, parent: Option<Rc<RefCell<Process>>>) -> Result<(Rc<RefCell<Process>>, Rc<Task>), RuntimeError> {
         let pmm = Rc::new(PageMappingManager::new()?);
         let heap = UserHeap::new()?;
-        let pte = pmm.pte.clone();
         let process = Self { 
             pid, 
             parent, 
-            pmm, 
+            pmm: pmm.clone(), 
             mem_set: MemSet::new(), 
             tasks: vec![], 
             entry: 0usize.into(), 
-            stack: UserStack::new(pte)?, 
+            stack: UserStack::new(pmm.clone())?, 
             heap, 
             workspace: open("/")?.clone(), 
             fd_table: FDTable::new(),
