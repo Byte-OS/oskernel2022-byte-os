@@ -58,19 +58,24 @@ impl Task {
     }
 
     // 运行当前任务
-    pub fn run(&self) -> (usize, usize) {
+    pub fn run(&self) {
+        extern "C" {
+            // 改变任务
+            fn change_task(pte: usize, stack: usize);
+        }
         let inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
 
         // 切换satp
         process.pmm.change_satp();
         
-        let pte_ppn = usize::from(PhysPageNum::from(PhysAddr::from(process.pmm.get_pte())));
+        let pte_ppn = process.pmm.get_pte() >> 12;
         let context_ptr = &inner.context as *const Context as usize;
         // 释放资源
         drop(process);
         drop(inner);
-        
-        ((PagingMode::Sv39 as usize) << 60 | pte_ppn, context_ptr)
+        unsafe {
+            change_task((PagingMode::Sv39 as usize) << 60 | pte_ppn, context_ptr)
+        };
     }
 }

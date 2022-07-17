@@ -90,8 +90,8 @@ fn kernel_callback(context: &mut Context, scause: Scause, stval: usize) -> usize
 
 // 用户中断回调
 #[no_mangle]
-fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) -> usize {
-    switch_to_kernel_page();
+pub fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) {
+    warn!("中断发生: {:#x}, 地址: {:#x}", scause.bits(), context.sepc);
     // 如果当前有任务则选择任务复制到context
     if let Some(current_task) = get_current_task() {
         current_task.inner.borrow_mut().context.clone_from(context);
@@ -151,8 +151,6 @@ fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) -> us
             LAST_TICKS = TICKS;
         }
     }
-    switch_to_user_page();
-    context as *const Context as usize
 }
 
 // 包含中断代码

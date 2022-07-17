@@ -115,4 +115,5 @@ pub fn init() {
 
 pub fn task_time_refresh() {
     NEXT_TICKS.force_get().refresh();
+    set_next_timeout();
 }

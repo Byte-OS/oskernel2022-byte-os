@@ -143,7 +143,7 @@ pub fn write_string_to_raw(target: &mut [u8], str: &str) {
 
 // 系统调用
 pub fn sys_call(call_type: usize, args: [usize; 7]) -> Result<usize, RuntimeError> {
-    // info!("中断号: {} 调用地址: {:#x}", call_type, sepc::read());
+    info!("中断号: {} 调用地址: {:#x}", call_type, sepc::read());
 
     // 对sepc + 4
     let task = get_current_task().unwrap();

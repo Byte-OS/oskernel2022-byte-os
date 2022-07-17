@@ -1,8 +1,9 @@
-use core::cell::RefCell;
+use core::{cell::RefCell};
 
 use alloc::{collections::VecDeque, rc::Rc, vec::Vec, sync::Arc};
+use riscv::register::{stval, scause::{Scause, self}};
 
-use crate::{sync::mutex::Mutex, task::pid::PidGenerater, memory::page_table::switch_to_kernel_page, interrupt::timer::task_time_refresh};
+use crate::{sync::mutex::Mutex, task::pid::PidGenerater, memory::page_table::switch_to_kernel_page, interrupt::{timer::task_time_refresh, Context, interrupt_callback}};
 
 use super::{task::{Task, TaskStatus}, task_queue::load_next_task, get_current_task, process::Process};
 
@@ -69,14 +70,21 @@ impl TaskScheduler {
     }
 
     // 执行第一个任务
-    pub fn run_first(&mut self) -> (usize, usize) {
-        if self.current.is_none() {
-            self.run_next();
+    pub fn start(&mut self) {
+        loop {
+            if self.current.is_none() {
+                self.run_next();
+            }
+            let task = self.current.clone().unwrap();
+            self.is_run = true;
+            task.run();
+            let task_inner = task.inner.borrow_mut();
+            let context = &task_inner.context as *const Context as usize as 
+                *mut Context;
+            drop(task_inner);
+            let context = unsafe { &mut *(context) };
+            interrupt_callback(context, scause::read(), stval::read());
         }
-
-        let task = self.current.clone().unwrap();
-        self.is_run = true;
-        task.run()
     }
 
     // 关闭当前任务
@@ -122,8 +130,7 @@ pub fn start_tasks() {
     // info!("开始任务");
     task_time_refresh();
     let mut task_scheduler = TASK_SCHEDULER.force_get();
-    let (pte, context_ptr) = task_scheduler.run_first();
-    unsafe { change_task(pte, context_ptr) };
+    task_scheduler.start();
     info!("恢复任务");
 }
 
