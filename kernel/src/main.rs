@@ -27,7 +27,7 @@ extern crate bitflags;
 extern crate lazy_static; 
 #[macro_use]
 extern crate alloc;
-use core::arch::global_asm;
+use core::{arch::global_asm};
 
 use fs::filetree::FileTreeNode;
 
@@ -126,7 +126,8 @@ pub extern "C" fn rust_main(hartid: usize, device_tree_paddr: usize) -> ! {
     // info!("I say {}", words);
 
     // 调用rust api关机
-    shutdown()
+    // shutdown()
+    panic!("关机")
 }
 
 
