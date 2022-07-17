@@ -74,12 +74,3 @@ impl Task {
         ((PagingMode::Sv39 as usize) << 60 | pte_ppn, context_ptr)
     }
 }
-
-// 包含更换任务代码
-// global_asm!(include_str!("change_task.asm"));
-
-impl Drop for Task {
-    fn drop(&mut self) {
-        info!("drop task pid: {}, tid: {}", self.pid, self.tid);
-    }
-}

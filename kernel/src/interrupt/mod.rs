@@ -122,13 +122,13 @@ fn interrupt_callback(context: &mut Context, scause: Scause, stval: usize) -> us
                 match e {
                     RuntimeError::FileNotFound => panic!("文件未找到"),
                     RuntimeError::NoEnoughPage => panic!("页表不足"),
+                    RuntimeError::ChangeTask => {},
                     _ => panic!("未知错误")
                 }
             } else {
-                
-            }
-            if let Some(current_task) = get_current_task() {
-                current_task.inner.borrow_mut().context.x[10] = res.unwrap();
+                if let Some(current_task) = get_current_task() {
+                    current_task.inner.borrow_mut().context.x[10] = res.unwrap();
+                }
             }
         },
         // 加载页面错误

@@ -2,7 +2,7 @@ use core::cell::RefCell;
 
 use alloc::{collections::VecDeque, rc::Rc, vec::Vec, sync::Arc};
 
-use crate::{sync::mutex::Mutex, task::pid::PidGenerater, memory::page_table::switch_to_kernel_page};
+use crate::{sync::mutex::Mutex, task::pid::PidGenerater, memory::page_table::switch_to_kernel_page, interrupt::timer::task_time_refresh};
 
 use super::{task::{Task, TaskStatus}, task_queue::load_next_task, get_current_task, process::Process};
 
@@ -118,7 +118,8 @@ pub fn start_tasks() {
         // 改变任务
         fn change_task(pte: usize, stack: usize);
     }
-
+    // 刷新下一个调度时间
+    task_time_refresh();
     let mut task_scheduler = TASK_SCHEDULER.force_get();
     let (pte, context_ptr) = task_scheduler.run_first();
     unsafe { change_task(pte, context_ptr) };

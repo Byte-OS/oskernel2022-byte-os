@@ -3,6 +3,7 @@ MODE        ?= release
 MODE_FLAG	:= --target=riscv64imac-unknown-none-elf
 KERNEL_FILE := target/$(TARGET)/$(MODE)/os
 BIN_FILE    := target/$(TARGET)/$(MODE)/kernel.bin
+DEBUG_FILE  ?= $(KERNEL_FILE)
 
 OBJDUMP     := rust-objdump --arch-name=riscv64
 OBJCOPY     := rust-objcopy --binary-architecture=riscv64
@@ -15,6 +16,7 @@ BOOTLOADER_K210 := ../bootloader/rustsbi-k210.bin
 
 K210-SERIALPORT	= /dev/ttyUSB0
 K210-BURNER	= ../tools/kflash.py
+
 
 ifeq ($(MODE), release)
 MODE_FLAG += --release
@@ -74,7 +76,7 @@ run: qemu
 debug: qemu
 	@tmux new-session -d \
 	"qemu-system-riscv64 -machine virt -nographic -bios $(BOOTLOADER) -drive file=$(FS_IMG),if=none,format=raw,id=x0 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0 -device loader,file=$(BIN_FILE),addr=0x80200000 -s -S && echo '按任意键继续' && read -n 1" && \
-	tmux split-window -h "riscv64-elf-gdb -ex 'file $(KERNEL_ELF)' -ex 'set arch riscv:rv64' -ex 'target remote localhost:1234'" && \
+	tmux split-window -h "riscv64-elf-gdb -ex 'file $(DEBUG_FILE)' -ex 'set arch riscv:rv64' -ex 'target remote localhost:1234'" && \
 	tmux -2 attach-session -d
 
 gdb:
@@ -90,4 +92,4 @@ coredump:
 	cd kernel && make -f makefile FS_IMG=../$(FS_IMG) coredump || exit 1;
 
 clean:
-	rm $(KERNEL_ELF) $(BIN_FILE)
+	rm $(KERNEL_FILE) $(BIN_FILE)

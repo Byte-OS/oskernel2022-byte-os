@@ -117,7 +117,6 @@ pub fn get_new_pid() -> usize {
 
 // 执行一个程序 path: 文件名 思路：加入程序准备池  等待执行  每过一个时钟周期就执行一次
 pub fn exec<'a>(path: &'a str, args: Vec<&'a str>) -> Result<(), RuntimeError> { 
-    warn!("exec start");   
     // 如果存在write
     let program = FILETREE.lock().open(path)?;
 
@@ -150,8 +149,6 @@ pub fn exec<'a>(path: &'a str, args: Vec<&'a str>) -> Result<(), RuntimeError> {
         if ph.get_type().unwrap() == xmas_elf::program::Type::Load {
             let start_va: VirtAddr = ph.virtual_addr().into();
             let alloc_pages = get_pages_num(ph.mem_size() as usize + start_va.0 % 0x1000);
-            info!("申请pages: {}", alloc_pages);
-            info!("剩余页表: {}", get_free_page_num());
             let phy_start = alloc_more(alloc_pages)?;
 
             let ph_offset = ph.offset() as usize;
@@ -208,7 +205,6 @@ pub fn exec<'a>(path: &'a str, args: Vec<&'a str>) -> Result<(), RuntimeError> {
     
     // 任务管理器添加任务
     add_task_to_scheduler(task);
-    warn!("end");  
     Ok(())
 }
 

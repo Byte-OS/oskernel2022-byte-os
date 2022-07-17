@@ -112,3 +112,7 @@ pub fn init() {
     // 设置下一次中断产生时间
     set_next_timeout();
 }
+
+pub fn task_time_refresh() {
+    NEXT_TICKS.force_get().refresh();
+}

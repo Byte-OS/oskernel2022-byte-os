@@ -6,7 +6,7 @@ use super::{UTSname, write_string_to_raw, SYS_CALL_ERR, get_string_from_raw, get
 
 pub fn sys_exit() -> Result<usize, RuntimeError> {
     kill_current_task();
-    Ok(0)
+    Err(RuntimeError::ChangeTask)
 }
 
 pub fn sys_exit_group(exit_code: usize) -> Result<usize, RuntimeError> {
@@ -16,7 +16,7 @@ pub fn sys_exit_group(exit_code: usize) -> Result<usize, RuntimeError> {
     drop(process);
     // suspend_and_run_next();
     // kill_current_task();
-    Ok(0)
+    Err(RuntimeError::ChangeTask)
 }
 
 pub fn sys_set_tid_address(tid_ptr: usize) -> Result<usize, RuntimeError> {
@@ -65,6 +65,11 @@ pub fn sys_getppid() -> Result<usize, RuntimeError> {
     })
 }
 
+pub fn sys_gettid() -> Result<usize, RuntimeError> {
+    let task = get_current_task().unwrap();
+    Ok(task.tid)
+}
+
 pub fn sys_fork() -> Result<usize, RuntimeError> {
     let task = get_current_task().unwrap();
     let mut task_inner = task.inner.borrow_mut();
@@ -81,15 +86,15 @@ pub fn sys_fork() -> Result<usize, RuntimeError> {
     let cpid = child_task.pid;
     task_inner.context.x[10] = cpid;
     drop(task_inner);
-    
+
     let mut child_process = child_process.borrow_mut();
     child_process.mem_set = process.mem_set.clone_with_data()?;
     child_process.stack = process.stack.clone_with_data(child_process.pmm.clone())?;
 
     child_process.pmm.add_mapping_by_set(&child_process.mem_set)?;
     drop(child_process);
-    suspend_and_run_next();
-    Ok(0)
+    // suspend_and_run_next();
+    Err(RuntimeError::ChangeTask)
 }
 
 pub fn sys_clone(flags: usize, new_sp: usize, ptid: usize, tls: usize, ctid: usize) -> Result<usize, RuntimeError> {
@@ -122,7 +127,7 @@ pub fn sys_execve(filename: usize, argv: usize) -> Result<usize, RuntimeError> {
     drop(process);
     exec(&filename, args)?;
     kill_current_task();
-    Ok(0)
+    Err(RuntimeError::ChangeTask)
 }
 
 pub fn sys_wait4(pid: usize, ptr: usize, options: usize) -> Result<usize, RuntimeError> {

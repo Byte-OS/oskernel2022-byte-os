@@ -21,7 +21,8 @@ pub struct Process {
 }
 
 impl Process {
-    pub fn new(pid: usize, parent: Option<Rc<RefCell<Process>>>) -> Result<(Rc<RefCell<Process>>, Rc<Task>), RuntimeError> {
+    pub fn new(pid: usize, parent: Option<Rc<RefCell<Process>>>) 
+        -> Result<(Rc<RefCell<Process>>, Rc<Task>), RuntimeError> {
         let pmm = Rc::new(PageMappingManager::new()?);
         let heap = UserHeap::new()?;
         let process = Self { 
@@ -79,12 +80,5 @@ impl Process {
         task_inner.context.x[10] = exit_code;
         // 进程回收
         kill_pid(task.pid);
-    }
-}
-
-// 在Drop中进行垃圾回收
-impl Drop for Process {
-    fn drop(&mut self) {
-        info!("release page while Droping Process, pid: {}", self.pid);
     }
 }

@@ -17,7 +17,7 @@ pub fn sys_brk(top_pos: usize) -> Result<usize, RuntimeError> {
 pub fn sys_mmap(start: usize, _len: usize, _prot: usize, 
     _flags: usize, fd: usize, _offset: usize) -> Result<usize, RuntimeError> {
     let process = get_current_process();
-    let mut process = process.borrow_mut();
+    let process = process.borrow_mut();
 
     if fd == SYS_CALL_ERR { // 如果是匿名映射
         // let page_num = (len + 4095) / 4096;

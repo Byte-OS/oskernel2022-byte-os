@@ -30,9 +30,7 @@ impl MemSet {
     }
 
     // 释放占用的资源
-    pub fn release(&self) {
-        for x in &self.0 {
-            x.release();
-        }
+    pub fn release(&mut self) {
+        self.0.clear();
     }
 }
