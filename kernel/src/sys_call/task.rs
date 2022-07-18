@@ -21,7 +21,7 @@ impl Task {
         let inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
         process.exit(exit_code);
-
+        info!("exit_code: {:#x}", exit_code);
         Err(RuntimeError::ChangeTask)
     }
     
@@ -171,7 +171,9 @@ impl Task {
         if let Some(target) = target {
             if let Some(exit_code) = target.borrow().exit_code {
                 let result = get_ptr_from_virt_addr::<u16>(process.pmm.clone(), ptr)?;
-                unsafe { result.write(exit_code as u16 + 128) };
+                // unsafe { result.write(exit_code as u16) };
+                unsafe { result.write(exit_code as u16) };
+                // warn!("exit_code: {}", exit_code + 128);
                 is_ok = true;
             }
         }

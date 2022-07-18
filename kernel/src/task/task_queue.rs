@@ -13,10 +13,10 @@ lazy_static! {
         // "runtest.exe -w entry-static.exe clock_gettime",
         // "runtest.exe -w entry-static.exe crypt",
         // "runtest.exe -w entry-static.exe dirname",   
-        // "runtest.exe -w entry-static.exe env",           // 此异常
+        "runtest.exe -w entry-static.exe env",           // 此异常
         // "runtest.exe -w entry-static.exe fdopen",  
         // "runtest.exe -w entry-static.exe fnmatch", // 以上通过
-        "runtest.exe -w entry-static.exe fscanf",
+        // "runtest.exe -w entry-static.exe fscanf",
         // "runtest.exe -w entry-static.exe fwscanf",
         // "runtest.exe -w entry-static.exe iconv_open",
         // "runtest.exe -w entry-static.exe inet_pton",
