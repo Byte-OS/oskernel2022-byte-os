@@ -214,36 +214,6 @@ pub fn exec<'a>(path: &'a str, args: Vec<&'a str>) -> Result<Rc<Task>, RuntimeEr
     exec_with_process(process, task, path, args)
 }
 
-
-// clone任务
-// pub fn clone_task(task_controller: &mut TaskController) -> Result<TaskController, RuntimeError> {
-//     // 创建任务并复制文件信息
-//     let mut task = TaskController::new(get_new_pid())?;
-//     let mut pmm = task.pmm.clone();
-
-//     // 设置任务信息
-//     task.context.clone_from(&mut task_controller.context);
-//     task.entry_point = task_controller.entry_point;
-//     task.ppid = task_controller.pid;
-//     task.fd_table = task_controller.fd_table.clone();
-
-//     let mem_set = task_controller.mem_set.clone_with_data()?;
-
-//     pmm.add_mapping_by_set(&mem_set)?;
-//     task.mem_set = mem_set;
-
-//     // 获取任务对应地址和栈对应地址
-//     let addr = pmm.get_phys_addr(VirtAddr::from(0x13240usize))?;
-    
-//     // 映射栈 
-//     pmm.add_mapping(PhysAddr::from(task_controller.stack.top).into(), 0xf0000usize.into(), PTEFlags::UVRWX)?;
-
-//     // 映射堆
-//     pmm.add_mapping(task_controller.heap.get_addr().into(), 0xf0010usize.into(), PTEFlags::UVRWX)?;
-//     Ok(task)
-// }
-
-
 // 包含更换任务代码
 global_asm!(include_str!("change_task.asm"));
 
