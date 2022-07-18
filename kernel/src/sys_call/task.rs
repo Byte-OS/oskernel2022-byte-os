@@ -96,7 +96,6 @@ impl Task {
         add_task_to_scheduler(child_task.clone());
         let cpid = child_task.pid;
         inner.context.x[10] = cpid;
-
         let mut child_process = child_process.borrow_mut();
         child_process.mem_set = process.mem_set.clone_with_data()?;
         child_process.stack = process.stack.clone_with_data(child_process.pmm.clone())?;
@@ -107,7 +106,6 @@ impl Task {
     }
     
     pub fn sys_clone(&self, flags: usize, new_sp: usize, ptid: usize, tls: usize, ctid: usize) -> Result<(), RuntimeError> {
-        let mut inner = self.inner.borrow_mut();
         info!(
             "clone: flags={:#x}, newsp={:#x}, parent_tid={:#x}, child_tid={:#x}, newtls={:#x}",
             flags, new_sp, ptid, tls, ctid
@@ -118,6 +116,7 @@ impl Task {
             warn!("sys_clone is calling sys_fork instead, ignoring other args");
             return self.sys_fork();
         }
+        let mut inner = self.inner.borrow_mut();
         inner.context.x[10] = 0;
         Ok(())
     }
