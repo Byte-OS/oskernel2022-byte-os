@@ -1,3 +1,4 @@
+use crate::print_file_tree;
 use core::slice;
 
 use alloc::sync::Arc;
@@ -172,13 +173,12 @@ impl Task {
         // 获取文件信息
         let filename = process.pmm.get_phys_addr(VirtAddr::from(filename)).unwrap();
         let filename = get_string_from_raw(filename);
-        let debug_flags = OpenFlags::from_bits(flags as u32);
-        info!("flags: {:?}", debug_flags);
-        let flags = OpenFlags::from_bits(flags as u32).unwrap();
+        let debug_flags = OpenFlags::from_bits_truncate(flags as u32);
+
+        let flags = OpenFlags::from_bits_truncate(flags as u32);
 
         // 判断文件描述符是否存在
         let value = if fd == 0xffffffffffffff9c {
-            info!("读取");
             // 根据文件类型匹配
             if flags.contains(OpenFlags::CREATE) {
                 process.workspace.create(&filename)?;
@@ -340,9 +340,11 @@ impl Task {
         let buf = get_buf_from_phys_addr(buf, count);
 
         // 判断文件描述符是否存在
-        let value = if let Some(file_tree_node) = process.fd_table.get(fd) {
+        let value = if let Some(file_desc) = process.fd_table.get(fd) {
+            let mut file_desc = file_desc.lock();
+            let offset = file_desc.pointer;
             // 匹配文件目标类型
-            match &mut file_tree_node.lock().target {
+            let size = match &mut file_desc.target {
                 FileDescEnum::File(file_tree_node) => {
                     let size = file_tree_node.read_to(buf);
                     size
@@ -353,7 +355,9 @@ impl Task {
                 _ => {
                     SYS_CALL_ERR
                 }
-            }
+            };
+            file_desc.pointer += size;
+            size
         } else {
             SYS_CALL_ERR
         };
@@ -372,11 +376,12 @@ impl Task {
         let buf = get_buf_from_phys_addr(buf, count);
 
         // 判断文件描述符是否存在
-        let value = if let Some(file_tree_node) = process.fd_table.get(fd) {
+        let value = if let Some(file_desc) = process.fd_table.get(fd) {
+            let mut file_desc = file_desc.lock();
             // 判断文件描述符类型
-            match &mut file_tree_node.lock().target {
+            let offset = match &mut file_desc.target {
                 FileDescEnum::File(file_tree) => {
-                    sys_write_wrap(file_tree.clone(),buf_ptr,count);
+                    sys_write_wrap(process.pmm.clone(), file_tree.clone(),buf_ptr,count);
                     count
                 },
                 FileDescEnum::Device(device_name) => {
@@ -398,7 +403,9 @@ impl Task {
                 //     let result_code: isize = -1;
                 //     context.x[10] = result_code as usize;
                 // }
-            }
+            };
+            file_desc.pointer += offset;
+            offset
         } else {
             SYS_CALL_ERR
         };
@@ -443,6 +450,40 @@ impl Task {
                     SYS_CALL_ERR
                 }
             }
+        } else {
+            SYS_CALL_ERR
+        };
+        drop(process);
+        inner.context.x[10] = value;
+        Ok(())
+    }
+
+    pub fn sys_lseek(&self, fd: usize, offset: usize, whence: usize) -> Result<(), RuntimeError> {
+        let mut inner = self.inner.borrow_mut();
+        let process = inner.process.borrow_mut();
+        // 判断文件描述符是否存在
+        let value = if let Some(file_desc) = process.fd_table.get(fd) {
+            let mut file_desc = file_desc.lock();
+            let offset = match whence {
+                // SEEK_SET
+                0 => {
+                    offset
+                }
+                // SEEK_CUR
+                1 => {
+                    file_desc.pointer + offset
+                }
+                // SEEK_END
+                2 => {
+                    0
+                }
+                _ => {
+                    warn!("未识别whence");
+                    0
+                }
+            };
+            file_desc.pointer = offset;
+            offset
         } else {
             SYS_CALL_ERR
         };

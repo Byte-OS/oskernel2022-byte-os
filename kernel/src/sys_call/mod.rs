@@ -1,9 +1,9 @@
 use core::slice;
 
-use alloc::{string::String, vec::Vec};
+use alloc::{string::String, vec::Vec, rc::Rc};
 use riscv::register::{satp, sepc, scause::{self, Trap, Exception, Interrupt}, stval};
 
-use crate::{memory::{page_table::PageMapping, addr::{VirtAddr, PhysPageNum, PhysAddr}}, interrupt::timer};
+use crate::{memory::{page_table::{PageMapping, PageMappingManager}, addr::{VirtAddr, PhysPageNum, PhysAddr}}, interrupt::timer};
 
 use crate::fs::{filetree::FileTreeNode, file::FileType};
 use crate::interrupt::timer::set_last_ticks;
@@ -28,8 +28,10 @@ pub const SYS_OPENAT:usize  = 56;
 pub const SYS_CLOSE: usize  = 57;
 pub const SYS_PIPE2: usize  = 59;
 pub const SYS_GETDENTS:usize= 61;
+pub const SYS_LSEEK: usize  = 62;
 pub const SYS_READ:  usize  = 63;
 pub const SYS_WRITE: usize  = 64;
+pub const SYS_WRITEV: usize = 66;
 pub const SYS_FSTAT: usize  = 80;
 pub const SYS_EXIT:  usize  = 93;
 pub const SYS_EXIT_GROUP: usize = 94;
@@ -87,9 +89,8 @@ struct Dirent {
 }
 
 // sys_write调用
-pub fn sys_write_wrap(fd: FileTreeNode, buf: usize, count: usize) -> usize {
+pub fn sys_write_wrap(pmm: Rc<PageMappingManager>, fd: FileTreeNode, buf: usize, count: usize) -> usize {
     // 根据satp中的地址构建PageMapping 获取当前的映射方式
-    let pmm = PageMapping::from(PhysPageNum(satp::read().bits()).to_addr());
     let buf = pmm.get_phys_addr(VirtAddr::from(buf)).unwrap();
 
     // 寻找物理地址
@@ -173,6 +174,8 @@ impl Task {
             SYS_PIPE2 => self.sys_pipe2(args[0]),
             // 获取文件节点
             SYS_GETDENTS => self.sys_getdents(args[0], args[1], args[2]),
+            // 移动读取位置
+            SYS_LSEEK => self.sys_lseek(args[0], args[1], args[2]),
             // 读取文件描述符
             SYS_READ => self.sys_read(args[0], args[1], args[2]),
             // 写入文件数据

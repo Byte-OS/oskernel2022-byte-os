@@ -4,7 +4,11 @@ use crate::{sync::mutex::Mutex, memory::addr::PAGE_SIZE, runtime_err::RuntimeErr
 
 use super::{addr::{PhysPageNum, VirtAddr}, page_table::PageMappingManager};
 
+#[cfg(not(feature = "board_k210"))]
 const ADDR_END: usize = 0x80800000;
+
+#[cfg(feature = "board_k210")]
+const ADDR_END: usize = 0x809e0000;
 
 // 内存页分配器
 pub struct MemoryPageAllocator {

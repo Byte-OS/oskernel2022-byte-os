@@ -50,6 +50,7 @@ pub enum FileDescEnum {
 // 文件描述符
 pub struct FileDesc {
     pub target: FileDescEnum,
+    pub pointer: usize,
     pub readable: bool,
     pub writable: bool
 }
@@ -59,6 +60,7 @@ impl FileDesc {
     pub fn new(target: FileDescEnum) -> Self {
         FileDesc {
             target,
+            pointer: 0,
             readable: true,
             writable: true
         }
@@ -69,11 +71,13 @@ impl FileDesc {
         let buf = PipeBuf::new();
         let read_pipe = FileDesc {
             target: FileDescEnum::Pipe(buf.clone()),
+            pointer: 0,
             readable: true,
             writable: false
         };
         let write_pipe = FileDesc {
             target: FileDescEnum::Pipe(buf.clone()),
+            pointer: 0,
             readable: false,
             writable: true
         };
