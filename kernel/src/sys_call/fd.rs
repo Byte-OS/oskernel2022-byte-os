@@ -172,11 +172,13 @@ impl Task {
         // 获取文件信息
         let filename = process.pmm.get_phys_addr(VirtAddr::from(filename)).unwrap();
         let filename = get_string_from_raw(filename);
-
+        let debug_flags = OpenFlags::from_bits(flags as u32);
+        info!("flags: {:?}", debug_flags);
         let flags = OpenFlags::from_bits(flags as u32).unwrap();
 
         // 判断文件描述符是否存在
         let value = if fd == 0xffffffffffffff9c {
+            info!("读取");
             // 根据文件类型匹配
             if flags.contains(OpenFlags::CREATE) {
                 process.workspace.create(&filename)?;

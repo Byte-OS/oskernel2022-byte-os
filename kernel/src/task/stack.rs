@@ -76,6 +76,7 @@ impl UserStack {
     }
 
     pub fn init_args(&mut self, args: Vec<&str>, _envp: Vec<&str>, auxv: BTreeMap<usize, usize>) {
+        // let envp = self.push_str("OS=PATH");
         let args: Vec<usize> = args.iter().map(|x| self.push_str(x)).collect();
         // auxv top
         self.push(0);
@@ -86,7 +87,7 @@ impl UserStack {
         }
         // envp top
         self.push(0);
-
+        // self.push(envp);
         // argv top
         self.push(0);
 

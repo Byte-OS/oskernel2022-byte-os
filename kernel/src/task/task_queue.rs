@@ -7,14 +7,14 @@ use super::exec;
 
 lazy_static! {
     pub static ref TASK_QUEUE: Mutex<VecDeque<&'static str>> = Mutex::new(VecDeque::from(vec![
-        "runtest.exe -w entry-static.exe argv",
-        "runtest.exe -w entry-static.exe basename",
-        "runtest.exe -w entry-static.exe clocale_mbfuncs",
-        "runtest.exe -w entry-static.exe clock_gettime",
-        "runtest.exe -w entry-static.exe crypt",
-        "runtest.exe -w entry-static.exe dirname",
-        "runtest.exe -w entry-static.exe env",
-        // "runtest.exe -w entry-static.exe fdopen",
+        // "runtest.exe -w entry-static.exe argv",
+        // "runtest.exe -w entry-static.exe basename",
+        // "runtest.exe -w entry-static.exe clocale_mbfuncs",
+        // "runtest.exe -w entry-static.exe clock_gettime",
+        // "runtest.exe -w entry-static.exe crypt",
+        // "runtest.exe -w entry-static.exe dirname",   // 以上通过
+        // "runtest.exe -w entry-static.exe env",
+        "runtest.exe -w entry-static.exe fdopen",
         // "runtest.exe -w entry-static.exe fnmatch",
         // "runtest.exe -w entry-static.exe fscanf",
         // "runtest.exe -w entry-static.exe fwscanf",

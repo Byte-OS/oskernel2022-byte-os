@@ -208,7 +208,7 @@ impl Task {
             // 复制进程信息
             SYS_CLONE => self.sys_clone(args[0], args[1], args[2], args[3], args[4]),
             // 执行文件
-            SYS_EXECVE => self.sys_execve(args[0], args[1]),
+            SYS_EXECVE => self.sys_execve(args[0].into(), args[1].into(), args[2].into()),
             // 进行文件映射
             SYS_MMAP => self.sys_mmap(args[0], args[1], args[2], args[3], args[4], args[5]),
             // 取消文件映射
@@ -216,7 +216,7 @@ impl Task {
             // 等待进程
             SYS_WAIT4 => self.sys_wait4(args[0], args[1].into(), args[2]),
             _ => {
-                // warn!("未识别调用号 {}", call_type);
+                warn!("未识别调用号 {}", call_type);
                 Ok(())
             }
         }
@@ -248,7 +248,7 @@ impl Task {
             // 用户请求
             Trap::Exception(Exception::UserEnvCall) => {
                 // 将 恢复地址 + 4 跳过调用地址
-                // info!("中断号: {} 调用地址: {:#x}", context.x[17], sepc::read());
+                info!("中断号: {} 调用地址: {:#x}", context.x[17], sepc::read());
 
                 // 对sepc + 4
                 context.sepc += 4;

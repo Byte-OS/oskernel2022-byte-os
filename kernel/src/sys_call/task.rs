@@ -130,18 +130,29 @@ impl Task {
         Ok(())
     }
     
-    pub fn sys_execve(&self, filename: usize, argv: usize) -> Result<(), RuntimeError> {
+    pub fn sys_execve(&self, filename: VirtAddr, argv: VirtAddr, envp: VirtAddr) -> Result<(), RuntimeError> {
         let inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
-        let filename = process.pmm.get_phys_addr(filename.into()).unwrap();
+        let filename = process.pmm.get_phys_addr(filename).unwrap();
         let filename = get_string_from_raw(filename);
-        let argv_ptr = process.pmm.get_phys_addr(argv.into()).unwrap();
+        // 获取argv
+        let argv_ptr = process.pmm.get_phys_addr(argv).unwrap();
         let args = get_usize_vec_from_raw(argv_ptr);
         let args: Vec<PhysAddr> = args.iter().map(
             |x| process.pmm.get_phys_addr(VirtAddr::from(x.clone())).expect("can't transfer")
         ).collect();
         let args: Vec<String> = args.iter().map(|x| get_string_from_raw(x.clone())).collect();
         let args: Vec<&str> = args.iter().map(AsRef::as_ref).collect();
+        // 获取 envp
+        let envp_ptr = process.pmm.get_phys_addr(envp).unwrap();
+        let envp = get_usize_vec_from_raw(envp_ptr);
+        let envp: Vec<PhysAddr> = envp.iter().map(
+            |x| process.pmm.get_phys_addr(VirtAddr::from(x.clone())).expect("can't transfer")
+        ).collect();
+        let envp: Vec<String> = envp.iter().map(|x| get_string_from_raw(x.clone())).collect();
+        for i in envp {
+            info!("envp: {}", i);
+        }
         let task = process.tasks[self.tid].clone().upgrade().unwrap();
         process.reset()?;
         drop(process);
