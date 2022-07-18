@@ -55,7 +55,7 @@ k210:
 	@dd if=$(BIN_FILE) of=$(BOOTLOADER_K210).copy bs=131072 seek=1
 	@mv $(BOOTLOADER_K210).copy $(BIN_FILE)
 
-flash: 
+flash: k210
 	(which $(K210-BURNER)) || (cd .. && git clone https://hub.fastgit.xyz/sipeed/kflash.py.git && mv kflash.py tools)
 	@sudo chmod 777 $(K210-SERIALPORT)
 	python3 $(K210-BURNER) -p $(K210-SERIALPORT) -b 1500000 $(BIN_FILE)
