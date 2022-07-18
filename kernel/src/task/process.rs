@@ -4,7 +4,7 @@ use alloc::{vec::Vec, rc::{Rc, Weak}};
 
 use crate::{memory::{page_table::PageMappingManager, mem_set::MemSet, addr::VirtAddr}, fs::filetree::{FileTreeNode, open}, runtime_err::RuntimeError, interrupt::timer::TMS};
 
-use super::{task::{Task, TaskStatus}, stack::UserStack, UserHeap, fd_table::FDTable, task_scheduler::{kill_pid, NEXT_PID}, pid::PidGenerater};
+use super::{task::{Task, TaskStatus}, stack::UserStack, UserHeap, fd_table::FDTable, task_scheduler::kill_pid};
 
 pub struct Process {
     pub pid: usize,                             // 进程id

@@ -1,6 +1,6 @@
 use alloc::{vec::Vec, collections::BTreeMap, rc::Rc};
 
-use crate::{memory::{page_table::{PageMapping, PTEFlags, PageMappingManager}, addr::VirtAddr, mem_set::{MemSet, self}, mem_map::MemMap}, runtime_err::RuntimeError};
+use crate::{memory::{page_table::{PTEFlags, PageMappingManager}, addr::VirtAddr, mem_set::MemSet, mem_map::MemMap}, runtime_err::RuntimeError};
 
 
 const PTR_SIZE: usize = 8;

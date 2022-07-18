@@ -20,6 +20,7 @@ mod sync;
 pub mod task;
 pub mod runtime_err;
 pub mod elf;
+pub mod sys_call;
 
 #[macro_use]
 extern crate bitflags;
@@ -56,10 +57,10 @@ fn clear_bss() {
 }
 
 #[no_mangle]
-pub extern "C" fn rust_main(hartid: usize, device_tree_paddr: usize) -> ! {
+pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
     // // 保证仅有一个核心工作
     #[cfg(not(debug_assertions))]
-    if hartid != 0 {
+    if hart_id != 0 {
         sbi::hart_suspend(0x00000000, support_hart_resume as usize, 0);
     }
     
@@ -67,8 +68,8 @@ pub extern "C" fn rust_main(hartid: usize, device_tree_paddr: usize) -> ! {
     clear_bss();
 
     // 输出设备信息
-    info!("当前核心 {}", hartid);
-    info!("设备树地址 {:#x}", device_tree_paddr);
+    info!("当前核心 {}", hart_id);
+    info!("设备树地址 {:#x}", device_tree_p_addr);
 
     // 提示信息
     info!("Welcome to test os!");
@@ -89,41 +90,8 @@ pub extern "C" fn rust_main(hartid: usize, device_tree_paddr: usize) -> ! {
     // 输出文件树
     print_file_tree(FILETREE.lock().open("/").unwrap());
 
-    // // 测试读取文件
-    // match FILETREE.lock().open("text.txt") {
-    //     Ok(file_txt) => {
-    //         let file_txt = file_txt.to_file();
-    //         let file_txt_content = file_txt.read();
-    //         info!("读取到内容: {}", file_txt.size);
-    //         info!("文件内容：{}", String::from_utf8_lossy(&file_txt_content));
-    //     }
-    //     Err(err) => {
-    //         info!("读取文件错误: {}", &err);
-    //     }
-    // };
-    
-
     // 初始化多任务
     task::init();
-
-    // unsafe {
-    //     loop {
-    //         // 正常使用代码
-    //         // 等待中断产生
-    //         asm!("WFI");
-    //         if TICKS >= 1000 {
-    //             info!("继续执行");
-    //             break;
-    //         }
-    //         if TICKS % 100 == 0 {
-    //             info!("{} TICKS", TICKS);
-    //         }
-    //     }
-    // }
-
-    // let mut words = String::new();
-    // read_line_display(&mut words);
-    // info!("I say {}", words);
 
     // 调用rust api关机
     // shutdown()

@@ -126,7 +126,7 @@ __load_kernel_context:
     csrrw a0, satp, a0
     sfence.vma
 
-    la a0, int_callback_entry
+    la a0, kernel_callback_entry
     csrw stvec, a0
     
     # 回收栈

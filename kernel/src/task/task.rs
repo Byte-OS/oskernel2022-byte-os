@@ -1,8 +1,8 @@
 use core::cell::RefCell;
 
-use alloc::{rc::Rc, sync::Arc};
+use alloc::rc::Rc;
 
-use crate::{interrupt::Context, memory::{page_table::PagingMode, addr::{PhysPageNum, PhysAddr}}};
+use crate::{interrupt::Context, memory::page_table::PagingMode};
 
 use super::{process::Process, task_scheduler::kill_pid};
 

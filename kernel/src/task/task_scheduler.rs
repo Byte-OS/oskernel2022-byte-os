@@ -1,9 +1,8 @@
-use core::{cell::RefCell};
+use core::cell::RefCell;
 
-use alloc::{collections::VecDeque, rc::Rc, vec::Vec, sync::Arc};
-use riscv::register::{stval, scause::{Scause, self}};
+use alloc::{collections::VecDeque, rc::Rc};
 
-use crate::{sync::mutex::Mutex, task::pid::PidGenerater, memory::page_table::switch_to_kernel_page, interrupt::{timer::task_time_refresh, Context, interrupt_callback}};
+use crate::{sync::mutex::Mutex, task::pid::PidGenerater, interrupt::timer::task_time_refresh};
 
 use super::{task::{Task, TaskStatus}, task_queue::load_next_task, get_current_task, process::Process};
 
@@ -78,12 +77,7 @@ impl TaskScheduler {
             let task = self.current.clone().unwrap();
             self.is_run = true;
             task.run();
-            let task_inner = task.inner.borrow_mut();
-            let context = &task_inner.context as *const Context as usize as 
-                *mut Context;
-            drop(task_inner);
-            let context = unsafe { &mut *(context) };
-            interrupt_callback(context, scause::read(), stval::read());
+            task.catch();
         }
     }
 
@@ -122,10 +116,6 @@ lazy_static! {
 }
 
 pub fn start_tasks() {
-    extern "C" {
-        // 改变任务
-        fn change_task(pte: usize, stack: usize);
-    }
     // 刷新下一个调度时间
     // info!("开始任务");
     task_time_refresh();

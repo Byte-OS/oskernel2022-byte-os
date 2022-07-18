@@ -117,3 +117,13 @@ pub fn task_time_refresh() {
     NEXT_TICKS.force_get().refresh();
     set_next_timeout();
 }
+
+#[inline]
+pub fn get_ticks() -> usize {
+    unsafe {TICKS}
+}
+
+#[inline]
+pub fn set_last_ticks() {
+    unsafe {LAST_TICKS = TICKS};
+}
