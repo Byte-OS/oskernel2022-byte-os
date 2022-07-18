@@ -8,7 +8,7 @@ use super::{task::{Task, TaskStatus}, stack::UserStack, UserHeap, fd_table::FDTa
 
 pub struct Process {
     pub pid: usize,                             // 进程id
-    pub parent: Option<Rc<RefCell<Process>>>,   // 父进程
+    pub parent: Option<Weak<RefCell<Process>>>,   // 父进程
     pub pmm: Rc<PageMappingManager>,            // 内存页映射管理 
     pub mem_set: MemSet,                        // 内存使用集
     pub tasks: Vec<Weak<Task>>,                 // 任务管理器
@@ -18,10 +18,12 @@ pub struct Process {
     pub workspace: FileTreeNode,                // 工作目录
     pub fd_table: FDTable,                      // 文件描述表
     pub tms: TMS,                               // 时间记录结构
+    pub children: Vec<Rc<RefCell<Process>>>,    // 子结构
+    pub exit_code: Option<usize>                // 退出代码
 }
 
 impl Process {
-    pub fn new(pid: usize, parent: Option<Rc<RefCell<Process>>>) 
+    pub fn new(pid: usize, parent: Option<Weak<RefCell<Process>>>)
         -> Result<(Rc<RefCell<Process>>, Rc<Task>), RuntimeError> {
         let pmm = Rc::new(PageMappingManager::new()?);
         let heap = UserHeap::new()?;
@@ -36,7 +38,9 @@ impl Process {
             heap, 
             workspace: open("/")?.clone(), 
             fd_table: FDTable::new(),
-            tms: TMS::new()
+            children: vec![],
+            tms: TMS::new(),
+            exit_code: None
         };
         // 创建默认任务
         let process = Rc::new(RefCell::new(process));

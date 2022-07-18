@@ -1,13 +1,12 @@
-use alloc::{vec::Vec, string::String};
+use alloc::{vec::Vec, string::String, rc::Rc};
 
-use crate::{task::{kill_current_task, task_scheduler::add_task_to_scheduler, exec, wait_task, process::Process, pid::get_next_pid, task::Task}, runtime_err::RuntimeError, memory::addr::{PhysAddr, VirtAddr}};
+use crate::{task::{task_scheduler::{add_task_to_scheduler, switch_next}, exec, process::Process, pid::get_next_pid, task::Task, exec_with_process}, runtime_err::RuntimeError, memory::{addr::{PhysAddr, VirtAddr}, page::{get_mut_from_virt_addr, get_ptr_from_virt_addr}}};
 use crate::task::task::TaskStatus;
 
 use super::{UTSname, write_string_to_raw, SYS_CALL_ERR, get_string_from_raw, get_usize_vec_from_raw};
 
 impl Task {
     pub fn sys_exit(&self) -> Result<(), RuntimeError> {
-        kill_current_task();
         Err(RuntimeError::ChangeTask)
     }
     
@@ -15,8 +14,7 @@ impl Task {
         let inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
         process.exit(exit_code);
-        // suspend_and_run_next();
-        // kill_current_task();
+
         Err(RuntimeError::ChangeTask)
     }
     
@@ -68,7 +66,11 @@ impl Task {
         let process = process.borrow();
 
         inner.context.x[10] = match &process.parent {
-            Some(parent) => parent.borrow().pid,
+            Some(parent) => {
+                let parent = parent.upgrade().unwrap();
+                let x = parent.borrow().pid; 
+                x
+            },
             None => SYS_CALL_ERR
         };
 
@@ -87,7 +89,7 @@ impl Task {
         let process = process.borrow_mut();
 
         let (child_process, child_task) =
-            Process::new(get_next_pid(), Some(inner.process.clone()))?;
+            Process::new(get_next_pid(), Some(Rc::downgrade(&inner.process)))?;
 
         let mut child_task_inner = child_task.inner.borrow_mut();
         child_task_inner.context.clone_from(&inner.context);
@@ -133,22 +135,38 @@ impl Task {
         ).collect();
         let args: Vec<String> = args.iter().map(|x| get_string_from_raw(x.clone())).collect();
         let args: Vec<&str> = args.iter().map(AsRef::as_ref).collect();
+        let task = process.tasks[self.tid].clone().upgrade().unwrap();
         drop(process);
-        exec(&filename, args)?;
-        kill_current_task();
-        Err(RuntimeError::ChangeTask)
+        let process = inner.process.clone();
+        drop(inner);
+        exec_with_process(process, task, &filename, args)?;
+        Ok(())
     }
     
-    pub fn sys_wait4(&self, pid: usize, ptr: usize, options: usize) -> Result<(), RuntimeError> {
+    pub fn sys_wait4(&self, pid: usize, ptr: VirtAddr, options: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
         info!("wait pid: {}, current pid: {}", pid, process.pid);
-        let ptr = usize::from(process.pmm.get_phys_addr(ptr.into()).unwrap()) as *mut u16;
-        // wait_task中进行上下文大小
-        wait_task(pid, ptr, options);
+
+        let mut is_ok = false;
+        let target = process.children.iter().find(|&x| x.borrow().pid == pid);
+        if let Some(target) = target {
+            if let Some(exit_code) = target.borrow().exit_code {
+                let result = get_ptr_from_virt_addr::<u16>(process.pmm.clone(), ptr)?;
+                unsafe { result.write(exit_code as u16) };
+                is_ok = true;
+            }
+        }
         drop(process);
-        inner.context.x[10] = 0;
-        Ok(())
+        if is_ok {
+            inner.context.x[10] = 0;
+            return Ok(())
+        } else {
+            inner.context.sepc -= 4;
+            drop(inner);
+            switch_next();
+            Err(RuntimeError::ChangeTask)
+        }
     }
     
     pub fn sys_kill(&self, pid: usize, signum: usize) -> Result<(), RuntimeError> {

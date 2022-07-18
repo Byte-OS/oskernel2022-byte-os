@@ -214,7 +214,7 @@ impl Task {
             // 取消文件映射
             SYS_MUNMAP => self.sys_munmap(args[0], args[1]),
             // 等待进程
-            SYS_WAIT4 => self.sys_wait4(args[0], args[1], args[2]),
+            SYS_WAIT4 => self.sys_wait4(args[0], args[1].into(), args[2]),
             _ => {
                 warn!("未识别调用号 {}", call_type);
                 Ok(())

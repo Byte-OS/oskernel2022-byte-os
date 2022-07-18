@@ -1,8 +1,8 @@
-use alloc::vec::Vec;
+use alloc::{vec::Vec, rc::Rc};
 
 use crate::{sync::mutex::Mutex, memory::addr::PAGE_SIZE, runtime_err::RuntimeError};
 
-use super::addr::PhysPageNum;
+use super::{addr::{PhysPageNum, VirtAddr}, page_table::PageMappingManager};
 
 const ADDR_END: usize = 0x80800000;
 
@@ -116,6 +116,17 @@ pub fn get_free_page_num() -> usize {
         }
     }
     last_pages
+}
+
+#[inline]
+pub fn get_mut_from_virt_addr<'a, T>(pmm: Rc<PageMappingManager>, addr: VirtAddr) -> Result<&'a mut T, RuntimeError>{
+    let result = pmm.get_phys_addr(addr)?.0 as *mut T;
+    Ok(unsafe {result.as_mut().unwrap()})
+}
+
+#[inline]
+pub fn get_ptr_from_virt_addr<'a, T>(pmm: Rc<PageMappingManager>, addr: VirtAddr) -> Result<*mut T, RuntimeError>{
+    Ok(pmm.get_phys_addr(addr)?.0 as *mut T)
 }
 
 pub fn init() {

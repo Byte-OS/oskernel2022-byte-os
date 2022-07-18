@@ -1,4 +1,5 @@
 use core::arch::global_asm;
+use core::cell::RefCell;
 
 use alloc::collections::BTreeMap;
 use alloc::rc::Rc;
@@ -6,17 +7,16 @@ use alloc::string::String;
 use alloc::vec::Vec;
 use crate::elf::{self, ElfExtra};
 use crate::fs::filetree::FileTreeNode;
-use crate::interrupt::timer::NEXT_TICKS;
 use crate::memory::addr::{get_pages_num, get_buf_from_phys_page};
 use crate::memory::mem_map::MemMap;
-use crate::memory::page::{alloc_more, dealloc_more, get_free_page_num};
+use crate::memory::page::{alloc_more, dealloc_more};
 use crate::runtime_err::RuntimeError;
 use crate::task::process::Process;
-use crate::task::task_scheduler::{start_tasks, add_task_to_scheduler};
+use crate::task::task_scheduler::start_tasks;
 use crate::{memory::{page_table::PTEFlags, addr::{PAGE_SIZE, VirtAddr, PhysAddr, PhysPageNum}, page::PAGE_ALLOCATOR}, fs::filetree::FILETREE};
 use self::pipe::PipeBuf;
 use self::task::Task;
-use self::task_scheduler::{TASK_SCHEDULER, NEXT_PID, scheduler_to_next};
+use self::task_scheduler::NEXT_PID;
 
 pub mod pipe;
 pub mod task_queue;
@@ -115,8 +115,8 @@ pub fn get_new_pid() -> usize {
     NEXT_PID.lock().next()
 }
 
-// 执行一个程序 path: 文件名 思路：加入程序准备池  等待执行  每过一个时钟周期就执行一次
-pub fn exec<'a>(path: &'a str, args: Vec<&'a str>) -> Result<(), RuntimeError> { 
+pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path: &'a str, args: Vec<&'a str>) 
+        -> Result<Rc<Task>, RuntimeError> {
     // 如果存在write
     let program = FILETREE.lock().open(path)?;
 
@@ -139,7 +139,6 @@ pub fn exec<'a>(path: &'a str, args: Vec<&'a str>) -> Result<(), RuntimeError> {
     assert_eq!(magic, [0x7f, 0x45, 0x4c, 0x46], "invalid elf!");
 
     // 创建新的任务控制器 并映射栈
-    let (process, task) = Process::new(get_new_pid(), None)?;
     let mut process = process.borrow_mut();
 
     // 重新映射内存 并设置头
@@ -189,6 +188,7 @@ pub fn exec<'a>(path: &'a str, args: Vec<&'a str>) -> Result<(), RuntimeError> {
     
     // 更新context
     let mut task_inner = task.inner.borrow_mut();
+    task_inner.context.x.fill(0);
     task_inner.context.sepc = entry_point;
     task_inner.context.x[2] =process.stack.get_stack_top();
     drop(task_inner);
@@ -204,36 +204,16 @@ pub fn exec<'a>(path: &'a str, args: Vec<&'a str>) -> Result<(), RuntimeError> {
     dealloc_more(elf_phy_start, elf_pages);
     
     // 任务管理器添加任务
-    add_task_to_scheduler(task);
-    Ok(())
+    Ok(task)
 }
 
-
-// 等待当前任务并切换到下一个任务
-pub fn suspend_and_run_next() {
-    let task_scheduler = TASK_SCHEDULER.force_get();
-    if !task_scheduler.is_run {
-        return;
-    }
-    // 刷新下一个调度的时间
-    NEXT_TICKS.force_get().refresh();
-    scheduler_to_next();
+// 执行一个程序 path: 文件名 思路：加入程序准备池  等待执行  每过一个时钟周期就执行一次
+pub fn exec<'a>(path: &'a str, args: Vec<&'a str>) -> Result<Rc<Task>, RuntimeError> { 
+    // 创建新的任务控制器 并映射栈
+    let (process, task) = Process::new(get_new_pid(), None)?;
+    exec_with_process(process, task, path, args)
 }
 
-// 获取当前任务
-pub fn get_current_task() ->Option<Rc<Task>> {
-    TASK_SCHEDULER.force_get().current.clone()
-}
-
-// 等待任务
-pub fn wait_task(pid: usize, status: *mut u16, _options: usize) {
-    
-}
-
-// 杀死当前任务
-pub fn kill_current_task() {
-    TASK_SCHEDULER.force_get().kill_current();
-}
 
 // clone任务
 // pub fn clone_task(task_controller: &mut TaskController) -> Result<TaskController, RuntimeError> {

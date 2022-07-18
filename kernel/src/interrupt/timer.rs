@@ -1,5 +1,5 @@
 use crate::sync::mutex::Mutex;
-use crate::{sbi::set_timer, task::suspend_and_run_next};
+use crate::sbi::set_timer;
 use riscv::register::{sie, sstatus, time};
 
 #[cfg(not(feature = "board_k210"))]
@@ -90,7 +90,7 @@ pub fn timer_handler() {
     }
     // 判断是否需要更换任务
     if NEXT_TICKS.force_get().need_change(unsafe { TICKS }) {
-        suspend_and_run_next();
+        // suspend_and_run_next();
     }
 }
 

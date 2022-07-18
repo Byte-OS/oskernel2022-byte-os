@@ -1,4 +1,4 @@
-use crate::{runtime_err::RuntimeError, task::{suspend_and_run_next, task::Task}, interrupt::timer::{TimeSpec, TMS}};
+use crate::{runtime_err::RuntimeError, task::task::Task, interrupt::timer::{TimeSpec, TMS}};
 use crate::interrupt::timer::get_ticks;
 
 impl Task {
@@ -22,7 +22,6 @@ impl Task {
             } else {
                 // 减少spec进行重复请求 然后切换任务
                 inner.context.sepc -= 4;
-                suspend_and_run_next();
                 0
             }
         } else {
@@ -33,7 +32,6 @@ impl Task {
             rem.tv_nsec = - (remain_ticks as i64);
             // 减少spec进行重复请求 然后切换任务
             inner.context.sepc -= 4;
-            suspend_and_run_next();
             0
         };
         Ok(())

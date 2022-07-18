@@ -1,6 +1,6 @@
 use alloc::vec::Vec;
 
-use crate::{sync::mutex::Mutex, memory::page::get_free_page_num};
+use crate::{sync::mutex::Mutex, memory::page::get_free_page_num, task::task_scheduler::add_task_to_scheduler};
 
 
 use super::exec;
@@ -18,16 +18,19 @@ lazy_static! {
 pub fn exec_by_str(str: &str) {
     let args: Vec<&str> = str.split(" ").collect();
     info!("执行任务: {}", str);
-    exec(args[0], args[0..].to_vec());
+    if let Ok(task) = exec(args[0], args[0..].to_vec()) {
+        add_task_to_scheduler(task);
+    }
 }
 
 // 加载下一个任务
-pub fn load_next_task() {
+pub fn load_next_task() -> bool {
     if let Some(pro_name) = TASK_QUEUE.lock().pop() {
-        exec_by_str(pro_name)
+        exec_by_str(pro_name);
+        true
     } else {
         info!("剩余页表: {}", get_free_page_num());
-        panic!("已无任务");
+        false
     }
 }
 
