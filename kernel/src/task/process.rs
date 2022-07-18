@@ -4,7 +4,7 @@ use alloc::{vec::Vec, rc::{Rc, Weak}};
 
 use crate::{memory::{page_table::PageMappingManager, mem_set::MemSet, addr::VirtAddr}, fs::filetree::{FileTreeNode, open}, runtime_err::RuntimeError, interrupt::timer::TMS};
 
-use super::{task::{Task, TaskStatus}, stack::UserStack, UserHeap, fd_table::FDTable, task_scheduler::kill_pid};
+use super::{task::{Task, TaskStatus}, stack::UserStack, UserHeap, fd_table::FDTable, task_scheduler::kill_process};
 
 pub struct Process {
     pub pid: usize,                             // 进程id
@@ -78,11 +78,25 @@ impl Process {
     // 结束进程
     pub fn exit(&mut self, exit_code: usize) {
         // 如果没有子进程
-        let task = self.get_task(0);
-        let mut task_inner = task.inner.borrow_mut();
-        task_inner.status = TaskStatus::READY;
-        task_inner.context.x[10] = exit_code;
+        self.exit_code = Some(exit_code);
         // 进程回收
-        kill_pid(task.pid);
+        kill_process(self.pid);
+    }
+
+    // 重置内存信息
+    pub fn reset(&mut self) -> Result<(), RuntimeError>{
+        let pmm = Rc::new(PageMappingManager::new()?);
+        let mem_set = MemSet::new();
+        self.pmm = pmm;
+        self.mem_set = mem_set;
+        self.stack = UserStack::new(self.pmm.clone())?;
+        Ok(())
+    }
+
+    // 释放内存
+    pub fn release(&mut self) {
+        self.stack.release();
+        self.mem_set.release();
+        self.pmm.release();
     }
 }

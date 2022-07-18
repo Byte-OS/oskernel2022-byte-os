@@ -338,6 +338,12 @@ impl PageMappingManager {
         let mut mem_set = self.mem_set.borrow_mut();
         mem_set.append(target_mem_set);
     }
+
+    // 释放内存资源
+    pub fn release(&self) {
+        let mut mem_set = self.mem_set.borrow_mut();
+        mem_set.release();
+    }
 }
 
 lazy_static! {

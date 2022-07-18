@@ -51,8 +51,13 @@ impl TaskScheduler {
     }
 
     // 关闭进程
-    pub fn kill_pid(&mut self, pid: usize) {
+    pub fn kill_process(&mut self, pid: usize) {
         self.queue = self.queue.clone().into_iter().filter(|x| x.pid != pid).collect();
+    }
+
+    // 关闭进程
+    pub fn kill_task(&mut self, pid: usize, tid: usize) {
+        self.queue = self.queue.clone().into_iter().filter(|x| x.pid != pid || x.tid != tid).collect();
     }
 }
 
@@ -75,12 +80,12 @@ pub fn add_task_to_scheduler(task: Rc<Task>) {
     TASK_SCHEDULER.force_get().add_task(task);
 }
 
-pub fn kill_pid(pid: usize) {
-    TASK_SCHEDULER.force_get().kill_pid(pid);
+pub fn kill_process(pid: usize) {
+    TASK_SCHEDULER.force_get().kill_process(pid);
 }
 
-pub fn get_tasks_len() -> usize {
-    TASK_SCHEDULER.force_get().queue.len()
+pub fn kill_task(pid: usize, tid: usize) {
+    TASK_SCHEDULER.force_get().kill_task(pid, tid);
 }
 
 pub fn switch_next() {

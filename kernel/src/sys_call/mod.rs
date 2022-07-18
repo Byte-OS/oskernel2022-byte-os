@@ -180,7 +180,7 @@ impl Task {
             // 获取文件数据信息
             SYS_FSTAT => self.sys_fstat(args[0], args[1]),
             // 退出文件信息
-            SYS_EXIT => self.sys_exit(),
+            SYS_EXIT => self.sys_exit(args[0]),
             // 退出组
             SYS_EXIT_GROUP => self.sys_exit_group(args[0]),
             // 设置tid
@@ -216,7 +216,7 @@ impl Task {
             // 等待进程
             SYS_WAIT4 => self.sys_wait4(args[0], args[1].into(), args[2]),
             _ => {
-                warn!("未识别调用号 {}", call_type);
+                // warn!("未识别调用号 {}", call_type);
                 Ok(())
             }
         }
@@ -227,7 +227,7 @@ impl Task {
         let stval = stval::read();
         let mut task_inner = self.inner.borrow_mut();
         let context = &mut task_inner.context;
-        warn!("中断发生: {:#x}, 地址: {:#x}", scause.bits(), context.sepc);
+        // warn!("中断发生: {:#x}, 地址: {:#x}", scause.bits(), context.sepc);
         // 更新TICKS
         set_last_ticks();
 
@@ -248,7 +248,7 @@ impl Task {
             // 用户请求
             Trap::Exception(Exception::UserEnvCall) => {
                 // 将 恢复地址 + 4 跳过调用地址
-                info!("中断号: {} 调用地址: {:#x}", context.x[17], sepc::read());
+                // info!("中断号: {} 调用地址: {:#x}", context.x[17], sepc::read());
 
                 // 对sepc + 4
                 context.sepc += 4;

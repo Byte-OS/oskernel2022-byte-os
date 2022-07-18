@@ -6,7 +6,14 @@ use crate::task::task::TaskStatus;
 use super::{UTSname, write_string_to_raw, SYS_CALL_ERR, get_string_from_raw, get_usize_vec_from_raw};
 
 impl Task {
-    pub fn sys_exit(&self) -> Result<(), RuntimeError> {
+    pub fn sys_exit(&self, exit_code: usize) -> Result<(), RuntimeError> {
+        let inner = self.inner.borrow();
+        let mut process = inner.process.borrow_mut();
+        if self.tid == 0 {
+            process.exit(exit_code);
+        } else {
+            self.exit();
+        }
         Err(RuntimeError::ChangeTask)
     }
     
@@ -86,11 +93,11 @@ impl Task {
     pub fn sys_fork(&self) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.clone();
-        let process = process.borrow_mut();
+        let mut process = process.borrow_mut();
 
         let (child_process, child_task) =
             Process::new(get_next_pid(), Some(Rc::downgrade(&inner.process)))?;
-
+        process.children.push(child_process.clone());
         let mut child_task_inner = child_task.inner.borrow_mut();
         child_task_inner.context.clone_from(&inner.context);
         child_task_inner.context.x[10] = 0;
@@ -108,14 +115,14 @@ impl Task {
     }
     
     pub fn sys_clone(&self, flags: usize, new_sp: usize, ptid: usize, tls: usize, ctid: usize) -> Result<(), RuntimeError> {
-        info!(
-            "clone: flags={:#x}, newsp={:#x}, parent_tid={:#x}, child_tid={:#x}, newtls={:#x}",
-            flags, new_sp, ptid, tls, ctid
-        );
+        // info!(
+        //     "clone: flags={:#x}, newsp={:#x}, parent_tid={:#x}, child_tid={:#x}, newtls={:#x}",
+        //     flags, new_sp, ptid, tls, ctid
+        // );
     
         if flags == 0x4111 || flags == 0x11 {
             // VFORK | VM | SIGCHILD
-            warn!("sys_clone is calling sys_fork instead, ignoring other args");
+            // warn!("sys_clone is calling sys_fork instead, ignoring other args");
             return self.sys_fork();
         }
         let mut inner = self.inner.borrow_mut();
@@ -125,7 +132,7 @@ impl Task {
     
     pub fn sys_execve(&self, filename: usize, argv: usize) -> Result<(), RuntimeError> {
         let inner = self.inner.borrow_mut();
-        let process = inner.process.borrow_mut();
+        let mut process = inner.process.borrow_mut();
         let filename = process.pmm.get_phys_addr(filename.into()).unwrap();
         let filename = get_string_from_raw(filename);
         let argv_ptr = process.pmm.get_phys_addr(argv.into()).unwrap();
@@ -136,6 +143,7 @@ impl Task {
         let args: Vec<String> = args.iter().map(|x| get_string_from_raw(x.clone())).collect();
         let args: Vec<&str> = args.iter().map(AsRef::as_ref).collect();
         let task = process.tasks[self.tid].clone().upgrade().unwrap();
+        process.reset()?;
         drop(process);
         let process = inner.process.clone();
         drop(inner);
@@ -146,20 +154,19 @@ impl Task {
     pub fn sys_wait4(&self, pid: usize, ptr: VirtAddr, options: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
-        info!("wait pid: {}, current pid: {}", pid, process.pid);
 
         let mut is_ok = false;
         let target = process.children.iter().find(|&x| x.borrow().pid == pid);
         if let Some(target) = target {
             if let Some(exit_code) = target.borrow().exit_code {
                 let result = get_ptr_from_virt_addr::<u16>(process.pmm.clone(), ptr)?;
-                unsafe { result.write(exit_code as u16) };
+                unsafe { result.write(exit_code as u16 + 128) };
                 is_ok = true;
             }
         }
         drop(process);
         if is_ok {
-            inner.context.x[10] = 0;
+            inner.context.x[10] = pid;
             return Ok(())
         } else {
             inner.context.sepc -= 4;

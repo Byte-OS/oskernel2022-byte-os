@@ -1,4 +1,5 @@
 use alloc::{vec::Vec, collections::BTreeMap, rc::Rc};
+use core::borrow::BorrowMut;
 
 use crate::{memory::{page_table::{PTEFlags, PageMappingManager}, addr::VirtAddr, mem_set::MemSet, mem_map::MemMap}, runtime_err::RuntimeError};
 
@@ -112,7 +113,8 @@ impl UserStack {
     }
 
     // 释放资源
-    pub fn release() {
-
+    pub fn release(&mut self) {
+        let mem_set = self.mem_set.borrow_mut();
+        mem_set.release();
     }
 }

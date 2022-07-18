@@ -3,8 +3,9 @@ use core::cell::RefCell;
 use alloc::rc::Rc;
 
 use crate::{interrupt::Context, memory::page_table::PagingMode};
+use crate::task::task_scheduler::kill_task;
 
-use super::{process::Process, task_scheduler::kill_pid};
+use super::process::Process;
 
 #[derive(Clone, Copy, PartialEq)]
 // 任务状态
@@ -47,14 +48,7 @@ impl Task {
 
     // 退出进程
     pub fn exit(&self) {
-        let mut inner = self.inner.borrow_mut();
-        inner.status = TaskStatus::EXIT;
-        drop(inner);
-        // 如果是tid 为 0 回收process资源 
-        // 暂不处理线程退出
-        if self.tid == 0 {
-            kill_pid(self.pid);
-        }
+        kill_task(self.pid, self.tid);
     }
 
     // 运行当前任务
@@ -65,9 +59,6 @@ impl Task {
         }
         let inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
-
-        // 切换satp
-        process.pmm.change_satp();
         
         let pte_ppn = process.pmm.get_pte() >> 12;
         let context_ptr = &inner.context as *const Context as usize;
