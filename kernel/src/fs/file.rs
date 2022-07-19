@@ -1,3 +1,5 @@
+use core::any::Any;
+
 // 文件类型
 #[allow(dead_code)]
 #[derive(Default, Clone, Copy, PartialEq)]
@@ -33,7 +35,7 @@ pub struct Kstat {
 	pub st_ctime_nsec: u64,		// 最后创建微秒
 }
 
-pub trait FileOP {
+pub trait FileOP: Any {
 	fn readable(&self) -> bool;
 	fn writeable(&self) -> bool;
 	fn read(&self, data: &mut [u8]) -> usize;
@@ -41,4 +43,38 @@ pub trait FileOP {
 	fn read_at(&self, pos: usize, data: &mut [u8]) -> usize;
 	fn write_at(&self, pos: usize, data: &[u8]) -> usize;
 	fn get_size(&self) -> usize;
+}
+
+pub struct File {
+
+}
+
+impl FileOP for File {
+    fn readable(&self) -> bool {
+        todo!()
+    }
+
+    fn writeable(&self) -> bool {
+        todo!()
+    }
+
+    fn read(&self, data: &mut [u8]) -> usize {
+        todo!()
+    }
+
+    fn write(&self, data: &[u8]) -> usize {
+        todo!()
+    }
+
+    fn read_at(&self, pos: usize, data: &mut [u8]) -> usize {
+        todo!()
+    }
+
+    fn write_at(&self, pos: usize, data: &[u8]) -> usize {
+        todo!()
+    }
+
+    fn get_size(&self) -> usize {
+        todo!()
+    }
 }
