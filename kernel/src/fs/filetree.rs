@@ -27,7 +27,7 @@ pub struct INodeInner {
 	pub st_mtime_nsec: u64,             // 最后修改微秒
 	pub st_ctime_sec: u64,              // 最后创建秒
 	pub st_ctime_nsec: u64,             // 最后创建微秒
-    pub children: Vec<Rc<INode>>,    // 子节点
+    pub children: Vec<Rc<INode>>,       // 子节点
 }
 
 pub struct INode(pub RefCell<INodeInner>);

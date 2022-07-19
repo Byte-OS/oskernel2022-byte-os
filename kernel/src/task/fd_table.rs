@@ -1,12 +1,13 @@
-use alloc::{vec::Vec, sync::Arc, string::String};
+use alloc::{vec::Vec, sync::Arc, string::String, boxed::Box};
+use hashbrown::HashMap;
 
-use crate::sync::mutex::Mutex;
+use crate::{sync::mutex::Mutex, fs::file::File};
 
 use super::{FileDesc, FileDescEnum};
 
 pub const FD_NULL: usize = 0xffffffffffffff9c;
 
-pub struct FDTable(Vec<Option<Arc<Mutex<FileDesc>>>>);
+pub struct FDTable(HashMap<usize, Box<dyn File>>);
 
 impl FDTable {
     pub fn new() -> Self {
