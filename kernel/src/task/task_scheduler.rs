@@ -1,10 +1,6 @@
-use core::cell::RefCell;
-
 use alloc::{collections::VecDeque, rc::Rc};
-
 use crate::{sync::mutex::Mutex, task::pid::PidGenerater, interrupt::timer::task_time_refresh};
-
-use super::{task::{Task, TaskStatus}, task_queue::load_next_task, process::Process};
+use super::{task::{Task, TaskStatus}, task_queue::load_next_task};
 
 // 任务控制器管理器
 pub struct TaskScheduler {
@@ -23,7 +19,6 @@ impl TaskScheduler {
 
     // 添加任务调度器
     pub fn add_task(&mut self, task: Rc<Task>) {
-        let mut task_inner = task.inner.borrow_mut();
         self.queue.push_back(task.clone());
     }
 

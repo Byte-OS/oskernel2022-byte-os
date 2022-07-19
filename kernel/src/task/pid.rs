@@ -1,5 +1,3 @@
-use crate::sync::mutex::Mutex;
-
 use super::task_scheduler::NEXT_PID;
 
 // PID生成器
