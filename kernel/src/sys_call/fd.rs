@@ -170,11 +170,12 @@ impl Task {
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
 
+
         // 获取文件信息
         let filename = process.pmm.get_phys_addr(VirtAddr::from(filename)).unwrap();
         let filename = get_string_from_raw(filename);
         let debug_flags = OpenFlags::from_bits_truncate(flags as u32);
-
+        info!("open file: {}", filename);
         let flags = OpenFlags::from_bits_truncate(flags as u32);
 
         // 判断文件描述符是否存在
