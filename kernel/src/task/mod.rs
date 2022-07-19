@@ -5,6 +5,7 @@ use alloc::collections::BTreeMap;
 use alloc::rc::Rc;
 use alloc::string::String;
 use alloc::vec::Vec;
+use xmas_elf::program::{Type, SegmentData};
 use crate::elf::{self, ElfExtra};
 use crate::fs::filetree::FileTreeNode;
 use crate::memory::addr::{get_pages_num, get_buf_from_phys_page};
@@ -121,6 +122,8 @@ pub fn get_new_pid() -> usize {
 
 pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path: &'a str, args: Vec<&'a str>) 
         -> Result<Rc<Task>, RuntimeError> {
+    info!("读取path: {}", path);
+
     // 如果存在write
     let program = FILETREE.lock().open(path)?;
 
@@ -141,6 +144,25 @@ pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path
 
     let entry_point = elf.header.pt2.entry_point() as usize;
     assert_eq!(magic, [0x7f, 0x45, 0x4c, 0x46], "invalid elf!");
+
+    // 测试代码
+    warn!("读取interp");
+    let header = elf
+        .program_iter()
+        .find(|ph| ph.get_type() == Ok(Type::Interp));
+    if let Some(header) = header {
+        info!("has interp");
+        if let Ok(SegmentData::Undefined(data)) = header.get_data(&elf) {
+            let len = (0..).find(|&i| data[i] == 0).unwrap();
+            let mut path = core::str::from_utf8(&data[..len]).unwrap();
+            path = "libc.so";
+            let mut new_args = vec![path];
+            new_args.extend_from_slice(&args[..]);
+            return exec_with_process(process, task, path, new_args);
+        }
+    }
+
+
 
     // 创建新的任务控制器 并映射栈
     let mut process = process.borrow_mut();

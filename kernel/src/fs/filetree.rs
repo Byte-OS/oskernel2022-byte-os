@@ -119,6 +119,7 @@ impl FileTreeNode {
         let location: Vec<&str> = path.split("/").collect();
         // 根据路径匹配文件
         for locate in location {
+
             match locate {
                 ".."=> {        // 如果是.. 则返回上一级
                     if !tree_node.is_root() {
@@ -129,11 +130,13 @@ impl FileTreeNode {
                 ""=> {}         // 空，不做处理 出现多个// 复用的情况
                 _ => {          // 默认情况则搜索
                     let mut sign = false;
+
                     // 遍历名称
                     for node in tree_node.get_children() {
                         if node.get_filename() == locate {
                             tree_node = node.clone();
                             sign = true;
+                            
                             break;
                         }
                     }

@@ -13,9 +13,9 @@ lazy_static! {
         // "runtest.exe -w entry-static.exe clock_gettime",
         // "runtest.exe -w entry-static.exe crypt",
         // "runtest.exe -w entry-static.exe dirname",   
-        "runtest.exe -w entry-static.exe env",           // 此异常
+        // "runtest.exe -w entry-static.exe env",           // 此异常 0 is not an allocated pointer 无法通过
         // "runtest.exe -w entry-static.exe fdopen",  
-        // "runtest.exe -w entry-static.exe fnmatch", // 以上通过
+        // "runtest.exe -w entry-static.exe fnmatch",       // 以上通过
         // "runtest.exe -w entry-static.exe fscanf",
         // "runtest.exe -w entry-static.exe fwscanf",
         // "runtest.exe -w entry-static.exe iconv_open",
@@ -116,7 +116,8 @@ lazy_static! {
         // "runtest.exe -w entry-static.exe syscall_sign_extend",
         // "runtest.exe -w entry-static.exe uselocale_0",
         // "runtest.exe -w entry-static.exe wcsncpy_read_overflow",
-        // "runtest.exe -w entry-static.exe wcsstr_false_negative"
+        // "runtest.exe -w entry-static.exe wcsstr_false_negative",
+        "runtest.exe -w entry-dynamic.exe argv",
     ]));
 }
 
