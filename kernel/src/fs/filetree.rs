@@ -37,11 +37,11 @@ impl INode {
     pub fn new(name: &str, file_type: FileType, parent: Option<Weak<INode>>, cluster: usize) -> Rc<Self> {
         Rc::new(Self(RefCell::new(INodeInner {
             filename: name.to_string(), 
-            file_type: FileType::File, 
+            file_type, 
             parent, 
             children: vec![],
             size: 0,
-            cluster: 0,
+            cluster,
             nlinkes: 1,
             st_atime_sec: 0,
             st_atime_nsec: 0,
