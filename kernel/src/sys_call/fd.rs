@@ -116,6 +116,9 @@ impl Task {
 
         let filename = process.pmm.get_phys_addr(VirtAddr::from(filename)).unwrap();
         let filename = get_string_from_raw(filename);
+        
+        process.workspace.test();
+        let pro = process.workspace.as_ref();
 
         process.workspace = INode::open(Some(process.workspace.clone()), &filename, false)?;
 

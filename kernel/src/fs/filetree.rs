@@ -237,4 +237,10 @@ impl INode {
             parent.delete(&inner.filename);
         }
     }
+
+    // TODO: 采用 更新的rust语法  更加实用 大大减少代码量
+    pub fn test(self: Rc<Self>) -> Rc<Self> {
+        info!("rc test");
+        self.clone()
+    }
 }
