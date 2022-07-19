@@ -4,5 +4,7 @@ pub enum RuntimeError {
     FileNotFound,
     // 没有对应的物理地址
     NoMatchedAddr,
-    ChangeTask
+    ChangeTask,
+    // 没有对应的文件
+    NoMatchedFile
 }

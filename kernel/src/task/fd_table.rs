@@ -4,6 +4,8 @@ use crate::sync::mutex::Mutex;
 
 use super::{FileDesc, FileDescEnum};
 
+pub const FD_NULL: usize = 0xffffffffffffff9c;
+
 pub struct FDTable(Vec<Option<Arc<Mutex<FileDesc>>>>);
 
 impl FDTable {

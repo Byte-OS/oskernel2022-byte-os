@@ -3,9 +3,9 @@ use core::slice;
 use alloc::{string::String, vec::Vec, rc::Rc};
 use riscv::register::{satp, sepc, scause::{self, Trap, Exception, Interrupt}, stval};
 
-use crate::{memory::{page_table::{PageMapping, PageMappingManager}, addr::{VirtAddr, PhysPageNum, PhysAddr}}, interrupt::timer};
+use crate::{memory::{page_table::{PageMapping, PageMappingManager}, addr::{VirtAddr, PhysPageNum, PhysAddr}}, interrupt::timer, fs::filetree::INode};
 
-use crate::fs::{filetree::FileTreeNode, file::FileType};
+use crate::fs::{file::FileType};
 use crate::interrupt::timer::set_last_ticks;
 use crate::runtime_err::RuntimeError;
 use crate::task::task::Task;
@@ -89,7 +89,7 @@ struct Dirent {
 }
 
 // sys_write调用
-pub fn sys_write_wrap(pmm: Rc<PageMappingManager>, fd: FileTreeNode, buf: usize, count: usize) -> usize {
+pub fn sys_write_wrap(pmm: Rc<PageMappingManager>, fd: Rc<INode>, buf: usize, count: usize) -> usize {
     // 根据satp中的地址构建PageMapping 获取当前的映射方式
     let buf = pmm.get_phys_addr(VirtAddr::from(buf)).unwrap();
 

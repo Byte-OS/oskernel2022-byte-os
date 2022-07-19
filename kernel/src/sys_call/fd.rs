@@ -1,9 +1,8 @@
-use crate::print_file_tree;
 use core::slice;
 
 use alloc::sync::Arc;
 
-use crate::{task::{FileDescEnum, FileDesc, task::Task}, memory::addr::VirtAddr, fs::{filetree::FILETREE, file::Kstat}, sync::mutex::Mutex, console::puts, runtime_err::RuntimeError};
+use crate::{task::{FileDescEnum, FileDesc, task::Task, fd_table::FD_NULL}, memory::addr::VirtAddr, fs::{file::Kstat, filetree::INode}, sync::mutex::Mutex, console::puts, runtime_err::RuntimeError};
 use crate::memory::addr::get_buf_from_phys_addr;
 
 use super::{SYS_CALL_ERR, get_string_from_raw, OpenFlags, write_string_to_raw, Dirent, sys_write_wrap};
@@ -75,29 +74,25 @@ impl Task {
         let filename = get_string_from_raw(filename);
 
         // 判断文件描述符是否存在
-        let value = if dir_fd == 0xffffffffffffff9c {
+        let current = if dir_fd == FD_NULL {
             // 在用户根据目录创建
-            process.workspace.mkdir(&filename, flags as u16);
-            0
+            None
         } else {
             // 判度是否存在节点
-            if let Some(tree_node) = process.fd_table.get(dir_fd).clone() {
+            if let Some(fd) = process.fd_table.get(dir_fd).clone() {
                 // 匹配文件节点
-                match &mut tree_node.lock().target {
-                    FileDescEnum::File(tree_node) => {
-                        tree_node.mkdir(&filename, flags as u16);
-                        0
-                    }, 
-                    _ => {
-                        SYS_CALL_ERR
-                    }
+                if let FileDescEnum::File(inode) = &fd.lock().target {
+                    Some(inode.clone())
+                } else {
+                    return Err(RuntimeError::NoMatchedFile);
                 }
             } else {
-                SYS_CALL_ERR
+                None
             }
         };
+        INode::mkdir(current, &filename, flags as u16);
         drop(process);
-        inner.context.x[10] = value;
+        inner.context.x[10] = 0;
         Ok(())
     }
 
@@ -110,41 +105,25 @@ impl Task {
         let filename = get_string_from_raw(filename);
 
         // 判断文件描述符是否存在
-        let value = if fd == 0xffffffffffffff9c {
-            if let Ok(node) = FILETREE.force_get().open(&filename) {
-                let node_name = node.get_filename();
-
-                let parent = node.get_parent().clone().unwrap();
-                parent.delete(&node_name);
-                0
-            } else {
-                SYS_CALL_ERR
-            }
+        let current = if fd == FD_NULL {
+            None
         } else {
             if let Some(tree_node) = process.fd_table.get(fd).clone() {
                 // 匹配目标 判断文件类型
-                match &mut tree_node.lock().target {
-                    FileDescEnum::File(tree_node) => {
-                        if let Ok(node) = tree_node.open(&filename) {
-                            let node_name = node.get_filename();
-        
-                            let parent = node.get_parent().clone().unwrap();
-                            parent.delete(&node_name);
-                            0
-                        } else {
-                            SYS_CALL_ERR
-                        }
-                    }, 
-                    _ => {
-                        SYS_CALL_ERR
-                    }
+                if let FileDescEnum::File(inode)= &tree_node.force_get().target {
+                    Some(inode.clone())
+                } else {
+                    None
                 }
             } else {
-                SYS_CALL_ERR
+                return Err(RuntimeError::NoMatchedFile)
             }
         };
+
+        let cnode = INode::open(current, &filename, false)?;
+        cnode.del_self();
         drop(process);
-        inner.context.x[10] = value;
+        inner.context.x[10] = 0;
         Ok(())
     }
 
@@ -155,14 +134,10 @@ impl Task {
         let filename = process.pmm.get_phys_addr(VirtAddr::from(filename)).unwrap();
         let filename = get_string_from_raw(filename);
 
-        let value = if let Ok(file) = FILETREE.lock().open(&filename) {
-            process.workspace = file.clone();
-            0
-        } else {
-            SYS_CALL_ERR
-        };
+        process.workspace = INode::open(Some(process.workspace.clone()), &filename, false)?;
+
         drop(process);
-        inner.context.x[10] = value;
+        inner.context.x[10] = 0;
         Ok(())
     }
 
@@ -179,44 +154,30 @@ impl Task {
         let flags = OpenFlags::from_bits_truncate(flags as u32);
 
         // 判断文件描述符是否存在
-        let value = if fd == 0xffffffffffffff9c {
-            // 根据文件类型匹配
-            if flags.contains(OpenFlags::CREATE) {
-                process.workspace.create(&filename)?;
-            }
-            if let Ok(file) = process.workspace.open(&filename) {
-                let fd = process.fd_table.alloc();
-                process.fd_table.set(fd, Some(Arc::new(Mutex::new(FileDesc::new(FileDescEnum::File(file.clone()))))));
-                fd
-            } else {
-                SYS_CALL_ERR
-            }
+        let current = if fd == FD_NULL {
+            None
         } else {
-            if let Some(tree_node) = process.fd_table.get(fd).clone() {
+            if let Some(file_desc) = process.fd_table.get(fd).clone() {
                 // 匹配文件类型
-                match &mut tree_node.lock().target {
-                    FileDescEnum::File(tree_node) => {
-                        if flags.contains(OpenFlags::CREATE) {
-                            tree_node.create(&filename)?;
-                        }
-                        if let Ok(file) = tree_node.open(&filename) {
-                            let fd = process.fd_table.alloc();
-                            process.fd_table.set(fd, Some(Arc::new(Mutex::new(FileDesc::new(FileDescEnum::File(file.clone()))))));
-                            fd
-                        } else {
-                            SYS_CALL_ERR
-                        }
-                    }, 
-                    _ => {
-                        SYS_CALL_ERR
-                    }
+                if let FileDescEnum::File(inode) = &file_desc.lock().target {
+                    Some(inode.clone())
+                } else {
+                    None
                 }
             } else {
-                SYS_CALL_ERR
+                None
             }
         };
+        // 根据文件类型匹配
+        let file = if flags.contains(OpenFlags::CREATE) {
+            INode::open(current, &filename, true)
+        } else {
+            INode::open(current, &filename, false)
+        }?;
+        let fd = process.fd_table.alloc();
+        process.fd_table.set(fd, Some(Arc::new(Mutex::new(FileDesc::new(FileDescEnum::File(file.clone()))))));
         drop(process);
-        inner.context.x[10] = value;
+        inner.context.x[10] = fd;
         Ok(())
     }
 

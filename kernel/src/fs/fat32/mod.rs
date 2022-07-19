@@ -1,12 +1,12 @@
-use core::{cell::RefCell, mem::size_of, slice, ptr};
+use core::{cell::RefCell, mem::size_of, slice};
 
 use alloc::{sync::Arc, rc::Rc, string::String, boxed::Box};
 
-use crate::{sync::mutex::Mutex, device::{SECTOR_SIZE, BLK_CONTROL, BlockDevice}, fs::{fat32::{long_file::FAT32longFileItem, short_file::FAT32shortFileItem}, filetree::FileTreeNodeRaw}};
+use crate::{sync::mutex::Mutex, device::{SECTOR_SIZE, BLK_CONTROL, BlockDevice}, fs::{fat32::{long_file::FAT32longFileItem, short_file::FAT32shortFileItem}}};
 
 use self::{fat32bpb::FAT32BPB, file_trait::FilesystemItemOperator};
 
-use super::{Partition, file::FileType, filetree::{FILETREE, FileTreeNode}};
+use super::{Partition, file::FileType, filetree::INode};
 
 pub mod fat32bpb;
 pub mod short_file;
@@ -55,12 +55,11 @@ impl Partition for FAT32 {
     // 挂载分区到路径
     fn mount(&self, prefix: &str) {
         // 获取文件树前缀节点
-        let filetree = FILETREE.lock();
-        if let Ok(filetree_node) = filetree.open(prefix) {
-            let filetree_node = filetree_node;
-            info!("当前文件树节点：{}", filetree_node.get_pwd());
-            if filetree_node.is_dir() && filetree_node.is_empty() {
-                self.read_directory(2, &filetree_node);
+        if let Ok(inode) = INode::open(None, prefix, true) {
+            let inode = inode;
+            info!("当前文件树节点：{}", inode.get_pwd());
+            if inode.is_dir() && inode.is_empty() {
+                self.read_directory(2, inode);
             }
             
         } else {
@@ -102,7 +101,7 @@ impl FAT32 {
     }
 
     // 从内存中读取文件
-    pub fn read_file_from(&self, buf: &[u8]) -> Option<FileTreeNode> {
+    pub fn read_file_from(&self, buf: &[u8]) -> Option<Rc<INode>> {
         if buf[11] == 0 || buf[0] == 0xe5{
             return None;
         }
@@ -117,12 +116,11 @@ impl FAT32 {
                     }
                     _=> {
                         let file_item;
-                        let file_tree_type;
                         file_item = &*(buf.as_ptr().add(i*0x20) as *const u8 as *const FAT32shortFileItem);
                         if buf.len() == 0x20 {
                             filename = filename + &file_item.filename();
                         }
-                        file_tree_type = match file_item.get_attr(){
+                        let file_type = match file_item.get_attr(){
                             FAT32FileItemAttr::FILE =>FileType::File,
                             FAT32FileItemAttr::RW => todo!(),
                             FAT32FileItemAttr::R => todo!(),
@@ -131,21 +129,11 @@ impl FAT32 {
                             FAT32FileItemAttr::VOLUME => todo!(),
                             FAT32FileItemAttr::SUBDIR => FileType::Directory,
                         };
-                        return Some(FileTreeNode(Rc::new(RefCell::new(FileTreeNodeRaw{
-                            filename: filename,
-                            file_type: file_tree_type,
-                            parent: Default::default(),
-                            children: vec![],
-                            size: file_item.file_size(),
-                            cluster: file_item.start_cluster(),
-                            nlinkes: 1,
-                            st_atime_sec: 0,
-                            st_atime_nsec: 0,
-                            st_mtime_sec: 0,
-                            st_mtime_nsec: 0,
-                            st_ctime_sec: 0,
-                            st_ctime_nsec: 0,
-                        }))))
+
+                        let inode = INode::new(&filename, file_type, None, file_item.start_cluster());
+                        let mut inner = inode.0.borrow_mut();
+                        inner.size = file_item.file_size();
+                        return Some(inode.clone());
                     },
                 }
             }
@@ -190,7 +178,7 @@ impl FAT32 {
     }
 
     // 读取文件夹
-    pub fn read_directory(&self, start_cluster: usize, filetree_node: &FileTreeNode) {
+    pub fn read_directory(&self, start_cluster: usize, inode: Rc<INode>) {
         // 创建缓冲区 缓冲区大小为一个簇(cluster)
         let mut buf = vec![0u8; self.bpb.sectors_per_cluster as usize * SECTOR_SIZE];
         let mut cluster = start_cluster;
@@ -214,10 +202,10 @@ impl FAT32 {
                     if let Some(new_node) = new_node {
                         if !(new_node.get_filename() == "." || new_node.get_filename() == "..") {
                             if new_node.is_dir() {                            
-                                self.read_directory(new_node.get_cluster(), &new_node);
+                                self.read_directory(new_node.get_cluster(), new_node.clone());
                             }
                             // 添加到节点
-                            filetree_node.add(new_node.clone());
+                            INode::add(inode.clone() ,new_node.clone());
                         }
                     }
                     file_item_buf.init();
@@ -227,41 +215,6 @@ impl FAT32 {
 
             cluster = self.get_next_cluster(cluster);
         }
-        
-        // 0x0 - 0x0fffffef 为有效簇
-        // while cluster < 0x0fff_ffef {
-        //     self.read_cluster(cluster, &mut buf);
-            
-        //     let mut start;
-        //     let mut end = 0;
-        //     // TODO: add new buf, resolving the possible problem that index out of bound
-        //     loop {
-        //         start = end;
-
-        //         while buf[end + 11] == 0x0f {
-        //             end = end + 0x20;
-        //         }
-        //         end = end + 0x20;
-
-        //         let new_node = self.read_file_from(&buf[start..end]);
-        //         if let Some(new_node) = new_node {
-        //             if !(new_node.get_filename() == "." || new_node.get_filename() == "..") {
-        //                 if new_node.is_dir() {                            
-        //                     self.read_directory(new_node.get_cluster(), &new_node);
-        //                 }
-        //                 // 添加到节点
-        //                 filetree_node.add(new_node.clone());
-        //             }
-                    
-        //         }
-
-        //         if end >= self.bpb.sectors_per_cluster as usize * SECTOR_SIZE {
-        //             break;
-        //         }
-        //     }
-
-        //     cluster = self.get_next_cluster(cluster);
-        // }
     }
 
     // 获取最后一个fat

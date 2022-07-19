@@ -7,14 +7,14 @@ use alloc::string::String;
 use alloc::vec::Vec;
 use xmas_elf::program::{Type, SegmentData};
 use crate::elf::{self, ElfExtra};
-use crate::fs::filetree::FileTreeNode;
+use crate::fs::filetree::INode;
 use crate::memory::addr::{get_pages_num, get_buf_from_phys_page};
 use crate::memory::mem_map::MemMap;
 use crate::memory::page::{alloc_more, dealloc_more};
 use crate::runtime_err::RuntimeError;
 use crate::task::process::Process;
 use crate::task::task_scheduler::start_tasks;
-use crate::{memory::{page_table::PTEFlags, addr::{PAGE_SIZE, VirtAddr, PhysAddr, PhysPageNum}, page::PAGE_ALLOCATOR}, fs::filetree::FILETREE};
+use crate::{memory::{page_table::PTEFlags, addr::{PAGE_SIZE, VirtAddr, PhysAddr, PhysPageNum}, page::PAGE_ALLOCATOR}};
 use self::pipe::PipeBuf;
 use self::task::Task;
 use self::task_scheduler::NEXT_PID;
@@ -43,7 +43,7 @@ pub struct UserHeap {
 
 // 文件描述符类型
 pub enum FileDescEnum {
-    File(FileTreeNode),
+    File(Rc<INode>),
     Pipe(PipeBuf),
     Device(String)
 }
@@ -125,7 +125,7 @@ pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path
     info!("读取path: {}", path);
 
     // 如果存在write
-    let program = FILETREE.lock().open(path)?;
+    let program = INode::open(None, path, false)?;
 
     // 申请页表存储程序
     let elf_pages = get_pages_num(program.get_file_size());

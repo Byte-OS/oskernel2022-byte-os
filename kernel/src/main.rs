@@ -30,9 +30,10 @@ extern crate lazy_static;
 extern crate alloc;
 use core::{arch::global_asm};
 
-use fs::filetree::FileTreeNode;
 
-use crate::{sbi::shutdown, fs::filetree::FILETREE};
+use alloc::rc::Rc;
+
+use crate::{sbi::shutdown, fs::filetree::{FILE_TREE, INode}};
 
 
 mod virtio_impl;
@@ -88,7 +89,7 @@ pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
     fs::init();
 
     // 输出文件树
-    print_file_tree(FILETREE.lock().open("/").unwrap());
+    print_file_tree(INode::open(None, "/", false).unwrap());
 
     // 初始化多任务
     task::init();
@@ -106,14 +107,14 @@ extern "C" fn support_hart_resume(hart_id: usize, _param: usize) {
 
 
 // 打印目录树
-pub fn print_file_tree(node: FileTreeNode) {
+pub fn print_file_tree(node: Rc<INode>) {
     // info!("is root {:?}", node.is_root());
     info!("{}", node.get_pwd());
-    print_file_tree_back(&node, 0);
+    print_file_tree_back(node, 0);
 }
 
 // 打印目录树 - 递归
-pub fn print_file_tree_back(node: &FileTreeNode, space: usize) {
+pub fn print_file_tree_back(node: Rc<INode>, space: usize) {
     let iter = node.get_children();
     let mut iter = iter.iter().peekable();
     while let Some(sub_node) = iter.next() {
@@ -123,7 +124,7 @@ pub fn print_file_tree_back(node: &FileTreeNode, space: usize) {
             info!("{:>2$}├──{}", "", sub_node.get_filename(), space);
         }
         if sub_node.is_dir() {
-            print_file_tree_back(sub_node, space + 3);
+            print_file_tree_back(sub_node.clone(), space + 3);
         }
     }
 }
