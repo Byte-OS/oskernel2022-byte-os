@@ -126,7 +126,7 @@ impl Write for Stdout {
 }
 
 // 输出函数
-pub fn puts(args: &mut [u8]) {
+pub fn puts(args: &[u8]) {
     for i in args {
         console_putchar(*i);
     }

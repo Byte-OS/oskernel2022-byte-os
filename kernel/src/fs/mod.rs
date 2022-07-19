@@ -2,6 +2,7 @@ pub mod fat32;
 pub mod file;
 mod partition;
 pub mod filetree;
+pub mod stdio;
 
 pub use partition::Partition;
 

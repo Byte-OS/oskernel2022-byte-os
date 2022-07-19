@@ -29,18 +29,11 @@ impl Task {
     pub fn sys_dup(&self, fd: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
-        // 申请文件描述符空间
-        let new_fd = process.fd_table.alloc();
+        let fd_v = process.fd_table.get(fd)?;
         // 判断文件描述符是否存在
-        let value = match process.fd_table.get(fd) {
-            Some(tree_node) => {
-                process.fd_table.set(new_fd, Some(tree_node));
-                new_fd
-            }
-            None => SYS_CALL_ERR
-        };
+        let new_fd = process.fd_table.push(fd_v);
         drop(process);
-        inner.context.x[10] = value;
+        inner.context.x[10] = new_fd;
         Ok(())
     }
 
@@ -49,20 +42,10 @@ impl Task {
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
         // 判断是否存在文件描述符
-        let value = match process.fd_table.get(fd) {
-            Some(tree_node) => {
-                // 申请空间 判断是否申请成功
-                if process.fd_table.alloc_fixed_index(new_fd) == SYS_CALL_ERR {
-                    SYS_CALL_ERR
-                } else {
-                    process.fd_table.set(new_fd, Some(tree_node));
-                    new_fd
-                }
-            }
-            None => SYS_CALL_ERR
-        };
+        let fd_v = process.fd_table.get(fd)?;
+        process.fd_table.set(new_fd, fd_v);
         drop(process);
-        inner.context.x[10] = value;
+        inner.context.x[10] = new_fd;
         Ok(())
     }
 

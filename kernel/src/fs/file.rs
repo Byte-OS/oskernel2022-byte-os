@@ -33,12 +33,12 @@ pub struct Kstat {
 	pub st_ctime_nsec: u64,		// 最后创建微秒
 }
 
-pub trait File {
+pub trait FileOP {
 	fn readable(&self) -> bool;
 	fn writeable(&self) -> bool;
 	fn read(&self, data: &mut [u8]) -> usize;
 	fn write(&self, data: &[u8]) -> usize;
-	fn read_at(&self, pos: usize, data: &mut [u8]);
-	fn write_at(&self, pos: usize, data: &[u8]);
+	fn read_at(&self, pos: usize, data: &mut [u8]) -> usize;
+	fn write_at(&self, pos: usize, data: &[u8]) -> usize;
 	fn get_size(&self) -> usize;
 }

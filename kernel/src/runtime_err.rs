@@ -6,5 +6,7 @@ pub enum RuntimeError {
     NoMatchedAddr,
     ChangeTask,
     // 没有对应的文件
-    NoMatchedFile
+    NoMatchedFile,
+    // 没有对应的fd
+    NoMatchedFileDesc
 }
