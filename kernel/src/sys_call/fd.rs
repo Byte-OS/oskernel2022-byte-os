@@ -1,11 +1,17 @@
 use core::slice;
 
-use alloc::sync::Arc;
+use crate::task::task::Task;
+use crate::task::fd_table::FD_NULL;
+use crate::task::pipe::new_pipe;
+use crate::memory::addr::VirtAddr;
+use crate::fs::file::Kstat;
+use crate::fs::filetree::INode;
 
-use crate::{task::{FileDescEnum, FileDesc, task::Task, fd_table::FD_NULL, pipe::new_pipe}, memory::addr::VirtAddr, fs::{file::Kstat, filetree::INode}, sync::mutex::Mutex, console::puts, runtime_err::RuntimeError};
+use crate::runtime_err::RuntimeError;
 use crate::memory::addr::get_buf_from_phys_addr;
 
-use super::{SYS_CALL_ERR, get_string_from_raw, OpenFlags, write_string_to_raw, Dirent, sys_write_wrap};
+use super::get_string_from_raw;
+use super::OpenFlags;
 
 impl Task {
     // 获取当前路径
@@ -51,7 +57,7 @@ impl Task {
 
     pub fn sys_mkdirat(&self, dir_fd: usize, filename: usize, flags: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
-        let mut process = inner.process.borrow_mut();
+        let process = inner.process.borrow_mut();
 
         let filename = process.pmm.get_phys_addr(VirtAddr::from(filename)).unwrap();
         let filename = get_string_from_raw(filename);
@@ -65,7 +71,7 @@ impl Task {
             let file = process.fd_table.get_file(dir_fd)?;
             Some(file.file.clone())
         };
-        INode::mkdir(current, &filename, flags as u16);
+        INode::mkdir(current, &filename, flags as u16)?;
         drop(process);
         inner.context.x[10] = 0;
         Ok(())
@@ -100,8 +106,6 @@ impl Task {
 
         let filename = process.pmm.get_phys_addr(VirtAddr::from(filename)).unwrap();
         let filename = get_string_from_raw(filename);
-        
-        let pro = process.workspace.as_ref();
 
         process.workspace = INode::get(Some(process.workspace.clone()), &filename, false)?;
 
@@ -118,8 +122,6 @@ impl Task {
         // 获取文件信息
         let filename = process.pmm.get_phys_addr(VirtAddr::from(filename)).unwrap();
         let filename = get_string_from_raw(filename);
-        let debug_flags = OpenFlags::from_bits_truncate(flags as u32);
-        info!("open file: {}", filename);
         let flags = OpenFlags::from_bits_truncate(flags as u32);
 
         // 判断文件描述符是否存在
@@ -172,7 +174,7 @@ impl Task {
         Ok(())
     }
 
-    pub fn sys_getdents(&self, fd: usize, ptr: usize, len: usize) -> Result<(), RuntimeError> {
+    pub fn sys_getdents(&self, _fd: usize, _ptr: usize, _len: usize) -> Result<(), RuntimeError> {
         // let mut inner = self.inner.borrow_mut();
         // let process = inner.process.borrow_mut();
 
@@ -257,6 +259,8 @@ impl Task {
         let buf = process.pmm.get_phys_addr(buf_ptr.into()).unwrap();
         let buf = get_buf_from_phys_addr(buf, count);
 
+        warn!("读取 fd: {} open size: {}", fd, count);
+
         // 判断文件描述符是否存在
         let reader = process.fd_table.get(fd)?;
         let value = if reader.readable() {
@@ -323,7 +327,7 @@ impl Task {
         Ok(())
     }
 
-    pub fn sys_lseek(&self, fd: usize, offset: usize, whence: usize) -> Result<(), RuntimeError> {
+    pub fn sys_lseek(&self, _fd: usize, _offset: usize, _whence: usize) -> Result<(), RuntimeError> {
         // let mut inner = self.inner.borrow_mut();
         // let process = inner.process.borrow_mut();
         // // 判断文件描述符是否存在
