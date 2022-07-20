@@ -10,7 +10,7 @@ use crate::elf::{self, ElfExtra};
 use crate::fs::filetree::INode;
 use crate::memory::addr::{get_pages_num, get_buf_from_phys_page};
 use crate::memory::mem_map::MemMap;
-use crate::memory::page::{alloc_more, dealloc_more};
+use crate::memory::page::{alloc_more, dealloc_more, alloc};
 use crate::runtime_err::RuntimeError;
 use crate::task::process::Process;
 use crate::task::task_scheduler::start_tasks;
@@ -126,13 +126,11 @@ pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path
 
     // 如果存在write
     let program = INode::get(None, path, false)?;
-
+    alloc_more(5)?;
     // 申请页表存储程序
     let elf_pages = get_pages_num(program.get_file_size());
-
     // 申请页表
     let elf_phy_start = alloc_more(elf_pages)?;
-
     // 获取缓冲区地址并读取
     let buf = get_buf_from_phys_page(elf_phy_start, elf_pages);
     program.read_to(buf);
