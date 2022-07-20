@@ -137,15 +137,6 @@ pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path
     let buf = get_buf_from_phys_page(elf_phy_start, elf_pages);
     program.read_to(buf);
 
-    let bbuf = get_buf_from_phys_page(elf_phy_start, elf_pages);
-    program.read_to(bbuf);
-
-    for i in 0..buf.len() {
-        if buf[i] != bbuf[i] {
-            panic!("不相等");
-        }
-    }
-
     // 读取elf信息
     let elf = xmas_elf::ElfFile::new(buf).unwrap();
     let elf_header = elf.header;    

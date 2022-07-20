@@ -234,6 +234,9 @@ impl Task {
                 RuntimeError::KillSelfTask => {
                     kill_task(self.pid, self.tid);
                 }
+                RuntimeError::NoEnoughPage => {
+                    panic!("No Enough Page");
+                }
                 _ => {}
             }
         }
