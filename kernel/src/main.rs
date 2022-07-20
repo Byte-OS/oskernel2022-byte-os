@@ -89,7 +89,7 @@ pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
     fs::init();
 
     // 输出文件树
-    print_file_tree(INode::open(None, "/", false).unwrap());
+    print_file_tree(INode::get(None, "/", false).unwrap());
 
     // 初始化多任务
     task::init();

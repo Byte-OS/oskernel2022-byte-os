@@ -36,7 +36,7 @@ impl Process {
             entry: 0usize.into(), 
             stack: UserStack::new(pmm.clone())?, 
             heap, 
-            workspace: INode::open(None, "/", false)?.clone(), 
+            workspace: INode::get(None, "/", false)?.clone(), 
             fd_table: FDTable::new(),
             children: vec![],
             tms: TMS::new(),

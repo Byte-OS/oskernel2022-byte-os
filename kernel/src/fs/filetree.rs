@@ -5,7 +5,7 @@ use alloc::{string::{String, ToString}, vec::Vec, rc::{Rc, Weak}};
 
 use crate::{sync::mutex::Mutex, device::BLK_CONTROL, memory::addr::PAGE_SIZE, runtime_err::RuntimeError};
 
-use super::file::FileType;
+use super::file::{FileType, File};
 
 
 lazy_static! {
@@ -67,7 +67,7 @@ impl INode {
     }
 
     // 根据路径 获取文件节点
-    pub fn open(current: Option<Rc<INode>>, path: &str, create_sign: bool) -> Result<Rc<INode>, RuntimeError> {
+    pub fn get(current: Option<Rc<INode>>, path: &str, create_sign: bool) -> Result<Rc<INode>, RuntimeError> {
         let mut current = match current {
             Some(tree) => tree.clone(),
             None => Self::root()
@@ -113,6 +113,12 @@ impl INode {
             }?;
         }
         Ok(current)
+    }
+
+    // 根据路径 获取文件节点
+    pub fn open(current: Option<Rc<INode>>, path: &str, create_sign: bool) -> Result<Rc<File>, RuntimeError> {
+        let inode = Self::get(current, path, create_sign)?;
+        Ok(File::new(inode))
     }
 
     // 获取当前路径
@@ -225,7 +231,7 @@ impl INode {
 
     // 创建文件夹
     pub fn mkdir(current: Option<Rc<INode>>, path: &str, _flags: u16) -> Result<Rc<INode>, RuntimeError>{
-        Self::open(current, path, true)
+        Self::get(current, path, true)
     }
 
     // 删除自身

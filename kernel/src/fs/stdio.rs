@@ -19,7 +19,7 @@ impl FileOP for StdIn {
         todo!()
     }
 
-    fn write(&self, data: &[u8]) -> usize {
+    fn write(&self, data: &[u8], count: usize) -> usize {
         todo!()
     }
 
@@ -27,7 +27,7 @@ impl FileOP for StdIn {
         todo!()
     }
 
-    fn write_at(&self, pos: usize, data: &[u8]) -> usize {
+    fn write_at(&self, pos: usize, data: &[u8], count: usize) -> usize {
         todo!()
     }
 
@@ -49,7 +49,7 @@ impl FileOP for StdOut {
         0
     }
 
-    fn write(&self, data: &[u8]) -> usize {
+    fn write(&self, data: &[u8], count: usize) -> usize {
         puts(data);
         data.len()
     }
@@ -58,7 +58,7 @@ impl FileOP for StdOut {
         0
     }
 
-    fn write_at(&self, pos: usize, data: &[u8]) -> usize {
+    fn write_at(&self, pos: usize, data: &[u8], count: usize) -> usize {
         puts(data);
         data.len()
     }
@@ -81,7 +81,7 @@ impl FileOP for StdErr {
         todo!()
     }
 
-    fn write(&self, data: &[u8]) -> usize {
+    fn write(&self, data: &[u8], count: usize) -> usize {
         todo!()
     }
 
@@ -89,7 +89,7 @@ impl FileOP for StdErr {
         todo!()
     }
 
-    fn write_at(&self, pos: usize, data: &[u8]) -> usize {
+    fn write_at(&self, pos: usize, data: &[u8], count: usize) -> usize {
         todo!()
     }
 

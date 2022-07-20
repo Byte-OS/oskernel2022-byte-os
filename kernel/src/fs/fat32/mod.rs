@@ -1,4 +1,4 @@
-use core::{cell::RefCell, mem::size_of, slice};
+use core::{mem::size_of, slice};
 
 use alloc::{sync::Arc, rc::Rc, string::String, boxed::Box};
 
@@ -55,7 +55,7 @@ impl Partition for FAT32 {
     // 挂载分区到路径
     fn mount(&self, prefix: &str) {
         // 获取文件树前缀节点
-        if let Ok(inode) = INode::open(None, prefix, true) {
+        if let Ok(inode) = INode::get(None, prefix, true) {
             let inode = inode;
             info!("当前文件树节点：{}", inode.get_pwd());
             if inode.is_dir() && inode.is_empty() {

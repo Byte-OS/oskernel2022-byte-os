@@ -125,7 +125,7 @@ pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path
     info!("读取path: {}", path);
 
     // 如果存在write
-    let program = INode::open(None, path, false)?;
+    let program = INode::get(None, path, false)?;
 
     // 申请页表存储程序
     let elf_pages = get_pages_num(program.get_file_size());

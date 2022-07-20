@@ -8,7 +8,7 @@ pub struct FDTable(HashMap<usize, Rc<dyn FileOP>>);
 
 impl FDTable {
     pub fn new() -> Self {
-        let map:HashMap<usize, Rc<dyn FileOP>> = HashMap::new();
+        let mut map:HashMap<usize, Rc<dyn FileOP>> = HashMap::new();
         map.insert(0, Rc::new(StdIn));
         map.insert(1, Rc::new(StdOut));
         map.insert(2, Rc::new(StdErr));

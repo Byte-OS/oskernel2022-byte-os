@@ -1,6 +1,6 @@
 use core::any::{Any, TypeId};
 
-use alloc::{rc::Rc, sync::Arc};
+use alloc::rc::Rc;
 
 use super::filetree::INode;
 
@@ -43,14 +43,22 @@ pub trait FileOP: Any {
 	fn readable(&self) -> bool;
 	fn writeable(&self) -> bool;
 	fn read(&self, data: &mut [u8]) -> usize;
-	fn write(&self, data: &[u8]) -> usize;
+	fn write(&self, data: &[u8], count: usize) -> usize;
 	fn read_at(&self, pos: usize, data: &mut [u8]) -> usize;
-	fn write_at(&self, pos: usize, data: &[u8]) -> usize;
+	fn write_at(&self, pos: usize, data: &[u8], count: usize) -> usize;
 	fn get_size(&self) -> usize;
 }
 
 pub struct File {
     pub file: Rc<INode>
+}
+
+impl File {
+    pub fn new(inode: Rc<INode>) -> Rc<Self> {
+        Rc::new(Self {
+            file: inode
+        })
+    }
 }
 
 impl FileOP for File {
@@ -66,7 +74,7 @@ impl FileOP for File {
         todo!()
     }
 
-    fn write(&self, data: &[u8]) -> usize {
+    fn write(&self, data: &[u8], count: usize) -> usize {
         todo!()
     }
 
@@ -74,7 +82,7 @@ impl FileOP for File {
         todo!()
     }
 
-    fn write_at(&self, pos: usize, data: &[u8]) -> usize {
+    fn write_at(&self, pos: usize, data: &[u8], count: usize) -> usize {
         todo!()
     }
 
