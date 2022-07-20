@@ -55,6 +55,7 @@ impl TaskScheduler {
     pub fn kill_task(&mut self, pid: usize, tid: usize) {
         self.queue = self.queue.clone().into_iter().filter(|x| x.pid != pid || x.tid != tid).collect();
     }
+
 }
 
 lazy_static! {

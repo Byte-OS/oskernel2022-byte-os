@@ -78,26 +78,29 @@ impl UserStack {
     }
 
     pub fn init_args(&mut self, args: Vec<&str>, _envp: Vec<&str>, auxv: BTreeMap<usize, usize>) {
-        let envp = self.push_str("OS=PATH");
+        // let envp = self.push_str("OS=PATH");
         let args: Vec<usize> = args.iter().map(|x| self.push_str(x)).collect();
         // auxv top
         self.push(0);
 
         for (key, value) in auxv {
+            info!("参数: {:#x} value: {:#x}", key, value);
             self.push(value);
             self.push(key);
         }
         // envp top
         self.push(0);
-        self.push(envp);
+        // self.push(envp);
         // argv top
         self.push(0);    // argv 没有top? 
 
         // args
         let args_len = args.len();
         for i in args.iter().rev() {
+            info!("args: {:#x}", i.clone());
             self.push(i.clone());
         }
+        info!("args len: {}", args_len);
         self.push(args_len);
     }
 

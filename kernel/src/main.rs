@@ -64,6 +64,11 @@ pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
     if hart_id != 0 {
         sbi::hart_suspend(0x00000000, support_hart_resume as usize, 0);
     }
+
+    #[cfg(feature = "board_k210")]
+    if hart_id != 0 {
+        sbi::hart_suspend(0x00000000, support_hart_resume as usize, 0);
+    }
     
     // 清空bss段
     clear_bss();

@@ -8,5 +8,7 @@ pub enum RuntimeError {
     // 没有对应的文件
     NoMatchedFile,
     // 没有对应的fd
-    NoMatchedFileDesc
+    NoMatchedFileDesc,
+    // 杀死当前任务
+    KillSelfTask
 }

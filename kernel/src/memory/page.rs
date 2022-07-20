@@ -1,8 +1,12 @@
+use core::{mem::size_of, slice::from_raw_parts_mut};
+
 use alloc::{vec::Vec, rc::Rc};
 
-use crate::{sync::mutex::Mutex, memory::addr::PAGE_SIZE, runtime_err::RuntimeError};
+use crate::{sync::mutex::Mutex, memory::addr::{PAGE_SIZE, PhysAddr}, runtime_err::RuntimeError};
 
 use super::{addr::{PhysPageNum, VirtAddr}, page_table::PageMappingManager};
+
+const USIZE_PER_PAGES: usize = PAGE_SIZE / size_of::<usize>();
 
 #[cfg(not(feature = "board_k210"))]
 const ADDR_END: usize = 0x80800000;
@@ -42,7 +46,9 @@ impl MemoryPageAllocator {
         for i in 0..self.pages.len() {
             if !self.pages[i] {
                 self.pages[i] = true;
-                return Ok(PhysPageNum::from((self.start >> 12) + i));
+                let page = PhysPageNum::from((self.start >> 12) + i);
+                init_pages(page, 1);
+                return Ok(page);
             }
         }
         Err(RuntimeError::NoEnoughPage)
@@ -75,7 +81,9 @@ impl MemoryPageAllocator {
             if value >= pages {
                 i -= pages;
                 self.pages[i..i+pages].fill(true);
-                return Ok(PhysPageNum::from((self.start >> 12) + i));
+                let page = PhysPageNum::from((self.start >> 12) + i);
+                init_pages(page, pages);
+                return Ok(page);
             }
         }
         Err(RuntimeError::NoEnoughPage)
@@ -94,6 +102,10 @@ impl MemoryPageAllocator {
 
 lazy_static! {
     pub static ref PAGE_ALLOCATOR: Mutex<MemoryPageAllocator> = Mutex::new(MemoryPageAllocator::new());
+}
+
+pub fn init_pages(page: PhysPageNum, num: usize) {
+    unsafe { from_raw_parts_mut(PhysAddr::from(page).0 as *mut usize, USIZE_PER_PAGES * num) }.fill(0);
 }
 
 pub fn alloc() -> Result<PhysPageNum, RuntimeError> {

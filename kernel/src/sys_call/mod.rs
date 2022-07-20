@@ -3,7 +3,7 @@ use core::slice;
 use alloc::{string::String, vec::Vec, rc::Rc};
 use riscv::register::{satp, sepc, scause::{self, Trap, Exception, Interrupt}, stval};
 
-use crate::{memory::{page_table::{PageMapping, PageMappingManager}, addr::{VirtAddr, PhysPageNum, PhysAddr}}, interrupt::timer, fs::filetree::INode};
+use crate::{memory::{page_table::{PageMapping, PageMappingManager}, addr::{VirtAddr, PhysPageNum, PhysAddr}}, interrupt::timer, fs::filetree::INode, task::task_scheduler::kill_task};
 
 use crate::fs::{file::FileType};
 use crate::interrupt::timer::set_last_ticks;
@@ -227,7 +227,19 @@ impl Task {
         }
     }
 
-    pub fn catch(&self) -> Result<(), RuntimeError> {
+    pub fn catch(&self) {
+        let result = self.interrupt();
+        if let Err(err) = result {
+            match err {
+                RuntimeError::KillSelfTask => {
+                    kill_task(self.pid, self.tid);
+                }
+                _ => {}
+            }
+        }
+    }
+
+    pub fn interrupt(&self) -> Result<(), RuntimeError> {
         let scause = scause::read();
         let stval = stval::read();
         let mut task_inner = self.inner.borrow_mut();
@@ -281,7 +293,7 @@ impl Task {
             // 其他情况，终止当前线程
             _ => {
                 info!("中断 {:#x} 地址 {:#x} stval: {:#x}", scause.bits(), sepc::read(), stval);
-                panic!("未知中断")
+                return Err(RuntimeError::KillSelfTask);
             },
         }
     
