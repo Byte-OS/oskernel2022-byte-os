@@ -9,10 +9,10 @@ use super::{addr::{PhysPageNum, VirtAddr}, page_table::PageMappingManager};
 const USIZE_PER_PAGES: usize = PAGE_SIZE / size_of::<usize>();
 
 #[cfg(not(feature = "board_k210"))]
-const ADDR_END: usize = 0x80800000;
+const ADDR_END: usize = 0x809e0000;
 
 #[cfg(feature = "board_k210")]
-const ADDR_END: usize = 0x809e0000;
+const ADDR_END: usize = 0x80800000;
 
 // 内存页分配器
 pub struct MemoryPageAllocator {
@@ -37,6 +37,7 @@ impl MemoryPageAllocator {
     fn init(&mut self, start: usize, end: usize) {
         self.start = start;
         self.end = end;
+        info!("end: {:#x}", end);
         self.pages = vec![false;(end - start) / PAGE_SIZE];
         info!("初始化页式内存管理, 页表数: {}", self.pages.capacity());
     }
@@ -64,26 +65,50 @@ impl MemoryPageAllocator {
 
     // 申请多个页
     pub fn alloc_more(&mut self, pages: usize) -> Result<PhysPageNum, RuntimeError> {
-        let mut i = 0;
-        let mut value = 0;
-        loop {
-            if i >= self.pages.len() { break; }
+        if pages < 10 {
+            let mut i = 0;
+            let mut value = 0;
+            loop {
+                if i >= self.pages.len() { break; }
 
-            if !self.pages[i] {
-                value += 1;
-            } else {
-                value = 0;
+                if !self.pages[i] {
+                    value += 1;
+                } else {
+                    value = 0;
+                }
+
+                // 进行下一个计算
+                i+=1;
+
+                if value >= pages {
+                    i -= pages;
+                    self.pages[i..i+pages].fill(true);
+                    let page = PhysPageNum::from((self.start >> 12) + i);
+                    info!("allocated page: {:#x}", PhysAddr::from(page).0);
+                    init_pages(page, pages);
+                    return Ok(page);
+                }
             }
+        } else {
+            let mut i = self.pages.len() - 1;
+            let mut value = 0;
+            loop {
+                if !self.pages[i] {
+                    value += 1;
+                } else {
+                    value = 0;
+                }
 
-            // 进行下一个计算
-            i+=1;
+                if value >= pages {
+                    self.pages[i..i+pages].fill(true);
+                    let page = PhysPageNum::from((self.start >> 12) + i);
+                    init_pages(page, pages);
+                    return Ok(page);
+                }
+                if i == 0 { break; }
 
-            if value >= pages {
-                i -= pages;
-                self.pages[i..i+pages].fill(true);
-                let page = PhysPageNum::from((self.start >> 12) + i);
-                init_pages(page, pages);
-                return Ok(page);
+                // 进行下一个计算
+                i-=1;
             }
         }
         Err(RuntimeError::NoEnoughPage)

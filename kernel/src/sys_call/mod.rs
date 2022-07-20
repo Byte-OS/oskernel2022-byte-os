@@ -229,6 +229,7 @@ impl Task {
 
     pub fn catch(&self) {
         let result = self.interrupt();
+        info!("catch");
         if let Err(err) = result {
             match err {
                 RuntimeError::KillSelfTask => {
@@ -237,7 +238,9 @@ impl Task {
                 RuntimeError::NoEnoughPage => {
                     panic!("No Enough Page");
                 }
-                _ => {}
+                _ => {
+                    warn!("异常: {:?}", err);
+                }
             }
         }
     }
