@@ -28,12 +28,12 @@ extern crate bitflags;
 extern crate lazy_static; 
 #[macro_use]
 extern crate alloc;
-use core::{arch::global_asm};
+use core::arch::global_asm;
 
 
 use alloc::rc::Rc;
 
-use crate::{sbi::shutdown, fs::filetree::{FILE_TREE, INode}};
+use crate::fs::filetree::INode;
 
 
 mod virtio_impl;
