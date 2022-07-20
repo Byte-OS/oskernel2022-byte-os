@@ -1,11 +1,6 @@
-use core::any::Any;
-
-use alloc::{sync::Arc, string::String, boxed::Box, rc::Rc};
+use alloc::rc::Rc;
 use hashbrown::HashMap;
-
-use crate::{sync::mutex::Mutex, fs::{file::{FileOP, File}, stdio::{StdIn, StdOut, StdErr}}, runtime_err::RuntimeError};
-
-use super::{FileDesc, FileDescEnum};
+use crate::{fs::{file::{FileOP, File}, stdio::{StdIn, StdOut, StdErr}}, runtime_err::RuntimeError};
 
 pub const FD_NULL: usize = 0xffffffffffffff9c;  
 
@@ -36,22 +31,18 @@ impl FDTable {
     }
 
     // 获取fd内容
-    pub fn get_file(&self, index: usize) -> Result<Option<Rc<dyn FileOP>>, RuntimeError> {
-        // let value = self.0.get(&index).cloned().ok_or(RuntimeError::NoMatchedFileDesc)?;
-        // // Rc<dyn FileOP>::downcast::<File>(value);
-        // // Rc::downcast::<File>(value);
-        // let &value as &An        
-        // // let value = value.downcast::<File>(value).map_or(RuntimeError::NoMatchedFileDesc);
-        // todo!()
+    pub fn get_file(&self, index: usize) -> Result<Rc<File>, RuntimeError> {
+        let value = self.0.get(&index).cloned().ok_or(RuntimeError::NoMatchedFileDesc)?;
+        value.downcast::<File>().map_err(|_| RuntimeError::NoMatchedFile)
     }
 
     // 设置fd内容
-    pub fn set(&mut self, index: usize, value: Arc<dyn FileOP>) {
+    pub fn set(&mut self, index: usize, value: Rc<dyn FileOP>) {
         self.0.insert(index, value);
     }
 
     // 加入描述符
-    pub fn push(&mut self, value: Arc<dyn FileOP>) -> usize {
+    pub fn push(&mut self, value: Rc<dyn FileOP>) -> usize {
         let index = self.alloc();
         self.set(index, value);
         index

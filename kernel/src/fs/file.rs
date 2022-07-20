@@ -1,4 +1,8 @@
-use core::any::Any;
+use core::any::{Any, TypeId};
+
+use alloc::{rc::Rc, sync::Arc};
+
+use super::filetree::INode;
 
 // 文件类型
 #[allow(dead_code)]
@@ -46,7 +50,7 @@ pub trait FileOP: Any {
 }
 
 pub struct File {
-
+    pub file: Rc<INode>
 }
 
 impl FileOP for File {
@@ -76,5 +80,20 @@ impl FileOP for File {
 
     fn get_size(&self) -> usize {
         todo!()
+    }
+}
+
+impl dyn FileOP {
+    pub fn is<T: 'static>(&self) -> bool {
+        TypeId::of::<T>() == self.type_id()
+    }
+    pub fn downcast<T: 'static>(self: Rc<Self>) -> Result<Rc<T>,Rc<Self>> {
+        if self.is::<T>() {
+            unsafe {
+                Ok(Rc::from_raw(Rc::into_raw(self) as _))
+            }
+        } else {
+            Err(self)
+        }
     }
 }

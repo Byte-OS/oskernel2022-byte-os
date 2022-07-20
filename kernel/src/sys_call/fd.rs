@@ -62,16 +62,8 @@ impl Task {
             None
         } else {
             // 判度是否存在节点
-            if let Some(fd) = process.fd_table.get(dir_fd).clone() {
-                // 匹配文件节点
-                if let FileDescEnum::File(inode) = &fd.lock().target {
-                    Some(inode.clone())
-                } else {
-                    return Err(RuntimeError::NoMatchedFile);
-                }
-            } else {
-                None
-            }
+            let file = process.fd_table.get_file(dir_fd)?;
+            Some(file.file)
         };
         INode::mkdir(current, &filename, flags as u16);
         drop(process);
@@ -91,16 +83,8 @@ impl Task {
         let current = if fd == FD_NULL {
             None
         } else {
-            if let Some(tree_node) = process.fd_table.get(fd).clone() {
-                // 匹配目标 判断文件类型
-                if let FileDescEnum::File(inode)= &tree_node.force_get().target {
-                    Some(inode.clone())
-                } else {
-                    None
-                }
-            } else {
-                return Err(RuntimeError::NoMatchedFile)
-            }
+            let file = process.fd_table.get_file(fd)?;
+            Some(file.file)
         };
 
         let cnode = INode::open(current, &filename, false)?;
@@ -117,7 +101,6 @@ impl Task {
         let filename = process.pmm.get_phys_addr(VirtAddr::from(filename)).unwrap();
         let filename = get_string_from_raw(filename);
         
-        process.workspace.test();
         let pro = process.workspace.as_ref();
 
         process.workspace = INode::open(Some(process.workspace.clone()), &filename, false)?;
@@ -143,16 +126,8 @@ impl Task {
         let current = if fd == FD_NULL {
             None
         } else {
-            if let Some(file_desc) = process.fd_table.get(fd).clone() {
-                // 匹配文件类型
-                if let FileDescEnum::File(inode) = &file_desc.lock().target {
-                    Some(inode.clone())
-                } else {
-                    None
-                }
-            } else {
-                None
-            }
+            let file = process.fd_table.get_file(fd)?;
+            Some(file.file)
         };
         // 根据文件类型匹配
         let file = if flags.contains(OpenFlags::CREATE) {
@@ -414,21 +389,12 @@ impl Task {
             let mut file_desc = file_desc.lock();
             let offset = match whence {
                 // SEEK_SET
-                0 => {
-                    offset
-                }
+                0 => { offset }
                 // SEEK_CUR
-                1 => {
-                    file_desc.pointer + offset
-                }
+                1 => { file_desc.pointer + offset }
                 // SEEK_END
-                2 => {
-                    0
-                }
-                _ => {
-                    warn!("未识别whence");
-                    0
-                }
+                2 => { 0 }
+                _ => { warn!("未识别whence"); 0 }
             };
             file_desc.pointer = offset;
             offset

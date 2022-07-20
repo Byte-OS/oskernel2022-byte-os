@@ -58,10 +58,10 @@ impl INode {
     }
 
     // 添加节点到父节点
-    pub fn add(parent: Rc<INode>, child: Rc<INode>) {
-        let mut inner = parent.0.borrow_mut();
+    pub fn add(self: Rc<Self>, child: Rc<INode>) {
+        let mut inner = self.0.borrow_mut();
         let mut cinner = child.0.borrow_mut();
-        cinner.parent = Some(Rc::downgrade(&parent));
+        cinner.parent = Some(Rc::downgrade(&self));
         drop(cinner);
         inner.children.push(child);
     }
@@ -236,11 +236,5 @@ impl INode {
             let parent = parent.upgrade().unwrap();
             parent.delete(&inner.filename);
         }
-    }
-
-    // TODO: 采用 更新的rust语法  更加实用 大大减少代码量
-    pub fn test(self: Rc<Self>) -> Rc<Self> {
-        info!("rc test");
-        self.clone()
     }
 }
