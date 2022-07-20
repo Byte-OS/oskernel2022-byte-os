@@ -118,7 +118,7 @@ impl INode {
     // 根据路径 获取文件节点
     pub fn open(current: Option<Rc<INode>>, path: &str, create_sign: bool) -> Result<Rc<File>, RuntimeError> {
         let inode = Self::get(current, path, create_sign)?;
-        Ok(File::new(inode))
+        File::new(inode)
     }
 
     // 获取当前路径

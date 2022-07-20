@@ -69,7 +69,7 @@ impl Task {
         } else {
             // 判度是否存在节点
             let file = process.fd_table.get_file(dir_fd)?;
-            Some(file.file.clone())
+            Some(file.get_inode())
         };
         INode::mkdir(current, &filename, flags as u16)?;
         drop(process);
@@ -90,7 +90,7 @@ impl Task {
             None
         } else {
             let file = process.fd_table.get_file(fd)?;
-            Some(file.file.clone())
+            Some(file.get_inode())
         };
 
         let cnode = INode::get(current, &filename, false)?;
@@ -129,7 +129,7 @@ impl Task {
             None
         } else {
             let file = process.fd_table.get_file(fd)?;
-            Some(file.file.clone())
+            Some(file.get_inode())
         };
         // 根据文件类型匹配
         let file = if flags.contains(OpenFlags::CREATE) {
@@ -304,7 +304,8 @@ impl Task {
         };
         // 判断文件描述符是否存在
         let inode = process.fd_table.get_file(fd)?;
-        let inode = inode.file.0.borrow_mut();
+        let inode = inode.get_inode();
+        let inode = inode.0.borrow_mut();
         kstat_ptr.st_dev = 1;
         kstat_ptr.st_ino = 1;
         kstat_ptr.st_mode = 0;
