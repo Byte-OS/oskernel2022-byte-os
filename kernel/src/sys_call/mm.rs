@@ -1,4 +1,5 @@
 use crate::runtime_err::RuntimeError;
+use crate::sys_call::SYS_CALL_ERR;
 use crate::task::task::Task;
 use crate::memory::addr::PAGE_SIZE;
 use crate::task::fd_table::FD_NULL;
@@ -33,7 +34,7 @@ impl Task {
             info!("file size: {:#x}", file.get_size() / PAGE_SIZE);
             file.mmap(process.pmm.clone(), start.into());
             drop(process);
-            inner.context.x[10] = start;
+            inner.context.x[10] = SYS_CALL_ERR;
             Ok(())
         }
         // let mut inner = self.inner.borrow_mut();

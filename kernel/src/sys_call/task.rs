@@ -110,19 +110,23 @@ impl Task {
         child_process.stack = process.stack.clone_with_data(child_process.pmm.clone())?;
     
         child_process.pmm.add_mapping_by_set(&child_process.mem_set)?;
+        drop(process);
+        drop(child_process);
+        drop(inner);
+        switch_next();
         // suspend_and_run_next();
         Err(RuntimeError::ChangeTask)
     }
     
     pub fn sys_clone(&self, flags: usize, new_sp: usize, ptid: usize, tls: usize, ctid: usize) -> Result<(), RuntimeError> {
-        // info!(
-        //     "clone: flags={:#x}, newsp={:#x}, parent_tid={:#x}, child_tid={:#x}, newtls={:#x}",
-        //     flags, new_sp, ptid, tls, ctid
-        // );
+        info!(
+            "clone: flags={:#x}, newsp={:#x}, parent_tid={:#x}, child_tid={:#x}, newtls={:#x}",
+            flags, new_sp, ptid, tls, ctid
+        );
     
         if flags == 0x4111 || flags == 0x11 {
             // VFORK | VM | SIGCHILD
-            // warn!("sys_clone is calling sys_fork instead, ignoring other args");
+            warn!("sys_clone is calling sys_fork instead, ignoring other args");
             return self.sys_fork();
         }
         let mut inner = self.inner.borrow_mut();

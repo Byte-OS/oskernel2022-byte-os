@@ -180,6 +180,8 @@ impl Task {
             SYS_READ => self.sys_read(args[0], args[1], args[2]),
             // 写入文件数据
             SYS_WRITE => self.sys_write(args[0], args[1], args[2]),
+            // 写入数据
+            SYS_WRITEV => self.sys_writev(args[0], args[1].into(), args[2]),
             // 获取文件数据信息
             SYS_FSTAT => self.sys_fstat(args[0], args[1]),
             // 退出文件信息
@@ -246,7 +248,10 @@ impl Task {
             // 页处理错误
             Trap::Exception(Exception::StorePageFault) => {
                 warn!("缺页中断触发 缺页地址: {:#x} 触发地址:{:#x} 已同步映射", stval, context.sepc);
-                panic!("系统终止");
+                drop(context);
+                let mut process = task_inner.process.borrow_mut();
+                process.stack.alloc_until(stval);
+                // panic!("系统终止");
             },
             // 用户请求
             Trap::Exception(Exception::UserEnvCall) => {

@@ -1,5 +1,6 @@
 use core::slice;
 
+use crate::task::fd_table::IoVec;
 use crate::task::task::Task;
 use crate::task::fd_table::FD_NULL;
 use crate::task::pipe::new_pipe;
@@ -42,7 +43,6 @@ impl Task {
         inner.context.x[10] = new_fd;
         Ok(())
     }
-
     // 复制文件描述符
     pub fn sys_dup3(&self, fd: usize, new_fd: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
@@ -54,7 +54,7 @@ impl Task {
         inner.context.x[10] = new_fd;
         Ok(())
     }
-
+    // 创建文件
     pub fn sys_mkdirat(&self, dir_fd: usize, filename: usize, flags: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
@@ -76,7 +76,7 @@ impl Task {
         inner.context.x[10] = 0;
         Ok(())
     }
-
+    // 取消链接文件
     pub fn sys_unlinkat(&self, fd: usize, filename: usize, _flags: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
@@ -92,14 +92,13 @@ impl Task {
             let file = process.fd_table.get_file(fd)?;
             Some(file.get_inode())
         };
-
         let cnode = INode::get(current, &filename, false)?;
         cnode.del_self();
         drop(process);
         inner.context.x[10] = 0;
         Ok(())
     }
-
+    // 更改工作目录
     pub fn sys_chdir(&self, filename: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
@@ -113,16 +112,17 @@ impl Task {
         inner.context.x[10] = 0;
         Ok(())
     }
-
+    // 打开文件
     pub fn sys_openat(&self, fd: usize, filename: usize, flags: usize, _open_mod: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
-
 
         // 获取文件信息
         let filename = process.pmm.get_phys_addr(VirtAddr::from(filename)).unwrap();
         let filename = get_string_from_raw(filename);
         let flags = OpenFlags::from_bits_truncate(flags as u32);
+
+        info!("读取文件: {}", filename);
 
         // 判断文件描述符是否存在
         let current = if fd == FD_NULL {
@@ -133,17 +133,17 @@ impl Task {
         };
         // 根据文件类型匹配
         let file = if flags.contains(OpenFlags::CREATE) {
-            INode::open(current, &filename, true)
+            INode::open(current, &filename, true)?
         } else {
-            INode::open(current, &filename, false)
-        }?;
+            INode::open(current, &filename, false)?
+        };
         let fd = process.fd_table.alloc();
         process.fd_table.set(fd, file);
         drop(process);
         inner.context.x[10] = fd;
         Ok(())
     }
-
+    // 关闭文件
     pub fn sys_close(&self, fd: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
@@ -152,7 +152,7 @@ impl Task {
         inner.context.x[10] = 0;
         Ok(())
     }
-
+    // 管道符
     pub fn sys_pipe2(&self, req_ptr: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
@@ -173,7 +173,7 @@ impl Task {
         inner.context.x[10] = 0;
         Ok(())
     }
-
+    // 获取文件信息
     pub fn sys_getdents(&self, _fd: usize, _ptr: usize, _len: usize) -> Result<(), RuntimeError> {
         // let mut inner = self.inner.borrow_mut();
         // let process = inner.process.borrow_mut();
@@ -250,7 +250,7 @@ impl Task {
         // Ok(())
         todo!()
     }
-
+    // 读取
     pub fn sys_read(&self, fd: usize, buf_ptr: usize, count: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
@@ -272,7 +272,7 @@ impl Task {
         inner.context.x[10] = value;
         Ok(())
     }
-
+    // 写入
     pub fn sys_write(&self, fd: usize, buf_ptr: usize, count: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
@@ -291,6 +291,23 @@ impl Task {
         };
         drop(process);
         inner.context.x[10] = value;
+        Ok(())
+    }
+    // 写入
+    pub fn sys_writev(&self, fd: usize, iov: VirtAddr, iovcnt: usize) -> Result<(), RuntimeError> {
+        let mut inner = self.inner.borrow_mut();
+        let process = inner.process.borrow_mut();
+        
+        let fd = process.fd_table.get(fd)?;
+        let iov_vec = iov.translate(process.pmm.clone()).transfer_vec_count::<IoVec>(iovcnt);
+        let mut cnt = 0;
+        for i in iov_vec {
+            let buf = get_buf_from_phys_addr(i.iov_base.translate(process.pmm.clone()), 
+                i.iov_len);
+            cnt += fd.write(buf, i.iov_len);
+        }
+        drop(process);
+        inner.context.x[10] = cnt;
         Ok(())
     }
 
@@ -328,30 +345,15 @@ impl Task {
         Ok(())
     }
 
-    pub fn sys_lseek(&self, _fd: usize, _offset: usize, _whence: usize) -> Result<(), RuntimeError> {
-        // let mut inner = self.inner.borrow_mut();
-        // let process = inner.process.borrow_mut();
-        // // 判断文件描述符是否存在
-        // let value = if let Some(file_desc) = process.fd_table.get(fd) {
-        //     let mut file_desc = file_desc.lock();
-        //     let offset = match whence {
-        //         // SEEK_SET
-        //         0 => { offset }
-        //         // SEEK_CUR
-        //         1 => { file_desc.pointer + offset }
-        //         // SEEK_END
-        //         2 => { 0 }
-        //         _ => { warn!("未识别whence"); 0 }
-        //     };
-        //     file_desc.pointer = offset;
-        //     offset
-        // } else {
-        //     SYS_CALL_ERR
-        // };
-        // drop(process);
-        // inner.context.x[10] = value;
-        // Ok(())
-        todo!()
+    pub fn sys_lseek(&self, fd: usize, offset: usize, whence: usize) -> Result<(), RuntimeError> {
+        let mut inner = self.inner.borrow_mut();
+        let process = inner.process.borrow_mut();
+
+        let file = process.fd_table.get_file(fd)?;
+        let offset = file.lseek(offset, whence);
+        drop(process);
+        inner.context.x[10] = offset;
+        Ok(())
     }
 
 }

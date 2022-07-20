@@ -3,9 +3,9 @@ use core::{cell::RefCell, slice};
 
 use alloc::{string::{String, ToString}, vec::Vec, rc::{Rc, Weak}};
 
-use crate::{sync::mutex::Mutex, device::BLK_CONTROL, memory::addr::PAGE_SIZE, runtime_err::RuntimeError};
+use crate::{sync::mutex::Mutex, device::BLK_CONTROL, memory::{addr::{PAGE_SIZE, PhysAddr}, page::alloc_more}, runtime_err::RuntimeError};
 
-use super::file::{FileType, File};
+use super::file::{FileType, File, DEFAULT_VIRT_FILE_PAGE};
 
 
 lazy_static! {
@@ -112,12 +112,21 @@ impl INode {
                 }
             }?;
         }
+        
         Ok(current)
     }
 
     // 根据路径 获取文件节点
     pub fn open(current: Option<Rc<INode>>, path: &str, create_sign: bool) -> Result<Rc<File>, RuntimeError> {
         let inode = Self::get(current, path, create_sign)?;
+        if create_sign {
+            let mut inner = inode.0.borrow_mut();
+            if inner.cluster == 0 {
+                inner.file_type = FileType::VirtFile;
+                let page_index = alloc_more(DEFAULT_VIRT_FILE_PAGE)?;
+                inner.cluster = PhysAddr::from(page_index).0;
+            }
+        }
         File::new(inode)
     }
 
@@ -240,7 +249,9 @@ impl INode {
         let parent = inner.parent.clone();
         if let Some(parent) = parent {
             let parent = parent.upgrade().unwrap();
-            parent.delete(&inner.filename);
+            let filename = inner.filename.clone();
+            drop(inner);
+            parent.delete(&filename);
         }
     }
 }

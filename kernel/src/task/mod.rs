@@ -146,7 +146,6 @@ pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path
     assert_eq!(magic, [0x7f, 0x45, 0x4c, 0x46], "invalid elf!");
 
     // 测试代码
-    warn!("读取interp");
     let header = elf
         .program_iter()
         .find(|ph| ph.get_type() == Ok(Type::Interp));

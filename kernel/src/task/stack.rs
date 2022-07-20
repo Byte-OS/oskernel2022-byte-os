@@ -1,7 +1,7 @@
 use alloc::{vec::Vec, collections::BTreeMap, rc::Rc};
 use core::borrow::BorrowMut;
 
-use crate::{memory::{page_table::{PTEFlags, PageMappingManager}, addr::VirtAddr, mem_set::MemSet, mem_map::MemMap}, runtime_err::RuntimeError};
+use crate::{memory::{page_table::{PTEFlags, PageMappingManager}, addr::{VirtAddr, PAGE_SIZE}, mem_set::MemSet, mem_map::MemMap}, runtime_err::RuntimeError};
 
 
 const PTR_SIZE: usize = 8;
@@ -9,6 +9,7 @@ const PTR_SIZE: usize = 8;
 pub struct UserStack {
     pub bottom: usize,
     pub top: usize,
+    pub pointer: usize,
     pub pmm: Rc<PageMappingManager>,
     pub mem_set: MemSet
 }
@@ -22,48 +23,49 @@ impl UserStack {
         mem_set.inner().push(mem_map);
         Ok(UserStack { 
             bottom: 0xf0001000, 
-            top: 0xf0001000,
+            top: 0xeffff000,
+            pointer: 0xf0001000,
             pmm,
             mem_set
         })
     }
 
     pub fn get_stack_top(&self) -> usize {
-        self.top
+        self.pointer
     }
 
     // 在栈中加入数字
     pub fn push(&mut self, num: usize) -> usize {
-        self.top -= PTR_SIZE;
-        let phys_ptr = self.pmm.get_phys_addr(self.top.into()).unwrap().0;
+        self.pointer -= PTR_SIZE;
+        let phys_ptr = self.pmm.get_phys_addr(self.pointer.into()).unwrap().0;
         unsafe {
             (phys_ptr as *mut usize).write(num)
         };
-        self.top
+        self.pointer
     }
 
     // 在栈中加入字符串 并且内存对齐
     pub fn push_arr(&mut self, str: &[u8]) -> usize {
         // 设置 总长度
         let str_len = (str.len() + 1 + (PTR_SIZE - 1)) / PTR_SIZE;
-        self.top -= PTR_SIZE * str_len;
+        self.pointer -= PTR_SIZE * str_len;
 
-        let mut phys_ptr = self.pmm.get_phys_addr(self.top.into()).unwrap().0;
-        let mut virt_ptr = self.top;
+        let mut phys_ptr = self.pmm.get_phys_addr(self.pointer.into()).unwrap().0;
+        let mut virt_ptr = self.pointer;
         for i in 0..str.len() {
             // 写入字节
             unsafe {(phys_ptr as *mut u8).write(str[i])};
             virt_ptr += 1;
             // 如果虚拟地址越界 则重新映射
             if virt_ptr % 4096 == 0 {
-                phys_ptr = self.pmm.get_phys_addr(VirtAddr::from(self.top)).unwrap().0;
+                phys_ptr = self.pmm.get_phys_addr(VirtAddr::from(self.pointer)).unwrap().0;
             } else {
                 phys_ptr += 1;
             }
         }
         // 写入 \0 作为结束符
         unsafe {(phys_ptr as *mut u8).write(0)};
-        self.top
+        self.pointer
     }
 
     pub fn push_str(&mut self, str: &str) -> usize {
@@ -108,6 +110,7 @@ impl UserStack {
         Ok(UserStack { 
             bottom: self.bottom, 
             top: self.top,
+            pointer: self.pointer,
             pmm,
             mem_set
         })
@@ -117,5 +120,16 @@ impl UserStack {
     pub fn release(&mut self) {
         let mem_set = self.mem_set.borrow_mut();
         mem_set.release();
+    }
+
+    pub fn alloc_until(&mut self, until_addr: usize) -> Result<(), RuntimeError> {
+        if until_addr < self.top {
+            let start_page = until_addr / PAGE_SIZE;
+            let end_page = self.top / PAGE_SIZE;
+            let mem_map = MemMap::new(start_page.into(), end_page - start_page, PTEFlags::UVRWX)?;
+            self.pmm.add_mapping_by_map(&mem_map)?;
+            self.mem_set.inner().push(mem_map);
+        }
+        Ok(())
     }
 }

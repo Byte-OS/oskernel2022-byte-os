@@ -91,5 +91,8 @@ hexdump:
 coredump:
 	cd kernel && make -f makefile FS_IMG=../$(FS_IMG) coredump || exit 1;
 
+objdump:
+	rust-objdump --arch-name=riscv64 -d $(KERNEL_FILE)
+
 clean:
 	rm $(KERNEL_FILE) $(BIN_FILE)

@@ -1,4 +1,10 @@
-use core::{fmt::{self, Debug, Formatter}, ops::Add, slice};
+use core::{fmt::{self, Debug, Formatter}, ops::Add, slice, mem::size_of};
+
+use alloc::{rc::Rc, vec::Vec};
+
+use crate::task::fd_table::IoVec;
+
+use super::page_table::PageMappingManager;
 
 pub const PAGE_SIZE: usize = 4096;
 pub const PAGE_PTE_NUM: usize = 512;
@@ -204,6 +210,10 @@ impl VirtAddr {
     pub fn as_mut_ptr(&mut self) -> *mut u8 {
         self.0 as *mut u8
     }
+    // 翻译地址
+    pub fn translate(&self, pmm: Rc<PageMappingManager>) -> PhysAddr {
+        pmm.get_phys_addr(self.clone()).unwrap()
+    }
 }
 
 impl PhysAddr {
@@ -213,6 +223,18 @@ impl PhysAddr {
 
     pub fn as_mut_ptr(&mut self) -> *mut u8 {
         self.0 as *mut u8
+    }
+
+    pub fn tranfer<'a, T>(&self) -> &'a mut T {
+        unsafe { (self.0 as *mut T).as_mut().unwrap() }
+    }
+
+    pub fn transfer_vec_count<T: Clone>(&self, count: usize) -> Vec<T> {
+        let mut arr = vec![];
+        for i in 0..count {
+            arr.push(PhysAddr::from(self.0 + i * size_of::<T>()).tranfer::<T>().clone());
+        }
+        arr
     }
 }
 
@@ -246,7 +268,6 @@ impl VirtAddr{
 }
 
 impl VirtPageNum {
-
     pub fn default() -> Self {
         Self(0)
     }

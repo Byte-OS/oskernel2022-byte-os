@@ -1,3 +1,5 @@
+use alloc::string::String;
+
 use crate::console::puts;
 
 use super::file::FileOP;
@@ -74,7 +76,7 @@ impl FileOP for StdErr {
     }
 
     fn writeable(&self) -> bool {
-        todo!()
+        true
     }
 
     fn read(&self, data: &mut [u8]) -> usize {
@@ -82,7 +84,8 @@ impl FileOP for StdErr {
     }
 
     fn write(&self, data: &[u8], count: usize) -> usize {
-        todo!()
+        error!("data: {}", unsafe { String::from_utf8_unchecked(data.to_vec()) });
+        count
     }
 
     fn read_at(&self, pos: usize, data: &mut [u8]) -> usize {

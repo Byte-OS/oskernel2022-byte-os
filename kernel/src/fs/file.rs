@@ -4,11 +4,13 @@ use alloc::rc::Rc;
 use core::cell::RefCell;
 
 use crate::{memory::mem_map::MemMap, runtime_err::RuntimeError};
-use crate::memory::addr::{get_buf_from_phys_page, get_pages_num, PAGE_SIZE, VirtAddr};
+use crate::memory::addr::{get_buf_from_phys_page, get_pages_num, PAGE_SIZE, VirtAddr, PhysAddr};
 use crate::memory::page::alloc_more;
 use crate::memory::page_table::{PageMappingManager, PTEFlags};
 
 use super::filetree::INode;
+
+pub const DEFAULT_VIRT_FILE_PAGE: usize = 2;
 
 // 文件类型
 #[allow(dead_code)]
@@ -63,31 +65,47 @@ pub struct FileInner {
     pub file_size: usize,
     pub mem_size: usize,
     pub buf: &'static mut [u8],
-    pub mem_map: Rc<MemMap>
+    pub mem_map: Option<Rc<MemMap>>
 }
 
 impl File {
     pub fn new(inode: Rc<INode>) -> Result<Rc<Self>, RuntimeError>{
-        // 申请页表存储程序
-        let elf_pages = get_pages_num(inode.get_file_size());
-
-        // 申请页表
-        let elf_phy_start = alloc_more(elf_pages)?;
-        let mem_map = MemMap::exists_page(elf_phy_start, elf_phy_start.0.into(),
-            elf_pages, PTEFlags::VRWX);
-        // 获取缓冲区地址并读取
-        let buf = get_buf_from_phys_page(elf_phy_start, elf_pages);
-        inode.read_to(buf);
-        let file_size = inode.get_file_size();
-        warn!("读取文件: {}", inode.get_filename());
-        Ok(Rc::new(Self(RefCell::new(FileInner {
-            file: inode,
-            offset: 0,
-            file_size,
-            buf,
-            mem_size: elf_pages * PAGE_SIZE,
-            mem_map: Rc::new(mem_map)
-        }))))
+        if inode.get_file_type() == FileType::VirtFile {
+            let inner = inode.0.borrow_mut();
+            let file_size = inner.size;
+            let mem_size = DEFAULT_VIRT_FILE_PAGE * PAGE_SIZE;
+            let buf = get_buf_from_phys_page(PhysAddr::from(inner.cluster).into(), mem_size);
+            drop(inner);
+            Ok(Rc::new(Self(RefCell::new(FileInner {
+                file: inode,
+                offset: 0,
+                file_size,
+                buf,
+                mem_size,
+                mem_map: None
+            }))))
+        } else {
+            // 申请页表存储程序
+            let elf_pages = get_pages_num(inode.get_file_size());
+            // 申请页表
+            let elf_phy_start = alloc_more(elf_pages)?;
+            let mem_map = MemMap::exists_page(elf_phy_start, elf_phy_start.0.into(),
+                elf_pages, PTEFlags::VRWX);
+            // 获取缓冲区地址并读取
+            let buf = get_buf_from_phys_page(elf_phy_start, elf_pages);
+            inode.read_to(buf);
+            let file_size = inode.get_file_size();
+            warn!("读取文件: {}", inode.get_filename());
+            Ok(Rc::new(Self(RefCell::new(FileInner {
+                file: inode,
+                offset: 0,
+                file_size,
+                buf,
+                mem_size: elf_pages * PAGE_SIZE,
+                mem_map: Some(Rc::new(mem_map))
+            }))))
+        }
+        
     }
 
     pub fn get_inode(&self) -> Rc<INode> {
@@ -98,7 +116,45 @@ impl File {
     pub fn mmap(&self, pmm: Rc<PageMappingManager>, virt_addr: VirtAddr) {
         let inner = self.0.borrow_mut();
         let mem_map = inner.mem_map.clone();
-        pmm.add_mapping_range(mem_map.ppn.into(), virt_addr, mem_map.page_num * PAGE_SIZE, PTEFlags::UVRWX);
+        // for i in 0..mem_map.page_num {
+        //     let addr = pmm.get_phys_addr(virt_addr + VirtAddr::from(i * 0x1000)).unwrap();
+        //     // info!("获取addr: {:#x}", addr.0);
+        // }
+        // todo!()
+        // pmm.add_mapping_range(mem_map.ppn.into(), virt_addr, mem_map.page_num * PAGE_SIZE, PTEFlags::UVRWX);
+    }
+
+    pub fn lseek(&self, offset: usize, whence: usize) -> usize {
+        let mut inner = self.0.borrow_mut();
+        info!("seek: {}, {}   file_size: {}", offset, whence, inner.file_size);
+        inner.offset = match whence {
+            // SEEK_SET
+            0 => { 
+                if offset < inner.file_size {
+                    offset
+                } else {
+                    inner.file_size - 1
+                }
+            }
+            // SEEK_CUR
+            1 => { 
+                if inner.offset + offset < inner.file_size {
+                    inner.offset + offset
+                } else {
+                    inner.file_size - 1
+                }
+            }
+            // SEEK_END
+            2 => {
+                if inner.file_size < offset + 1 {
+                    inner.file_size - offset - 1
+                } else {
+                    0
+                }
+            }
+            _ => { 0 }
+        };
+        inner.offset
     }
 }
 
@@ -116,13 +172,24 @@ impl FileOP for File {
         let remain = inner.file_size - inner.offset;
         let len = if remain < data.len() { remain } else { data.len() };
         info!("读取len: {} offset: {}", len, inner.offset);
-        data[..len].copy_from_slice(&inner.buf[inner.offset..inner.offset + len]);
+        data[..len].clone_from_slice(&inner.buf[inner.offset..inner.offset + len]);
         inner.offset += len;
         len
     }
 
     fn write(&self, data: &[u8], count: usize) -> usize {
-        todo!()
+        let mut inner = self.0.borrow_mut();
+        let end = inner.offset + count;
+        if end >= inner.mem_size {
+            panic!("无法写入超出部分");
+        }
+        let start = inner.offset;
+        inner.buf[start..end].clone_from_slice(&data);
+        inner.offset += count;
+        if inner.offset >= inner.file_size {
+            inner.file_size = inner.offset + 1;
+        }
+        count
     }
 
     fn read_at(&self, pos: usize, data: &mut [u8]) -> usize {
