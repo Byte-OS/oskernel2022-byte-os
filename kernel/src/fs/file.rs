@@ -131,14 +131,14 @@ impl File {
 
     pub fn lseek(&self, offset: usize, whence: usize) -> usize {
         let mut inner = self.0.borrow_mut();
-        info!("seek: {}, {}   file_size: {}", offset, whence, inner.file_size);
+        info!("seek: {}, {}   file_size: {} offset: {}", offset, whence, inner.file_size, inner.offset);
         inner.offset = match whence {
             // SEEK_SET
             0 => { 
                 if offset < inner.file_size {
                     offset
                 } else {
-                    inner.file_size - 1
+                    inner.file_size
                 }
             }
             // SEEK_CUR
@@ -146,19 +146,16 @@ impl File {
                 if inner.offset + offset < inner.file_size {
                     inner.offset + offset
                 } else {
-                    inner.file_size - 1
+                    inner.file_size
                 }
             }
             // SEEK_END
             2 => {
-                if inner.file_size < offset + 1 {
-                    inner.file_size - offset - 1
-                } else {
-                    0
-                }
+                inner.file_size + offset
             }
             _ => { 0 }
         };
+        info!("inner.offset: {}", inner.offset);
         inner.offset
     }
 }
@@ -179,6 +176,7 @@ impl FileOP for File {
         info!("读取len: {} offset: {}", len, inner.offset);
         data[..len].clone_from_slice(&inner.buf[inner.offset..inner.offset + len]);
         inner.offset += len;
+        info!("offset: {}", inner.offset);
         len
     }
 
@@ -192,7 +190,7 @@ impl FileOP for File {
         inner.buf[start..end].clone_from_slice(&data);
         inner.offset += count;
         if inner.offset >= inner.file_size {
-            inner.file_size = inner.offset + 1;
+            inner.file_size = inner.offset;
         }
         count
     }

@@ -175,7 +175,7 @@ pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path
             info!("relocate success");
             base
         },
-        Err(_) => {
+        Err(value) => {
             info!("test: {}", value);
             0
         }
