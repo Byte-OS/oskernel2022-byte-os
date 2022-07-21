@@ -131,10 +131,11 @@ pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path
     
     // 申请页表存储程序
     let elf_pages = get_pages_num(program.get_file_size());
-    // 申请页表
-    let elf_phy_start = alloc_more(elf_pages)?;
+    
+    // 申请暂时内存
+    let temp_buf = MemMap::new_kernel_buf(elf_pages)?;
     // 获取缓冲区地址并读取
-    let buf = get_buf_from_phys_page(elf_phy_start, elf_pages);
+    let buf = get_buf_from_phys_page(temp_buf.ppn, temp_buf.page_num);
     program.read_to(buf);
 
     // 读取elf信息
@@ -174,7 +175,7 @@ pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path
             info!("relocate success");
             base
         },
-        Err(value) => {
+        Err(_) => {
             info!("test: {}", value);
             0
         }
@@ -251,7 +252,6 @@ pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path
 
     drop(process);
     // 释放读取的文件
-    dealloc_more(elf_phy_start, elf_pages);
     
     // 任务管理器添加任务
     Ok(task)

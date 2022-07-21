@@ -46,6 +46,17 @@ impl MemMap {
         })
     }
 
+    // 申请开始页表和页表数量 申请内存
+    pub fn new_kernel_buf(page_num: usize) -> Result<Self, RuntimeError> {
+        let phys_num_start = alloc_more(page_num)?;
+        Ok(Self {
+            ppn: phys_num_start,
+            vpn: 0usize.into(),
+            page_num,
+            flags: PTEFlags::VRWX
+        })
+    }
+
     // 获取pte容器地址
     pub fn pte_container(ppn: PhysPageNum) -> Self {
         Self {
