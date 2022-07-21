@@ -202,7 +202,6 @@ pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path
 
             // 初始化
             temp_buf[vr_offset..vr_offset_end].copy_from_slice(&buf[ph_offset..ph_offset+read_size]);
-            info!("mapping to {:#x}", start_va.0);
             process.pmm.add_mapping_range(PhysAddr::from(phy_start) + PhysAddr::from(offset), 
                 start_va, ph.mem_size() as usize, PTEFlags::VRWX | PTEFlags::U)?;
         }
@@ -213,12 +212,7 @@ pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path
             let phys_addr = pmm.get_phys_addr(addr.into())?;
             let ptr = phys_addr.tranfer::<usize>();
             *ptr = value;
-            // let value_addr = get_buf_from_phys_addr(phys_addr, size_of::<usize>());
-            // warn!("RELATIVE write: {:#x} @ {:#x}", value, addr);
-            // value_addr.clone_from_slice(&value.to_ne_bytes());
         }
-        // panic!("shutdown");
-        // panic!("shutdown");
     }
 
     // 添加参数

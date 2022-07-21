@@ -1,7 +1,9 @@
+use crate::memory::mem_map::MemMap;
+use crate::memory::page_table::PTEFlags;
 use crate::runtime_err::RuntimeError;
 use crate::sys_call::SYS_CALL_ERR;
 use crate::task::task::Task;
-use crate::memory::addr::PAGE_SIZE;
+use crate::memory::addr::{PAGE_SIZE, VirtAddr};
 use crate::task::fd_table::{FD_NULL, FD_RANDOM};
 use crate::fs::file::FileOP;
 
@@ -21,17 +23,23 @@ impl Task {
         Ok(())
     }
 
-    pub fn sys_mmap(&self, start: usize, _len: usize, _prot: usize, 
+    pub fn sys_mmap(&self, start: usize, len: usize, _prot: usize, 
         _flags: usize, fd: usize, _offset: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
-        let process = inner.process.borrow_mut();
-        info!("mmap start: {:#x}, len: {:#x}, prot: {}, flags: {}, fd: {:#x}, offset: {}", start, _len, _prot, _flags, fd, _offset);
-        info!("mmap pages: {}", _len / PAGE_SIZE);
+        let mut process = inner.process.borrow_mut();
+        info!("mmap start: {:#x}, len: {:#x}, prot: {}, flags: {}, fd: {:#x}, offset: {}", start, len, _prot, _flags, fd, _offset);
+        info!("mmap pages: {}", len / PAGE_SIZE);
         
         if fd == FD_NULL {
             todo!()
         } else if fd == FD_RANDOM {
-            todo!()
+            let page_num = len / PAGE_SIZE;
+            let mem_map = MemMap::new(VirtAddr::from(start).into(), page_num, PTEFlags::UVRWX)?;
+            process.pmm.add_mapping_by_map(&mem_map)?;
+            process.mem_set.0.push(mem_map);
+            drop(process);
+            inner.context.x[10] = start;
+            Ok(())
         } else {
             let file = process.fd_table.get_file(fd)?;
             info!("file size: {:#x}", file.get_size() / PAGE_SIZE);

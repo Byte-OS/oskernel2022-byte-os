@@ -119,7 +119,6 @@ impl ElfExtra for ElfFile<'_> {
                     let addr = base + entry.get_offset() as usize;
                     // vmar.write_memory(addr, &value.to_ne_bytes())
                         // .map_err(|_| "Invalid Vmar")?;
-                    warn!("RELATIVE write: {:#x} @ {:#x}", value, addr);
                     res.push((addr, value))
                 }
                 REL_RELATIVE | R_RISCV_RELATIVE | R_AARCH64_RELATIVE => {
@@ -127,7 +126,6 @@ impl ElfExtra for ElfFile<'_> {
                     let addr = base + entry.get_offset() as usize;
                     // vmar.write_memory(addr, &value.to_ne_bytes())
                         // .map_err(|_| "Invalid Vmar")?;
-                    warn!("RELATIVE write: {:#x} @ {:#x}", value, addr);
                     res.push((addr, value))
                 }
                 t => unimplemented!("unknown type: {}", t),
