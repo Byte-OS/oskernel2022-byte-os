@@ -273,7 +273,7 @@ impl Task {
             Trap::Interrupt(Interrupt::SupervisorTimer) => timer::timer_handler(),
             // 页处理错误
             Trap::Exception(Exception::StorePageFault) => {
-                warn!("缺页中断触发 缺页地址: {:#x} 触发地址:{:#x} 已同步映射", stval, context.sepc);
+                error!("缺页中断触发 缺页地址: {:#x} 触发地址:{:#x} 已同步映射", stval, context.sepc);
                 drop(context);
                 panic!("error");
                 let mut process = task_inner.process.borrow_mut();

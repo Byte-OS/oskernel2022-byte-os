@@ -65,32 +65,7 @@ impl MemoryPageAllocator {
 
     // 申请多个页
     pub fn alloc_more(&mut self, pages: usize) -> Result<PhysPageNum, RuntimeError> {
-        if pages < 10 {
-            let mut i = 0;
-            let mut value = 0;
-            loop {
-                if i >= self.pages.len() { break; }
-
-                if !self.pages[i] {
-                    value += 1;
-                } else {
-                    value = 0;
-                }
-
-                // 进行下一个计算
-                i+=1;
-
-                if value >= pages {
-                    i -= pages;
-                    self.pages[i..i+pages].fill(true);
-                    let page = PhysPageNum::from((self.start >> 12) + i);
-                    info!("allocated page: {:#x}", PhysAddr::from(page).0);
-                    init_pages(page, pages);
-                    return Ok(page);
-                }
-            }
-        } else {
-            let mut i = self.pages.len() - 1;
+        let mut i = self.pages.len() - 1;
             let mut value = 0;
             loop {
                 if !self.pages[i] {
@@ -110,7 +85,6 @@ impl MemoryPageAllocator {
                 // 进行下一个计算
                 i-=1;
             }
-        }
         Err(RuntimeError::NoEnoughPage)
     }
 
