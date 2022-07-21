@@ -126,7 +126,7 @@ pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path
 
     // 如果存在write
     let program = INode::get(None, path, false)?;
-    alloc_more(5)?;
+    
     // 申请页表存储程序
     let elf_pages = get_pages_num(program.get_file_size());
     // 申请页表
@@ -165,8 +165,8 @@ pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path
     // let entry_point = base + entry_point;
 
     match elf.relocate(process.borrow().pmm.clone(), 0x20000000) {
-        Ok(_) => info!("relocate success"),
-        Err(value) => info!("test: {}", value)
+        Ok(_) => {info!("relocate success");},
+        Err(value) => {info!("test: {}", value);}
     };
 
     // 创建新的任务控制器 并映射栈

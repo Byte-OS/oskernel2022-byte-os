@@ -62,7 +62,7 @@ impl Task {
         
         let pte_ppn = process.pmm.get_pte() >> 12;
         let context_ptr = &inner.context as *const Context as usize;
-        
+        info!("恢复任务");
         // 释放资源
         drop(process);
         drop(inner);
