@@ -113,6 +113,12 @@ impl File {
         inner.file.clone()
     }
 
+    pub fn copy_to(&self, offset: usize, buf: &mut [u8]) {
+        let inner = self.0.borrow_mut();
+        let len = inner.buf.len() - offset;
+        buf[..len].clone_from_slice(&inner.buf[offset..]);
+    }
+
     pub fn mmap(&self, pmm: Rc<PageMappingManager>, virt_addr: VirtAddr) {
         let inner = self.0.borrow_mut();
         let mem_map = inner.mem_map.clone().expect("没有申请页面");

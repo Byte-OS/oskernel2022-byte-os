@@ -90,7 +90,7 @@ impl FileDesc {
 impl UserHeap {
     // 创建heap
     pub fn new() -> Result<Self, RuntimeError> {
-        let phy_start = PAGE_ALLOCATOR.lock().alloc()?;
+        let phy_start = alloc()?;
         // 申请页表作为heap
         Ok(UserHeap {
             start: phy_start,
@@ -109,6 +109,7 @@ impl UserHeap {
     }
 
     pub fn set_heap_top(&mut self, top: usize) -> usize {
+        warn!("set top: {}", top);
         let origin_top = self.pointer;
         self.pointer = top;
         origin_top

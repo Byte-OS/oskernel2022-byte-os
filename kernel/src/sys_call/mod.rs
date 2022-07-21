@@ -238,6 +238,11 @@ impl Task {
                 RuntimeError::NoEnoughPage => {
                     panic!("No Enough Page");
                 }
+                RuntimeError::FileNotFound => {
+                    let mut inner = self.inner.borrow_mut();
+                    warn!("文件未找到");
+                    inner.context.x[10] = SYS_CALL_ERR;
+                }
                 _ => {
                     warn!("异常: {:?}", err);
                 }

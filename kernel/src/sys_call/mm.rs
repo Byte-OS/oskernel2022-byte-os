@@ -1,9 +1,9 @@
-use crate::memory::mem_map::MemMap;
+use crate::memory::mem_map::{MemMap, MapFlags};
 use crate::memory::page_table::PTEFlags;
 use crate::runtime_err::RuntimeError;
 use crate::sys_call::SYS_CALL_ERR;
 use crate::task::task::Task;
-use crate::memory::addr::{PAGE_SIZE, VirtAddr};
+use crate::memory::addr::{PAGE_SIZE, VirtAddr, get_buf_from_phys_addr};
 use crate::task::fd_table::{FD_NULL, FD_RANDOM};
 use crate::fs::file::FileOP;
 
@@ -14,36 +14,49 @@ impl Task {
         let mut process = process.borrow_mut();
 
         // 如果是0 返回堆顶 否则设置为新的堆顶
-        inner.context.x[10] = if top_pos == 0 {
-            process.heap.get_heap_size()
-        } else {
-            process.heap.set_heap_top(top_pos)
-        };
+        // inner.context.x[10] = if top_pos == 0 {
+        //     process.heap.get_heap_size()
+        // } else {
+        //     process.heap.set_heap_top(top_pos)
+        // };
+        inner.context.x[10] = SYS_CALL_ERR;
         warn!("brk");
         Ok(())
     }
 
     pub fn sys_mmap(&self, start: usize, len: usize, _prot: usize, 
-        _flags: usize, fd: usize, _offset: usize) -> Result<(), RuntimeError> {
+        flags: usize, fd: usize, offset: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
-        info!("mmap start: {:#x}, len: {:#x}, prot: {}, flags: {}, fd: {:#x}, offset: {}", start, len, _prot, _flags, fd, _offset);
+        info!("mmap start: {:#x}, len: {:#x}, prot: {}, flags: {}, fd: {:#x}, offset: {:#x}", start, len, _prot, flags, fd, offset);
         info!("mmap pages: {}", len / PAGE_SIZE);
         
+        let flags = MapFlags::from_bits_truncate(flags as u32);
+        let mut p_start = process.pmm.get_phys_addr(start.into())?;
+        if p_start.0 == start {
+            let page_num = len / PAGE_SIZE;
+            let mem_map = MemMap::new(VirtAddr::from(start).into(), page_num, PTEFlags::UVRWX)?;
+            p_start = mem_map.ppn.into();
+            process.pmm.add_mapping_by_map(&mem_map)?;
+            process.mem_set.0.push(mem_map);
+        }
+        let buf = get_buf_from_phys_addr(p_start, len);
+
+        if flags.contains(MapFlags::MAP_FIXED) {
+            warn!("contains: fixed");
+            buf.fill(0);
+        }
+
         if fd == FD_NULL {
             todo!()
         } else if fd == FD_RANDOM {
-            let page_num = len / PAGE_SIZE;
-            let mem_map = MemMap::new(VirtAddr::from(start).into(), page_num, PTEFlags::UVRWX)?;
-            process.pmm.add_mapping_by_map(&mem_map)?;
-            process.mem_set.0.push(mem_map);
             drop(process);
             inner.context.x[10] = start;
             Ok(())
         } else {
             let file = process.fd_table.get_file(fd)?;
             info!("file size: {:#x}", file.get_size() / PAGE_SIZE);
-            file.mmap(process.pmm.clone(), start.into());
+            file.copy_to(offset, buf);
             drop(process);
             inner.context.x[10] = start;
             Ok(())
