@@ -115,13 +115,12 @@ impl File {
 
     pub fn mmap(&self, pmm: Rc<PageMappingManager>, virt_addr: VirtAddr) {
         let inner = self.0.borrow_mut();
-        let mem_map = inner.mem_map.clone();
+        let mem_map = inner.mem_map.clone().expect("没有申请页面");
         // for i in 0..mem_map.page_num {
         //     let addr = pmm.get_phys_addr(virt_addr + VirtAddr::from(i * 0x1000)).unwrap();
         //     // info!("获取addr: {:#x}", addr.0);
         // }
-        // todo!()
-        // pmm.add_mapping_range(mem_map.ppn.into(), virt_addr, mem_map.page_num * PAGE_SIZE, PTEFlags::UVRWX);
+        pmm.add_mapping_range(mem_map.ppn.into(), virt_addr, mem_map.page_num * PAGE_SIZE, PTEFlags::UVRWX);
     }
 
     pub fn lseek(&self, offset: usize, whence: usize) -> usize {

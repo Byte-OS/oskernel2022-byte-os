@@ -84,7 +84,6 @@ impl UserStack {
         self.push(0);
 
         for (key, value) in auxv {
-            info!("参数: {:#x} value: {:#x}", key, value);
             self.push(value);
             self.push(key);
         }
@@ -97,10 +96,8 @@ impl UserStack {
         // args
         let args_len = args.len();
         for i in args.iter().rev() {
-            info!("args: {:#x}", i.clone());
             self.push(i.clone());
         }
-        info!("args len: {}", args_len);
         self.push(args_len);
     }
 

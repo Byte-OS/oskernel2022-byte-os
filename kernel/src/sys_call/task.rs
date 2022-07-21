@@ -169,7 +169,6 @@ impl Task {
     pub fn sys_wait4(&self, pid: usize, ptr: VirtAddr, options: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
-
         let mut is_ok = false;
         let target = process.children.iter().find(|&x| x.borrow().pid == pid);
         if let Some(target) = target {

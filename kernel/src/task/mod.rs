@@ -1,5 +1,6 @@
 use core::arch::global_asm;
 use core::cell::RefCell;
+use core::mem::size_of;
 
 use alloc::collections::BTreeMap;
 use alloc::rc::Rc;
@@ -8,7 +9,7 @@ use alloc::vec::Vec;
 use xmas_elf::program::{Type, SegmentData};
 use crate::elf::{self, ElfExtra};
 use crate::fs::filetree::INode;
-use crate::memory::addr::{get_pages_num, get_buf_from_phys_page};
+use crate::memory::addr::{get_pages_num, get_buf_from_phys_page, get_buf_from_phys_addr};
 use crate::memory::mem_map::MemMap;
 use crate::memory::page::{alloc_more, dealloc_more, alloc};
 use crate::runtime_err::RuntimeError;
@@ -163,12 +164,27 @@ pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path
     // 创建新的任务控制器 并映射栈
     let mut process = process.borrow_mut();
 
+    let mut base = 0x20000000;
+    let mut relocated_arr = vec![];
+
+    base = match elf.relocate(process.pmm.clone(), base) {
+        Ok(arr) => {
+            relocated_arr = arr;
+            info!("relocate success");
+            base
+        },
+        Err(value) => {
+            info!("test: {}", value);
+            0
+        }
+    };
+
     // 重新映射内存 并设置头
     let ph_count = elf_header.pt2.ph_count();
     for i in 0..ph_count {
         let ph = elf.program_header(i).unwrap();
         if ph.get_type().unwrap() == xmas_elf::program::Type::Load {
-            let start_va: VirtAddr = ph.virtual_addr().into();
+            let start_va: VirtAddr = (ph.virtual_addr() as usize + base).into();
             let alloc_pages = get_pages_num(ph.mem_size() as usize + start_va.0 % 0x1000);
             let phy_start = alloc_more(alloc_pages)?;
 
@@ -177,35 +193,33 @@ pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path
             let read_size = ph.file_size() as usize;
             let temp_buf = get_buf_from_phys_page(phy_start, alloc_pages);
 
-            let vr_start = ph.virtual_addr() as usize % 0x1000;
-            let vr_end = vr_start + read_size;
+            let vr_offset = ph.virtual_addr() as usize % 0x1000;
+            let vr_offset_end = vr_offset + read_size;
 
             // 添加memset
             process.mem_set.inner().push(MemMap::exists_page(phy_start, VirtAddr::from(ph.virtual_addr()).into(), 
                 alloc_pages, PTEFlags::VRWX | PTEFlags::U));
 
             // 初始化
-            temp_buf[..vr_start].fill(0);
-            temp_buf[vr_end..].fill(0);
-            temp_buf[vr_start..vr_end].copy_from_slice(&buf[ph_offset..ph_offset+read_size]);
-
+            temp_buf[vr_offset..vr_offset_end].copy_from_slice(&buf[ph_offset..ph_offset+read_size]);
+            info!("mapping to {:#x}", start_va.0);
             process.pmm.add_mapping_range(PhysAddr::from(phy_start) + PhysAddr::from(offset), 
                 start_va, ph.mem_size() as usize, PTEFlags::VRWX | PTEFlags::U)?;
         }
     }
-
-    let base = 0x20000000;
-
-    entry_point = match elf.relocate(process.pmm.clone(), base) {
-        Ok(_) => {
-            info!("relocate success");
-            base + entry_point
-        },
-        Err(value) => {
-            info!("test: {}", value);
-            entry_point
+    if base > 0 {
+        let pmm = process.pmm.clone();
+        for (addr, value) in relocated_arr.clone() {
+            let phys_addr = pmm.get_phys_addr(addr.into())?;
+            let ptr = phys_addr.tranfer::<usize>();
+            *ptr = value;
+            // let value_addr = get_buf_from_phys_addr(phys_addr, size_of::<usize>());
+            // warn!("RELATIVE write: {:#x} @ {:#x}", value, addr);
+            // value_addr.clone_from_slice(&value.to_ne_bytes());
         }
-    };
+        // panic!("shutdown");
+        // panic!("shutdown");
+    }
 
     // 添加参数
     let stack = &mut process.stack;
@@ -215,16 +229,16 @@ pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path
     auxv.insert(elf::AT_EXECFN, stack.push_str(path));
     auxv.insert(elf::AT_PHNUM, elf_header.pt2.ph_count() as usize);
     auxv.insert(elf::AT_PAGESZ, PAGE_SIZE);
-    auxv.insert(elf::AT_ENTRY, entry_point);
+    auxv.insert(elf::AT_ENTRY, base + entry_point);
     auxv.insert(elf::AT_PHENT, elf_header.pt2.ph_entry_size() as usize);
-    auxv.insert(elf::AT_PHDR, elf.get_ph_addr()? as usize);
+    auxv.insert(elf::AT_PHDR, base + elf.get_ph_addr()? as usize);
 
     stack.init_args(args, vec![], auxv);
     
     // 更新context
     let mut task_inner = task.inner.borrow_mut();
     task_inner.context.x.fill(0);
-    task_inner.context.sepc = entry_point;
+    task_inner.context.sepc = base + entry_point;
     task_inner.context.x[2] =process.stack.get_stack_top();
     drop(task_inner);
 

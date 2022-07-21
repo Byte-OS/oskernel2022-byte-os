@@ -2,7 +2,7 @@ use crate::runtime_err::RuntimeError;
 use crate::sys_call::SYS_CALL_ERR;
 use crate::task::task::Task;
 use crate::memory::addr::PAGE_SIZE;
-use crate::task::fd_table::FD_NULL;
+use crate::task::fd_table::{FD_NULL, FD_RANDOM};
 use crate::fs::file::FileOP;
 
 impl Task {
@@ -25,16 +25,19 @@ impl Task {
         _flags: usize, fd: usize, _offset: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
-        info!("mmap start: {:#x}, len: {:#x}, prot: {}, flags: {}, fd: {}, offset: {}", start, _len, _prot, _flags, fd, _offset);
+        info!("mmap start: {:#x}, len: {:#x}, prot: {}, flags: {}, fd: {:#x}, offset: {}", start, _len, _prot, _flags, fd, _offset);
         info!("mmap pages: {}", _len / PAGE_SIZE);
+        
         if fd == FD_NULL {
+            todo!()
+        } else if fd == FD_RANDOM {
             todo!()
         } else {
             let file = process.fd_table.get_file(fd)?;
             info!("file size: {:#x}", file.get_size() / PAGE_SIZE);
             file.mmap(process.pmm.clone(), start.into());
             drop(process);
-            inner.context.x[10] = SYS_CALL_ERR;
+            inner.context.x[10] = start;
             Ok(())
         }
         // let mut inner = self.inner.borrow_mut();

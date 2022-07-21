@@ -267,6 +267,7 @@ impl Task {
             Trap::Exception(Exception::StorePageFault) => {
                 warn!("缺页中断触发 缺页地址: {:#x} 触发地址:{:#x} 已同步映射", stval, context.sepc);
                 drop(context);
+                panic!("error");
                 let mut process = task_inner.process.borrow_mut();
                 process.stack.alloc_until(stval);
                 // panic!("系统终止");
