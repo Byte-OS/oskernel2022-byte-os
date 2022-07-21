@@ -33,7 +33,7 @@ use core::arch::global_asm;
 
 use alloc::rc::Rc;
 
-use crate::fs::filetree::INode;
+use crate::{fs::filetree::INode, memory::page::get_free_page_num};
 
 
 mod virtio_impl;
@@ -99,6 +99,8 @@ pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
     // 初始化多任务
     task::init();
 
+    // 输出剩余页表
+    println!("剩余页表: {}", get_free_page_num());
     // 调用rust api关机
     // shutdown()
     panic!("关机")

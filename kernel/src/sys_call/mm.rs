@@ -28,9 +28,13 @@ impl Task {
         flags: usize, fd: usize, offset: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
+        let start = if start == 0 {
+            process.mem_set.get_last_addr()
+        } else {
+            start
+        };
         info!("mmap start: {:#x}, len: {:#x}, prot: {}, flags: {}, fd: {:#x}, offset: {:#x}", start, len, _prot, flags, fd, offset);
         info!("mmap pages: {}", len / PAGE_SIZE);
-        
         let flags = MapFlags::from_bits_truncate(flags as u32);
         let mut p_start = process.pmm.get_phys_addr(start.into())?;
         if p_start.0 == start {
@@ -101,6 +105,12 @@ impl Task {
         //     }
         // };
         // Ok(())
+    }
+
+    pub fn sys_mprotect(&self, addr: usize, len: usize, prot: usize) -> Result<(), RuntimeError> {
+        let mut inner = self.inner.borrow_mut();
+        inner.context.x[10] = 0;
+        Ok(())
     }
 
     pub fn sys_munmap(&self, start: usize, _len: usize) -> Result<(), RuntimeError> {

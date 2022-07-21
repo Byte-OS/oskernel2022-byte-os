@@ -28,6 +28,18 @@ impl MemSet {
         }
         Ok(mem_set)
     }
+    
+    // 获取最后的地址
+    pub fn get_last_addr(&self) -> usize {
+        let mut end = 0;
+        for i in &self.0 {
+            let c_end = i.vpn.0 + i.page_num;
+            if c_end > end {
+                end = c_end;
+            }
+        }
+        (end + 1) << 12
+    }
 
     // 释放占用的资源
     pub fn release(&mut self) {

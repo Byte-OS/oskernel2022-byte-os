@@ -122,7 +122,7 @@ impl Task {
         let filename = get_string_from_raw(filename);
         let flags = OpenFlags::from_bits_truncate(flags as u32);
 
-        info!("读取文件: {}", filename);
+        info!("读取文件: {}, flags:{:?}", filename, flags);
 
         // 判断文件描述符是否存在
         let current = if fd == FD_NULL {
@@ -145,6 +145,7 @@ impl Task {
     }
     // 关闭文件
     pub fn sys_close(&self, fd: usize) -> Result<(), RuntimeError> {
+        warn!("close fd: {}",fd);
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
         process.fd_table.dealloc(fd);

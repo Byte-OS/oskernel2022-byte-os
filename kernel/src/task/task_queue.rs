@@ -117,7 +117,119 @@ lazy_static! {
         // "runtest.exe -w entry-static.exe uselocale_0",
         // "runtest.exe -w entry-static.exe wcsncpy_read_overflow",
         // "runtest.exe -w entry-static.exe wcsstr_false_negative",
+        
+
+
         "runtest.exe -w entry-dynamic.exe argv",
+        "runtest.exe -w entry-dynamic.exe basename",
+        "runtest.exe -w entry-dynamic.exe clocale_mbfuncs",
+        "runtest.exe -w entry-dynamic.exe clock_gettime",
+        "runtest.exe -w entry-dynamic.exe crypt",
+        "runtest.exe -w entry-dynamic.exe dirname",   
+        // "runtest.exe -w entry-dynamic.exe env",           // 此异常 0 is not an allocated pointer 无法通过
+        "runtest.exe -w entry-dynamic.exe fdopen",  
+        "runtest.exe -w entry-dynamic.exe fnmatch",    
+        // "runtest.exe -w entry-dynamic.exe fscanf",        // 异常
+        // "runtest.exe -w entry-dynamic.exe fwscanf",       // 异常
+        "runtest.exe -w entry-dynamic.exe iconv_open",      
+        "runtest.exe -w entry-dynamic.exe inet_pton",
+        "runtest.exe -w entry-dynamic.exe mbc",
+        // "runtest.exe -w entry-dynamic.exe memstream",         // k210异常
+        // "runtest.exe -w entry-dynamic.exe pthread_cancel_points", // 异常
+        // "runtest.exe -w entry-dynamic.exe pthread_cancel",    // 异常
+        // "runtest.exe -w entry-dynamic.exe pthread_cond",      // 异常
+        // "runtest.exe -w entry-dynamic.exe pthread_tsd",       // 异常
+        // "runtest.exe -w entry-dynamic.exe qsort",             // k210异常
+        "runtest.exe -w entry-dynamic.exe random",
+        // "runtest.exe -w entry-dynamic.exe search_hsearch",    // 异常
+        // "runtest.exe -w entry-dynamic.exe search_insque",
+        // "runtest.exe -w entry-dynamic.exe search_lsearch",
+        // "runtest.exe -w entry-dynamic.exe search_tsearch",
+        // // "runtest.exe -w entry-dynamic.exe setjmp",            // 异常
+        // // "runtest.exe -w entry-dynamic.exe snprintf",          // 异常
+        // // "runtest.exe -w entry-dynamic.exe socket",            // 异常
+        // // "runtest.exe -w entry-dynamic.exe sscanf",            // 异常
+        // // "runtest.exe -w entry-dynamic.exe sscanf_long",       // 异常
+        // // "runtest.exe -w entry-dynamic.exe stat",              // 异常
+        // // "runtest.exe -w entry-dynamic.exe strftime",          // 异常
+        // "runtest.exe -w entry-dynamic.exe string",
+        // "runtest.exe -w entry-dynamic.exe string_memcpy",
+        // "runtest.exe -w entry-dynamic.exe string_memmem",
+        // "runtest.exe -w entry-dynamic.exe string_memset",
+        // "runtest.exe -w entry-dynamic.exe string_strchr",
+        // "runtest.exe -w entry-dynamic.exe string_strcspn",
+        // "runtest.exe -w entry-dynamic.exe string_strstr",
+        // // "runtest.exe -w entry-dynamic.exe strptime",          // 异常
+        // // "runtest.exe -w entry-dynamic.exe strtod",            // 异常
+        // // "runtest.exe -w entry-dynamic.exe strtod_simple",     // 异常
+        // // "runtest.exe -w entry-dynamic.exe strtof",            // 异常
+        // "runtest.exe -w entry-dynamic.exe strtol",
+        // // "runtest.exe -w entry-dynamic.exe strtold",           // 异常
+        // // "runtest.exe -w entry-dynamic.exe swprintf",          // 异常
+        // // "runtest.exe -w entry-dynamic.exe tgmath",            // 异常
+        // "runtest.exe -w entry-dynamic.exe time",
+        // "runtest.exe -w entry-dynamic.exe tls_align",
+        // "runtest.exe -w entry-dynamic.exe udiv",
+        // // "runtest.exe -w entry-dynamic.exe ungetc",            // 异常
+        // // "runtest.exe -w entry-dynamic.exe utime",             // 异常
+        // "runtest.exe -w entry-dynamic.exe wcsstr",
+        // "runtest.exe -w entry-dynamic.exe wcstol",
+        // "runtest.exe -w entry-dynamic.exe pleval",
+        // // "runtest.exe -w entry-dynamic.exe daemon_failure",    // 异常
+        // "runtest.exe -w entry-dynamic.exe dn_expand_empty",
+        // "runtest.exe -w entry-dynamic.exe dn_expand_ptr_0",
+        // // "runtest.exe -w entry-dynamic.exe fflush_exit",       // 异常
+        // "runtest.exe -w entry-dynamic.exe fgets_eof",
+        // "runtest.exe -w entry-dynamic.exe fgetwc_buffering",
+        // "runtest.exe -w entry-dynamic.exe flockfile_list",
+        // "runtest.exe -w entry-dynamic.exe fpclassify_invalid_ld80",
+        // // "runtest.exe -w entry-dynamic.exe ftello_unflushed_append",    // 异常
+        // "runtest.exe -w entry-dynamic.exe getpwnam_r_crash",
+        // "runtest.exe -w entry-dynamic.exe getpwnam_r_errno",
+        // "runtest.exe -w entry-dynamic.exe iconv_roundtrips",
+        // "runtest.exe -w entry-dynamic.exe inet_ntop_v4mapped",
+        // "runtest.exe -w entry-dynamic.exe inet_pton_empty_last_field",
+        // "runtest.exe -w entry-dynamic.exe iswspace_null",
+        // "runtest.exe -w entry-dynamic.exe lrand48_signextend",
+        // // "runtest.exe -w entry-dynamic.exe lseek_large",           // 异常
+        // "runtest.exe -w entry-dynamic.exe malloc_0",
+        // "runtest.exe -w entry-dynamic.exe mbsrtowcs_overflow",
+        // "runtest.exe -w entry-dynamic.exe memmem_oob_read",
+        // "runtest.exe -w entry-dynamic.exe memmem_oob",
+        // "runtest.exe -w entry-dynamic.exe mkdtemp_failure",
+        // "runtest.exe -w entry-dynamic.exe mkstemp_failure",
+        // // "runtest.exe -w entry-dynamic.exe printf_1e9_oob",                // 异常
+        // // "runtest.exe -w entry-dynamic.exe printf_fmt_g_round",            // 异常
+        // // "runtest.exe -w entry-dynamic.exe printf_fmt_g_zeros",            // 异常
+        // "runtest.exe -w entry-dynamic.exe printf_fmt_n",
+        // // "runtest.exe -w entry-dynamic.exe pthread_robust_detach",         // 异常
+        // // "runtest.exe -w entry-dynamic.exe pthread_cancel_sem_wait",       // 异常
+        // // "runtest.exe -w entry-dynamic.exe pthread_cond_smasher",          // 异常
+        // // "runtest.exe -w entry-dynamic.exe pthread_condattr_setclock",     // 异常
+        // // "runtest.exe -w entry-dynamic.exe pthread_exit_cancel",           // 异常
+        // // "runtest.exe -w entry-dynamic.exe pthread_once_deadlock",         // 异常
+        // // "runtest.exe -w entry-dynamic.exe pthread_rwlock_ebusy",          // 异常
+        // // "runtest.exe -w entry-dynamic.exe putenv_doublefree",             // 异常
+        // // "runtest.exe -w entry-dynamic.exe regex_backref_0",               // k210异常
+        // // "runtest.exe -w entry-dynamic.exe regex_bracket_icase",           // k210异常
+        // // "runtest.exe -w entry-dynamic.exe regex_ere_backref",             // k210异常
+        // "runtest.exe -w entry-dynamic.exe regex_escaped_high_byte",
+        // // "runtest.exe -w entry-dynamic.exe regex_negated_range",           // k210异常
+        // "runtest.exe -w entry-dynamic.exe regexec_nosub",
+        // // "runtest.exe -w entry-dynamic.exe rewind_clear_error",            // 异常
+        // // "runtest.exe -w entry-dynamic.exe rlimit_open_files",             // 异常
+        // "runtest.exe -w entry-dynamic.exe scanf_bytes_consumed",
+        // "runtest.exe -w entry-dynamic.exe scanf_match_literal_eof",
+        // "runtest.exe -w entry-dynamic.exe scanf_nullbyte_char",
+        // "runtest.exe -w entry-dynamic.exe setvbuf_unget",
+        // "runtest.exe -w entry-dynamic.exe sigprocmask_internal",
+        // // "runtest.exe -w entry-dynamic.exe sscanf_eof",                    // 异常
+        // // "runtest.exe -w entry-dynamic.exe statvfs",                       // 异常
+        // "runtest.exe -w entry-dynamic.exe strverscmp",
+        // // "runtest.exe -w entry-dynamic.exe syscall_sign_extend",           // 异常
+        // "runtest.exe -w entry-dynamic.exe uselocale_0",
+        // "runtest.exe -w entry-dynamic.exe wcsncpy_read_overflow",
+        // "runtest.exe -w entry-dynamic.exe wcsstr_false_negative",
     ]));
 }
 

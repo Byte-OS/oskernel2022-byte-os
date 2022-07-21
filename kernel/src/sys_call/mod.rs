@@ -49,6 +49,7 @@ pub const SYS_BRK:   usize  = 214;
 pub const SYS_CLONE: usize  = 220;
 pub const SYS_EXECVE:usize  = 221;
 pub const SYS_MMAP: usize   = 222;
+pub const SYS_MPROTECT:usize= 226;
 pub const SYS_MUNMAP:usize  = 215;
 pub const SYS_WAIT4: usize  = 260;
 
@@ -216,6 +217,8 @@ impl Task {
             SYS_EXECVE => self.sys_execve(args[0].into(), args[1].into(), args[2].into()),
             // 进行文件映射
             SYS_MMAP => self.sys_mmap(args[0], args[1], args[2], args[3], args[4], args[5]),
+            // 页面保护
+            SYS_MPROTECT => self.sys_mprotect(args[0], args[1], args[2]),
             // 取消文件映射
             SYS_MUNMAP => self.sys_munmap(args[0], args[1]),
             // 等待进程

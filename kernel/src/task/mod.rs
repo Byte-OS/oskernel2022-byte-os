@@ -90,10 +90,10 @@ impl FileDesc {
 impl UserHeap {
     // 创建heap
     pub fn new() -> Result<Self, RuntimeError> {
-        let phy_start = alloc()?;
+        // let phy_start = alloc()?;
         // 申请页表作为heap
         Ok(UserHeap {
-            start: phy_start,
+            start: 0usize.into(),
             pointer: 0,
             size: PAGE_SIZE
         })
@@ -227,6 +227,12 @@ pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path
     auxv.insert(elf::AT_ENTRY, base + entry_point);
     auxv.insert(elf::AT_PHENT, elf_header.pt2.ph_entry_size() as usize);
     auxv.insert(elf::AT_PHDR, base + elf.get_ph_addr()? as usize);
+
+    auxv.insert(elf::AT_GID, 1);
+    auxv.insert(elf::AT_EGID, 1);
+    auxv.insert(elf::AT_UID, 1);
+    auxv.insert(elf::AT_EUID, 1);
+    auxv.insert(elf::AT_SECURE, 0);
 
     stack.init_args(args, vec![], auxv);
     
