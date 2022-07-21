@@ -104,7 +104,7 @@ impl ElfExtra for ElfFile<'_> {
             const R_RISCV_RELATIVE: u32 = 3;
             const R_AARCH64_RELATIVE: u32 = 0x403;
             const R_AARCH64_GLOBAL_DATA: u32 = 0x401;
-
+            
             match entry.get_type() {
                 REL_GOT | REL_PLT | R_RISCV_64 | R_AARCH64_GLOBAL_DATA => {
                     let dynsym = &dynsym[entry.get_symbol_table_index() as usize];

@@ -140,7 +140,7 @@ pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path
     let elf_header = elf.header;    
     let magic = elf_header.pt1.magic;
 
-    let entry_point = elf.header.pt2.entry_point() as usize;
+    let mut entry_point = elf.header.pt2.entry_point() as usize;
     assert_eq!(magic, [0x7f, 0x45, 0x4c, 0x46], "invalid elf!");
 
     // 测试代码
@@ -159,15 +159,6 @@ pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path
             return exec_with_process(process, task, path, new_args);
         }
     }
-
-    // let base = 0x20000000;
-
-    // let entry_point = base + entry_point;
-
-    match elf.relocate(process.borrow().pmm.clone(), 0x20000000) {
-        Ok(_) => {info!("relocate success");},
-        Err(value) => {info!("test: {}", value);}
-    };
 
     // 创建新的任务控制器 并映射栈
     let mut process = process.borrow_mut();
@@ -202,6 +193,19 @@ pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path
                 start_va, ph.mem_size() as usize, PTEFlags::VRWX | PTEFlags::U)?;
         }
     }
+
+    let base = 0x20000000;
+
+    entry_point = match elf.relocate(process.pmm.clone(), base) {
+        Ok(_) => {
+            info!("relocate success");
+            base + entry_point
+        },
+        Err(value) => {
+            info!("test: {}", value);
+            entry_point
+        }
+    };
 
     // 添加参数
     let stack = &mut process.stack;
