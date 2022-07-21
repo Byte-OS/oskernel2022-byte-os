@@ -160,7 +160,14 @@ pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path
         }
     }
 
+    // let base = 0x20000000;
 
+    // let entry_point = base + entry_point;
+
+    match elf.relocate(process.borrow().pmm.clone(), 0x20000000) {
+        Ok(_) => info!("relocate success"),
+        Err(value) => info!("test: {}", value)
+    };
 
     // 创建新的任务控制器 并映射栈
     let mut process = process.borrow_mut();
