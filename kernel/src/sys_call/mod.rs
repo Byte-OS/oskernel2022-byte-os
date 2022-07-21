@@ -305,6 +305,14 @@ impl Task {
             Trap::Exception(Exception::StoreMisaligned) => {
                 info!("页面未对齐");
             }
+            Trap::Exception(Exception::IllegalInstruction) => {
+                info!("中断 {:#x} 地址 {:#x} stval: {:#x}", scause.bits(), sepc::read(), stval);
+                context.sepc += 4;
+
+            }
+            Trap::Exception(Exception::InstructionPageFault) => {
+                panic!("指令页错误");
+            }
             // 其他情况，终止当前线程
             _ => {
                 info!("中断 {:#x} 地址 {:#x} stval: {:#x}", scause.bits(), sepc::read(), stval);

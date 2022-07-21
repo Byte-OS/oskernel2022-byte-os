@@ -123,7 +123,7 @@ lazy_static! {
         // "runtest.exe -w entry-dynamic.exe uselocale_0",
         // "runtest.exe -w entry-dynamic.exe wcsncpy_read_overflow",
         // "runtest.exe -w entry-dynamic.exe wcsstr_false_negative",
-        // k210 可能出现异常
+        // // k210 可能出现异常
         // "runtest.exe -w entry-dynamic.exe fnmatch",    
         // "runtest.exe -w entry-dynamic.exe iconv_open",      
 
@@ -134,7 +134,7 @@ lazy_static! {
         // "runtest.exe -w entry-static.exe env",           // 此异常 0 is not an allocated pointer 无法通过
         // "runtest.exe -w entry-static.exe fdopen",        // k210 偶尔异常 loadmisaligned
         // "runtest.exe -w entry-static.exe fscanf",        // 异常
-        "runtest.exe -w entry-static.exe fwscanf",       // 异常
+        // "runtest.exe -w entry-static.exe fwscanf",       // 异常
         // "runtest.exe -w entry-static.exe memstream",         // k210异常
         // "runtest.exe -w entry-static.exe pthread_cancel_points", // 异常
         // "runtest.exe -w entry-static.exe pthread_cancel",    // 异常
@@ -179,7 +179,7 @@ lazy_static! {
         // "runtest.exe -w entry-static.exe regex_negated_range",           // k210异常
         // "runtest.exe -w entry-static.exe rewind_clear_error",            // 异常
         // "runtest.exe -w entry-static.exe rlimit_open_files",             // 异常
-        // "runtest.exe -w entry-static.exe sscanf_eof",                    // 异常
+        "runtest.exe -w entry-static.exe sscanf_eof",                    // 异常
         // "runtest.exe -w entry-static.exe statvfs",                       // 异常
         // "runtest.exe -w entry-static.exe syscall_sign_extend",           // 异常
         // "runtest.exe -w entry-dynamic.exe env",           // 此异常 0 is not an allocated pointer 无法通过
