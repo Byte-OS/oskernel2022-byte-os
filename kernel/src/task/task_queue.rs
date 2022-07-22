@@ -151,8 +151,8 @@ lazy_static! {
         // "runtest.exe -w entry-dynamic.exe utime",             // 异常
         // "runtest.exe -w entry-static.exe putenv_doublefree",             // 异常
         // "runtest.exe -w entry-dynamic.exe putenv_doublefree",             // 异常
+        "runtest.exe -w entry-static.exe search_hsearch",    // 异常
         // "runtest.exe -w entry-dynamic.exe search_hsearch",    // 异常
-        // "runtest.exe -w entry-static.exe search_hsearch",    // 异常
         // "runtest.exe -w entry-dynamic.exe setjmp",            // 异常
         // "runtest.exe -w entry-static.exe setjmp",            // 异常
         // "runtest.exe -w entry-dynamic.exe socket",            // 异常
