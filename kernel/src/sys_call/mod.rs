@@ -347,36 +347,41 @@ impl Task {
                 let process = process.borrow_mut();
                 let instruction_addr = VirtAddr::from(instruction_addr_virt).translate(process.pmm.clone());
                 let instruction = instruction_addr.tranfer::<u32>();
-                // // let mut ins = instruction.clone();
-                // if stval&0x7f == 0x7 {
-                //     let rd = (stval >> 7) & 0x1f;
-                //     let op_type = (stval >> 12) & 0x7;
-                //     let rs1 = (stval >> 15) & 0x1f;
-                //     let imm = ((stval >> 20) & 0x8ff) as isize;
-                //     let sign = (stval >> 31) & 1;
-                //     let imm = if sign == 1 { 
-                //         -imm
-                //     } else { 
-                //         imm 
-                //     };
-                //     if op_type == 0b011 {
-                //         debug!("成功模拟");
-                //         let mem_addr = VirtAddr::from((task_inner.context.x[rs1] as isize + imm) as usize);
-                //         let value = mem_addr.translate(process.pmm.clone()).tranfer::<usize>();
-                //         task_inner.context.x[rd] = value.clone();
-                //         task_inner.context.sepc += 4; 
-                //     }
-                // }
-                // *instruction = ins;
+                let mut ins = instruction.clone() as usize;
+                if ins&0x7f == 0x7 {
+                    let rd = (ins >> 7) & 0x1f;
+                    let op_type = (ins >> 12) & 0x7;
+                    let rs1 = (ins >> 15) & 0x1f;
+                    let imm = ((ins >> 20) & 0x8ff) as isize;
+                    let sign = (ins >> 31) & 1;
+                    let imm = if sign == 1 { 
+                        -imm
+                    } else { 
+                        imm 
+                    };
+                    if op_type == 0b011 {
+                        debug!("成功模拟");
+                        let mem_addr = VirtAddr::from((task_inner.context.x[rs1] as isize + imm) as usize);
+                        let value = mem_addr.translate(process.pmm.clone()).tranfer::<usize>();
+                        task_inner.context.x[rd] = value.clone();
+                        task_inner.context.sepc += 4; 
+                    }
+                }
+                *instruction = ins as u32;
                 debug!("instruction :{:#x}", instruction.clone());
                 // panic!("指令页错误");
 
             }
             Trap::Exception(Exception::InstructionPageFault) => {
                 info!("中断 {:#x} 地址 {:#x} stval: {:#x}", scause.bits(), sepc::read(), stval);
-                let process = task_inner.process.borrow_mut();
+                let instruction_addr_virt = context.sepc;
+                let process = task_inner.process.clone();
+                let process = process.borrow_mut();
                 let pte_entry = process.pmm.get_entry(VirtAddr::from(stval))?;
-                // debug!("flags: {:?}", pte_entry.flags());
+                let instruction_addr = VirtAddr::from(instruction_addr_virt).translate(process.pmm.clone());
+                let instruction = instruction_addr.tranfer::<u32>();
+                let mut ins = instruction.clone() as usize;
+                debug!("flags: {:?}", pte_entry.flags());
                 panic!("指令页错误");
             }
             // 其他情况，终止当前线程
