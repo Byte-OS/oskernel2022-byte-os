@@ -125,6 +125,8 @@ lazy_static! {
         // "runtest.exe -w entry-dynamic.exe ungetc",
         // "runtest.exe -w entry-static.exe rewind_clear_error",
         // "runtest.exe -w entry-dynamic.exe rewind_clear_error",
+        // "runtest.exe -w entry-static.exe rlimit_open_files",
+        // "runtest.exe -w entry-dynamic.exe rlimit_open_files",
 
         // // 扩大栈可过
         // "runtest.exe -w entry-static.exe qsort",             // k210异常
@@ -141,13 +143,11 @@ lazy_static! {
 
 
         // 待完成功能
+        // "runtest.exe -w entry-static.exe utime",             // 异常
         // "runtest.exe -w entry-dynamic.exe utime",             // 异常
-        "runtest.exe -w entry-static.exe utime",             // 异常
         // "runtest.exe -w entry-static.exe putenv_doublefree",             // 异常
         // "runtest.exe -w entry-dynamic.exe putenv_doublefree",             // 异常
-        // "runtest.exe -w entry-static.exe rlimit_open_files",             // 异常
-        // "runtest.exe -w entry-dynamic.exe rlimit_open_files",             // 异常
-        // "runtest.exe -w entry-static.exe statvfs",                       // 异常
+        "runtest.exe -w entry-static.exe statvfs",                       // 异常
         // "runtest.exe -w entry-dynamic.exe statvfs",                       // 异常
         // "runtest.exe -w entry-static.exe syscall_sign_extend",           // 异常
         // "runtest.exe -w entry-dynamic.exe syscall_sign_extend",           // 异常

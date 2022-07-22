@@ -14,6 +14,7 @@ pub mod fd;
 pub mod task;
 pub mod time;
 pub mod mm;
+pub mod consts;
 
 // 中断调用列表
 pub const SYS_GETCWD:usize  = 17;

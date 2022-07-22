@@ -1,6 +1,6 @@
 use alloc::rc::Rc;
 use hashbrown::HashMap;
-use crate::{fs::{file::{FileOP, File}, stdio::{StdIn, StdOut, StdErr}}, runtime_err::RuntimeError, memory::addr::VirtAddr, sys_call::SYS_CALL_ERR};
+use crate::{fs::{file::{FileOP, File}, stdio::{StdIn, StdOut, StdErr}}, runtime_err::RuntimeError, memory::addr::VirtAddr, sys_call::{SYS_CALL_ERR, consts::EMFILE}};
 
 pub const FD_NULL: usize = 0xffffffffffffff9c;
 pub const FD_RANDOM: usize = usize::MAX;
@@ -52,7 +52,7 @@ impl FDTable {
     // 加入描述符
     pub fn push(&mut self, value: Rc<dyn FileOP>) -> usize {
         let index = self.alloc();
-        if index > 20 { return SYS_CALL_ERR; }
+        if index > 41 { return EMFILE; }
         self.set(index, value);
         index
     }
