@@ -350,17 +350,12 @@ impl Task {
                 }
                 *instruction = ins;
                 debug!("instruction :{:#x}", instruction.clone());
-                drop(instruction);
-                let instruction_addr = VirtAddr::from(instruction_addr_virt).translate(process.pmm.clone());
-                let instruction = instruction_addr.tranfer::<u32>();
-
-                debug!("instruction :{:#x}", instruction.clone());
                 // panic!("指令页错误");
 
             }
             Trap::Exception(Exception::InstructionPageFault) => {
                 info!("中断 {:#x} 地址 {:#x} stval: {:#x}", scause.bits(), sepc::read(), stval);
-                panic!("指令页错误");
+                // panic!("指令页错误");
             }
             // 其他情况，终止当前线程
             _ => {
