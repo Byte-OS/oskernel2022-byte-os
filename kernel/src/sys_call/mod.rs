@@ -24,6 +24,7 @@ pub const SYS_MKDIRAT:usize = 34;
 pub const SYS_UNLINKAT:usize= 35;
 pub const SYS_UMOUNT2: usize= 39;
 pub const SYS_MOUNT: usize  = 40;
+pub const SYS_STATFS: usize = 43;
 pub const SYS_CHDIR: usize  = 49;
 pub const SYS_OPENAT:usize  = 56;
 pub const SYS_CLOSE: usize  = 57;
@@ -168,6 +169,8 @@ impl Task {
             SYS_UMOUNT2 => Ok(()),
             // mount设备
             SYS_MOUNT => Ok(()),
+            // 获取文件系统信息
+            SYS_STATFS => self.sys_statfs(args[0], args[1].into()),
             // 改变文件信息
             SYS_CHDIR => self.sys_chdir(args[0]),
             // 打开文件地址

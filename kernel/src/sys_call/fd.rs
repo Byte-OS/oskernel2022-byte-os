@@ -1,5 +1,6 @@
 use core::slice;
 
+use crate::fs::StatFS;
 use crate::fs::file::FileType;
 use crate::task::fd_table::IoVec;
 use crate::task::task::Task;
@@ -252,6 +253,27 @@ impl Task {
         // Ok(())
         todo!()
     }
+
+    pub fn sys_statfs(&self, fd: usize, buf_ptr: VirtAddr) -> Result<(), RuntimeError> {
+        let mut inner = self.inner.borrow_mut();
+        let process = inner.process.borrow_mut();
+
+        let buf_ptr = buf_ptr.translate(process.pmm.clone());
+        let buf = buf_ptr.tranfer::<StatFS>();
+        buf.f_type = 32;
+        buf.f_bsize = 512;
+        buf.f_blocks = 80;
+        buf.f_bfree = 40;
+        buf.f_bavail = 0;
+        buf.f_files = 32;
+        buf.f_ffree = 0;
+        buf.f_fsid = 32;
+        buf.f_namelen = 20;
+        drop(process);
+        inner.context.x[10] = 0;
+        Ok(())
+    }
+
     // 读取
     pub fn sys_read(&self, fd: usize, buf_ptr: usize, count: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
