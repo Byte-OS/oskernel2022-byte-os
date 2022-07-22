@@ -121,6 +121,8 @@ lazy_static! {
         // "runtest.exe -w entry-dynamic.exe wcsstr_false_negative",
         // "runtest.exe -w entry-static.exe stat",
         // "runtest.exe -w entry-dynamic.exe stat",
+        // "runtest.exe -w entry-static.exe ungetc",
+        // "runtest.exe -w entry-dynamic.exe ungetc",
 
         // // 扩大栈可过
         // "runtest.exe -w entry-static.exe qsort",             // k210异常
@@ -137,9 +139,7 @@ lazy_static! {
 
 
         // 待完成功能
-        "runtest.exe -w entry-static.exe ungetc",                        // read异常
-        // "runtest.exe -w entry-dynamic.exe ungetc",                       // 异常
-        // "runtest.exe -w entry-dynamic.exe utime",             // 异常
+        "runtest.exe -w entry-dynamic.exe utime",             // 异常
         // "runtest.exe -w entry-static.exe utime",             // 异常
         // "runtest.exe -w entry-static.exe rewind_clear_error",            // 异常
         // "runtest.exe -w entry-dynamic.exe rewind_clear_error",            // 异常

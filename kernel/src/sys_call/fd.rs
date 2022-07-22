@@ -313,6 +313,23 @@ impl Task {
         Ok(())
     }
 
+    pub fn sys_readv(&self, fd: usize, iov: VirtAddr, iovcnt: usize) -> Result<(), RuntimeError> {
+        let mut inner = self.inner.borrow_mut();
+        let process = inner.process.borrow_mut();
+        
+        let fd = process.fd_table.get(fd)?;
+        let iov_vec = iov.translate(process.pmm.clone()).transfer_vec_count::<IoVec>(iovcnt);
+        let mut cnt = 0;
+        for i in iov_vec {
+            let buf = get_buf_from_phys_addr(i.iov_base.translate(process.pmm.clone()), 
+                i.iov_len);
+            cnt += fd.read(buf);
+        }
+        drop(process);
+        inner.context.x[10] = cnt;
+        Ok(())
+    }
+
     pub fn sys_fstat(&self, fd: usize, buf_ptr: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
