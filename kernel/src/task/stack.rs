@@ -1,3 +1,4 @@
+use crate::memory::addr::VirtPageNum;
 use alloc::{vec::Vec, collections::BTreeMap, rc::Rc};
 use core::borrow::BorrowMut;
 
@@ -5,6 +6,7 @@ use crate::{memory::{page_table::{PTEFlags, PageMappingManager}, addr::{VirtAddr
 
 
 const PTR_SIZE: usize = 8;
+const DEFAULT_STACK_PAGE_NUM: usize = 5;
 
 pub struct UserStack {
     pub bottom: usize,
@@ -18,12 +20,12 @@ impl UserStack {
     // 创建新的栈
     pub fn new(pmm: Rc<PageMappingManager>) -> Result<Self, RuntimeError> {
         let mut mem_set = MemSet::new();
-        let mem_map = MemMap::new(0xf000eusize.into(), 3, PTEFlags::UVRWX)?;
+        let mem_map = MemMap::new((0xf0010 - DEFAULT_STACK_PAGE_NUM).into(), DEFAULT_STACK_PAGE_NUM, PTEFlags::UVRWX)?;
         pmm.add_mapping_by_map(&mem_map)?;
         mem_set.inner().push(mem_map);
         Ok(UserStack { 
             bottom: 0xf0010000, 
-            top: 0xf000d000,
+            top: 0xf0010000 - DEFAULT_STACK_PAGE_NUM * PAGE_SIZE,
             pointer: 0xf0010000,
             pmm,
             mem_set
@@ -128,6 +130,8 @@ impl UserStack {
             let end_page = self.top / PAGE_SIZE;
             let mem_map = MemMap::new(start_page.into(), end_page - start_page, PTEFlags::UVRWX)?;
             self.pmm.add_mapping_by_map(&mem_map)?;
+            info!("start value: {:#x}  end: {:#x}", VirtAddr::from(mem_map.vpn).0,
+                VirtAddr::from(mem_map.vpn + VirtPageNum::from(end_page - start_page)).0);
             self.mem_set.inner().push(mem_map);
         }
         Ok(())
