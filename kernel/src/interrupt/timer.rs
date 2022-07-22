@@ -34,11 +34,11 @@ impl TMS {
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 pub struct TimeSpec {
 	pub tv_sec: u64,       /* 秒 */
     pub tv_nsec: i64       /* 纳秒, 范围在0~999999999 */
 }
-
 
 impl TimeSpec {
     pub fn get_now(&mut self) {
@@ -46,13 +46,28 @@ impl TimeSpec {
         self.tv_sec = (ms / 1000) as u64;
         self.tv_nsec = ((ms % 1000) * 1000) as i64;
     }
+
+    pub fn now() -> Self {
+        let ms = get_time_ms();
+        Self{
+            tv_sec: (ms / 1000) as u64,
+            tv_nsec: ((ms % 1000) * 1000) as i64
+        }
+    }
 }
 
 // 获取毫秒结构
+pub fn get_time_sec() -> usize {
+    time::read() / CLOCK_FREQ
+}
+
 pub fn get_time_ms() -> usize {
     time::read() / (CLOCK_FREQ / MSEC_PER_SEC)
 }
 
+pub fn get_time_us() -> usize {
+    time::read() / (CLOCK_FREQ / MSEC_PER_SEC / MSEC_PER_SEC)
+}
 
 // 下一个任务ticks
 pub struct NextTaskTicks(usize);

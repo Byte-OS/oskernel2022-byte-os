@@ -3,6 +3,7 @@ use hashbrown::HashMap;
 use crate::{fs::{file::{FileOP, File}, stdio::{StdIn, StdOut, StdErr}}, runtime_err::RuntimeError, memory::addr::VirtAddr, sys_call::{SYS_CALL_ERR, consts::EMFILE}};
 
 pub const FD_NULL: usize = 0xffffffffffffff9c;
+pub const FD_CWD: usize = -100 as isize as usize;
 pub const FD_RANDOM: usize = usize::MAX;
 
 #[repr(C)]

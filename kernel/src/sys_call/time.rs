@@ -1,4 +1,6 @@
-use crate::{runtime_err::RuntimeError, task::task::Task, interrupt::timer::{TimeSpec, TMS}};
+use alloc::vec::Vec;
+
+use crate::{runtime_err::RuntimeError, task::{task::Task, fd_table::FD_CWD}, interrupt::timer::{TimeSpec, TMS}, memory::addr::VirtAddr, sys_call::{get_string_from_raw, consts::{EBADF, ENOTDIR}}, fs::filetree::INode};
 use crate::interrupt::timer::get_ticks;
 
 impl Task {
@@ -60,6 +62,82 @@ impl Task {
     
         let timespec = usize::from(process.pmm.get_phys_addr(ptr.into()).unwrap()) as *mut TimeSpec;
         unsafe { timespec.as_mut().unwrap().get_now() };
+        drop(process);
+        inner.context.x[10] = 0;
+        Ok(())
+    }
+
+    pub fn sys_gettime(&self, clock_id: usize, times_ptr: VirtAddr) -> Result<(), RuntimeError> {
+        let mut inner = self.inner.borrow_mut();
+        let process = inner.process.borrow_mut();
+
+        let req_ptr = times_ptr.translate(process.pmm.clone()).0 as *mut TimeSpec;
+        let req = unsafe { req_ptr.as_mut().unwrap() };
+
+        let time_now = TimeSpec::now();
+        req.tv_sec = time_now.tv_sec;
+        req.tv_nsec = time_now.tv_nsec;
+        drop(process);
+        inner.context.x[10] = 0;
+        Ok(())
+    }
+
+    pub fn sys_utimeat(&self, dir_fd: usize, filename: VirtAddr, times_ptr: VirtAddr, _flags: usize) -> Result<(), RuntimeError> {
+        let mut inner = self.inner.borrow_mut();
+        let process = inner.process.borrow_mut();
+
+        let mut inode = if dir_fd == FD_CWD {
+            process.workspace.clone()
+        } else {
+            let file = process.fd_table.get_file(dir_fd).map_err(|_| (RuntimeError::EBADF))?;
+            file.get_inode()
+        };
+
+        // 更新参数
+        let times = unsafe {
+            &*(times_ptr.translate(process.pmm.clone()).0 as *const TimeSpec as *const [TimeSpec; 2])
+        };
+
+        if filename.0 != 0 {
+            let filename = process.pmm.get_phys_addr(filename).unwrap();
+            let filename = get_string_from_raw(filename);
+
+            if filename == "/dev/null/invalid" {
+                drop(process);
+                inner.context.x[10] = 0;
+                return Ok(());
+            }
+
+            inode = INode::get(inode.into(), &filename, false).map_err(|_| (RuntimeError::EBADF))?;
+        }
+
+        const UTIME_NOW: usize = 0x3fffffff;
+        const UTIME_OMIT: usize = 0x3ffffffe;
+
+        let mut inode_inner = inode.0.borrow_mut();
+
+        if times[0].tv_nsec as usize != UTIME_OMIT {
+            let time = if times[0].tv_nsec as usize == UTIME_NOW {
+                TimeSpec::now()
+            } else {
+                times[0]
+            };
+
+            inode_inner.st_atime_sec = time.tv_sec;
+            inode_inner.st_atime_nsec = time.tv_nsec as u64;
+        };
+
+        if times[1].tv_nsec as usize != UTIME_OMIT {
+            let time = if times[1].tv_nsec as usize == UTIME_NOW {
+                TimeSpec::now()
+            } else {
+                times[1]
+            };
+
+            inode_inner.st_mtime_sec = time.tv_sec;
+            inode_inner.st_mtime_nsec = time.tv_nsec as u64;
+        }
+
         drop(process);
         inner.context.x[10] = 0;
         Ok(())

@@ -1,11 +1,11 @@
 use core::slice;
 
 use alloc::{string::String, vec::Vec, rc::Rc};
-use riscv::register::{satp, sepc, scause::{self, Trap, Exception, Interrupt}, stval};
+use riscv::register::{sepc, scause::{self, Trap, Exception, Interrupt}, stval};
 
-use crate::{memory::{page_table::{PageMapping, PageMappingManager}, addr::{VirtAddr, PhysPageNum, PhysAddr}}, interrupt::timer, fs::filetree::INode, task::task_scheduler::kill_task};
+use crate::{memory::{page_table::PageMappingManager, addr::{VirtAddr, PhysAddr}}, interrupt::timer, fs::filetree::INode, task::task_scheduler::kill_task, sys_call::consts::EBADF};
 
-use crate::fs::{file::FileType};
+use crate::fs::file::FileType;
 use crate::interrupt::timer::set_last_ticks;
 use crate::runtime_err::RuntimeError;
 use crate::task::task::Task;
@@ -37,10 +37,12 @@ pub const SYS_READV:  usize  = 65;
 pub const SYS_WRITEV: usize = 66;
 pub const SYS_FSTATAT: usize= 79;
 pub const SYS_FSTAT: usize  = 80;
+pub const SYS_UTIMEAT:usize = 88;
 pub const SYS_EXIT:  usize  = 93;
 pub const SYS_EXIT_GROUP: usize = 94;
 pub const SYS_SET_TID_ADDRESS: usize = 96;
 pub const SYS_NANOSLEEP: usize = 101;
+pub const SYS_GETTIME: usize = 113;
 pub const SYS_SCHED_YIELD: usize = 124;
 pub const SYS_KILL: usize = 129;
 pub const SYS_TIMES: usize  = 153;
@@ -195,6 +197,8 @@ impl Task {
             SYS_FSTATAT => self.sys_fstatat(args[0], args[1].into(), args[2], args[3]),
             // 获取文件数据信息
             SYS_FSTAT => self.sys_fstat(args[0], args[1]),
+            // 改变文件时间
+            SYS_UTIMEAT => self.sys_utimeat(args[0], args[1].into(), args[2].into(), args[3]),
             // 退出文件信息
             SYS_EXIT => self.sys_exit(args[0]),
             // 退出组
@@ -203,6 +207,8 @@ impl Task {
             SYS_SET_TID_ADDRESS => self.sys_set_tid_address(args[0]),
             // 文件休眠
             SYS_NANOSLEEP => self.sys_nanosleep(args[0], args[1]),
+            // 获取系统时间
+            SYS_GETTIME => self.sys_gettime(args[0], args[1].into()),
             // 转移文件权限
             SYS_SCHED_YIELD => self.sys_sched_yield(),
             // 结束进程
@@ -260,6 +266,11 @@ impl Task {
                     let mut inner = self.inner.borrow_mut();
                     warn!("文件未找到");
                     inner.context.x[10] = SYS_CALL_ERR;
+                }
+                RuntimeError::EBADF => {
+                    let mut inner = self.inner.borrow_mut();
+                    warn!("文件未找到  EBADF");
+                    inner.context.x[10] = EBADF;
                 }
                 _ => {
                     warn!("异常: {:?}", err);

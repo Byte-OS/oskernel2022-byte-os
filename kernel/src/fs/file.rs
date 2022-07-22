@@ -3,6 +3,7 @@ use core::any::{Any, TypeId};
 use alloc::rc::Rc;
 use core::cell::RefCell;
 
+use crate::interrupt::timer::TimeSpec;
 use crate::{memory::mem_map::MemMap, runtime_err::RuntimeError};
 use crate::memory::addr::{get_buf_from_phys_page, get_pages_num, PAGE_SIZE, VirtAddr, PhysAddr};
 use crate::memory::page::alloc_more;
@@ -195,6 +196,16 @@ impl FileOP for File {
             let file_size = inner.file_size;
             let mut inode = inner.file.0.borrow_mut();
             inode.size = file_size;
+
+            let time = TimeSpec::now();
+
+            inode.st_atime_sec = time.tv_sec;
+            inode.st_ctime_sec = time.tv_sec;
+            inode.st_mtime_sec = time.tv_sec;
+
+            inode.st_atime_nsec = time.tv_nsec as u64;
+            inode.st_ctime_nsec = time.tv_nsec as u64;
+            inode.st_mtime_nsec = time.tv_nsec as u64;
         }
         count
     }
