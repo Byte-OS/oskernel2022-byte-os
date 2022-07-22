@@ -228,7 +228,7 @@ impl Task {
             // 申请堆空间
             SYS_BRK => self.sys_brk(args[0]),
             // 复制进程信息
-            SYS_CLONE => self.sys_clone(args[0], args[1], args[2], args[3], args[4]),
+            SYS_CLONE => self.sys_clone(args[0], args[1], args[2].into(), args[3], args[4].into()),
             // 执行文件
             SYS_EXECVE => self.sys_execve(args[0].into(), args[1].into(), args[2].into()),
             // 进行文件映射

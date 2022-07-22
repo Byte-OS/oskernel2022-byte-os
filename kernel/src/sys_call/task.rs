@@ -1,6 +1,6 @@
 use alloc::{vec::Vec, string::String, rc::Rc};
 
-use crate::{task::{task_scheduler::{add_task_to_scheduler, switch_next}, exec, process::Process, pid::get_next_pid, task::Task, exec_with_process}, runtime_err::RuntimeError, memory::{addr::{PhysAddr, VirtAddr}, page::{get_mut_from_virt_addr, get_ptr_from_virt_addr}}};
+use crate::{task::{task_scheduler::{add_task_to_scheduler, switch_next}, exec, process::{Process, self}, pid::get_next_pid, task::Task, exec_with_process}, runtime_err::RuntimeError, memory::{addr::{PhysAddr, VirtAddr}, page::{get_mut_from_virt_addr, get_ptr_from_virt_addr}}};
 use crate::task::task::TaskStatus;
 
 use super::{UTSname, write_string_to_raw, SYS_CALL_ERR, get_string_from_raw, get_usize_vec_from_raw};
@@ -118,10 +118,10 @@ impl Task {
         Err(RuntimeError::ChangeTask)
     }
     
-    pub fn sys_clone(&self, flags: usize, new_sp: usize, ptid: usize, tls: usize, ctid: usize) -> Result<(), RuntimeError> {
+    pub fn sys_clone(&self, flags: usize, new_sp: usize, ptid: VirtAddr, tls: usize, ctid: VirtAddr) -> Result<(), RuntimeError> {
         info!(
             "clone: flags={:#x}, newsp={:#x}, parent_tid={:#x}, child_tid={:#x}, newtls={:#x}",
-            flags, new_sp, ptid, tls, ctid
+            flags, new_sp, ptid.0, tls, ctid.0
         );
     
         if flags == 0x4111 || flags == 0x11 {
@@ -130,8 +130,30 @@ impl Task {
             return self.sys_fork();
         }
         let mut inner = self.inner.borrow_mut();
+        let process = inner.process.clone();
+        let process = process.borrow();
+
+        let ptid_ref = ptid.translate(process.pmm.clone()).0 as *mut usize;
+        let ctid_ref = ptid.translate(process.pmm.clone()).0 as *mut usize;
+
+        let ptid = self.tid;
+        let ctid = process.tasks.len();
+        drop(process);
+        let new_task = Task::new(ctid, inner.process.clone());
+        let mut new_task_inner = new_task.inner.borrow_mut();
+        new_task_inner.context.clone_from(&inner.context);
+        new_task_inner.context.x[2] = new_sp;
+        new_task_inner.context.x[4] = tls;
+        add_task_to_scheduler(new_task.clone());
         inner.context.x[10] = 0;
-        Ok(())
+        drop(new_task_inner);
+        drop(inner);
+        switch_next();
+        unsafe { ptid_ref.write(ptid) };
+        unsafe { ctid_ref.write(ctid) };
+
+
+        Err(RuntimeError::ChangeTask)
     }
     
     pub fn sys_execve(&self, filename: VirtAddr, argv: VirtAddr, envp: VirtAddr) -> Result<(), RuntimeError> {
