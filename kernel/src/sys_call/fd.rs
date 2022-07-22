@@ -1,5 +1,6 @@
 use core::slice;
 
+use crate::fs::file::FileType;
 use crate::task::fd_table::IoVec;
 use crate::task::task::Task;
 use crate::task::fd_table::FD_NULL;
@@ -344,6 +345,63 @@ impl Task {
         drop(process);
         inner.context.x[10] = 0;
         Ok(())
+    }
+
+    // 获取文件信息
+    pub fn sys_fstatat(&self, dir_fd: usize, filename: VirtAddr, stat_ptr: usize, flags: usize) -> Result<(), RuntimeError> {
+        let mut inner = self.inner.borrow_mut();
+        let process = inner.process.borrow_mut();
+
+        // 获取参数
+        let kstat_ptr = unsafe {
+            (usize::from(process.pmm.get_phys_addr(stat_ptr.into()).unwrap()) as *mut Kstat).as_mut().unwrap()
+        };
+        // 判断文件描述符是否存在
+        let filename = process.pmm.get_phys_addr(filename).unwrap();
+        let filename = get_string_from_raw(filename);
+
+        if filename != "/dev/null" {
+            // 判断文件描述符是否存在
+            let file = if dir_fd == FD_NULL {
+                None
+            } else {
+                let file = process.fd_table.get_file(dir_fd)?;
+                Some(file.get_inode())
+            };
+            
+            let inode = INode::get(file, &filename, false)?;
+            let inode = inode.0.borrow_mut();
+            kstat_ptr.st_dev = 1;
+            kstat_ptr.st_ino = 1;
+            // kstat_ptr.st_mode = 0;
+            if inode.file_type == FileType::Directory {
+                kstat_ptr.st_mode = 0o40000;
+            } else {
+                kstat_ptr.st_mode = 0;
+            }
+            kstat_ptr.st_nlink = inode.nlinkes as u32;
+            kstat_ptr.st_uid = 0;
+            kstat_ptr.st_gid = 0;
+            kstat_ptr.st_rdev = 0;
+            kstat_ptr.__pad = 0;
+            kstat_ptr.st_size = inode.size as u64;
+            kstat_ptr.st_blksize = 512;
+            kstat_ptr.st_blocks = ((inode.size - 1 + 512) / 512) as u64;
+            kstat_ptr.st_atime_sec = inode.st_atime_sec;
+            kstat_ptr.st_atime_nsec = inode.st_atime_nsec;
+            kstat_ptr.st_mtime_sec = inode.st_mtime_sec;
+            kstat_ptr.st_mtime_nsec = inode.st_mtime_nsec;
+            kstat_ptr.st_ctime_sec = inode.st_ctime_sec;
+            kstat_ptr.st_ctime_nsec = inode.st_ctime_nsec;
+            drop(process);
+            inner.context.x[10] = 0;
+            Ok(())
+        } else {
+            kstat_ptr.st_mode = 0o20000;
+            drop(process);
+            inner.context.x[10] = 0;
+            Ok(())
+        }
     }
 
     pub fn sys_lseek(&self, fd: usize, offset: usize, whence: usize) -> Result<(), RuntimeError> {

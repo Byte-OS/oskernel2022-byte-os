@@ -189,8 +189,12 @@ impl FileOP for File {
         let start = inner.offset;
         inner.buf[start..end].clone_from_slice(&data);
         inner.offset += count;
+        // 需要更新文件数据
         if inner.offset >= inner.file_size {
             inner.file_size = inner.offset;
+            let file_size = inner.file_size;
+            let mut inode = inner.file.0.borrow_mut();
+            inode.size = file_size;
         }
         count
     }

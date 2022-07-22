@@ -32,6 +32,7 @@ pub const SYS_LSEEK: usize  = 62;
 pub const SYS_READ:  usize  = 63;
 pub const SYS_WRITE: usize  = 64;
 pub const SYS_WRITEV: usize = 66;
+pub const SYS_FSTATAT: usize= 79;
 pub const SYS_FSTAT: usize  = 80;
 pub const SYS_EXIT:  usize  = 93;
 pub const SYS_EXIT_GROUP: usize = 94;
@@ -183,6 +184,8 @@ impl Task {
             SYS_WRITE => self.sys_write(args[0], args[1], args[2]),
             // 写入数据
             SYS_WRITEV => self.sys_writev(args[0], args[1].into(), args[2]),
+            // 获取文件数据信息
+            SYS_FSTATAT => self.sys_fstatat(args[0], args[1].into(), args[2], args[3]),
             // 获取文件数据信息
             SYS_FSTAT => self.sys_fstat(args[0], args[1]),
             // 退出文件信息
