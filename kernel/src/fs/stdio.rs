@@ -7,6 +7,7 @@ use super::file::FileOP;
 pub struct StdIn;
 pub struct StdOut;
 pub struct StdErr;
+pub struct StdZero;
 
 impl FileOP for StdIn {
     fn readable(&self) -> bool {
@@ -90,6 +91,38 @@ impl FileOP for StdErr {
 
     fn read_at(&self, pos: usize, data: &mut [u8]) -> usize {
         todo!()
+    }
+
+    fn write_at(&self, pos: usize, data: &[u8], count: usize) -> usize {
+        todo!()
+    }
+
+    fn get_size(&self) -> usize {
+        todo!()
+    }
+}
+
+impl FileOP for StdZero {
+    fn readable(&self) -> bool {
+        true
+    }
+
+    fn writeable(&self) -> bool {
+        todo!()
+    }
+
+    fn read(&self, data: &mut [u8]) -> usize {
+        data.fill(0);
+        data.len()
+    }
+
+    fn write(&self, data: &[u8], count: usize) -> usize {
+        todo!()
+    }
+
+    fn read_at(&self, pos: usize, data: &mut [u8]) -> usize {
+        data.fill(0);
+        data.len()
     }
 
     fn write_at(&self, pos: usize, data: &[u8], count: usize) -> usize {

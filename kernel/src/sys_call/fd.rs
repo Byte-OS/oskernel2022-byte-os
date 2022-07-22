@@ -1,7 +1,10 @@
 use core::slice;
 
+use alloc::rc::Rc;
+
 use crate::fs::StatFS;
 use crate::fs::file::FileType;
+use crate::fs::stdio::StdZero;
 use crate::task::fd_table::IoVec;
 use crate::task::task::Task;
 use crate::task::fd_table::FD_NULL;
@@ -123,6 +126,13 @@ impl Task {
         let filename = process.pmm.get_phys_addr(VirtAddr::from(filename)).unwrap();
         let filename = get_string_from_raw(filename);
         let flags = OpenFlags::from_bits_truncate(flags as u32);
+
+        if filename == "/dev/zero" {
+            let fd = process.fd_table.push(Rc::new(StdZero));
+            drop(process);
+            inner.context.x[10] = fd;
+            return Ok(())
+        }
 
         info!("读取文件: {}, flags:{:?}", filename, flags);
 
