@@ -308,14 +308,16 @@ impl Task {
             Trap::Exception(Exception::IllegalInstruction) => {
                 info!("中断 {:#x} 地址 {:#x} stval: {:#x}", scause.bits(), sepc::read(), stval);
                 context.sepc += 4;
+                panic!("指令页错误");
 
             }
             Trap::Exception(Exception::InstructionPageFault) => {
+                info!("中断 {:#x} 地址 {:#x} stval: {:#x}", scause.bits(), sepc::read(), stval);
                 panic!("指令页错误");
             }
             // 其他情况，终止当前线程
             _ => {
-                info!("中断 {:#x} 地址 {:#x} stval: {:#x}", scause.bits(), sepc::read(), stval);
+                info!("未知 中断 {:#x} 地址 {:#x} stval: {:#x}", scause.bits(), sepc::read(), stval);
                 return Err(RuntimeError::KillSelfTask);
             },
         }

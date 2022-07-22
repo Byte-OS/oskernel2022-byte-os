@@ -18,13 +18,13 @@ impl UserStack {
     // 创建新的栈
     pub fn new(pmm: Rc<PageMappingManager>) -> Result<Self, RuntimeError> {
         let mut mem_set = MemSet::new();
-        let mem_map = MemMap::new(0xeffffusize.into(), 2, PTEFlags::UVRWX)?;
+        let mem_map = MemMap::new(0xf000eusize.into(), 3, PTEFlags::UVRWX)?;
         pmm.add_mapping_by_map(&mem_map)?;
         mem_set.inner().push(mem_map);
         Ok(UserStack { 
-            bottom: 0xf0001000, 
-            top: 0xeffff000,
-            pointer: 0xf0001000,
+            bottom: 0xf0010000, 
+            top: 0xf000d000,
+            pointer: 0xf0010000,
             pmm,
             mem_set
         })

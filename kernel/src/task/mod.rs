@@ -143,7 +143,7 @@ pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path
     let elf_header = elf.header;    
     let magic = elf_header.pt1.magic;
 
-    let mut entry_point = elf.header.pt2.entry_point() as usize;
+    let entry_point = elf.header.pt2.entry_point() as usize;
     assert_eq!(magic, [0x7f, 0x45, 0x4c, 0x46], "invalid elf!");
 
     // 测试代码

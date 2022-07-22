@@ -107,7 +107,7 @@ pub fn init() {
         // 开启时钟中断
         sie::set_stimer();
         // 允许中断产生
-        sstatus::set_sie();
+        // sstatus::set_sie();
     }
     // 设置下一次中断产生时间
     set_next_timeout();
