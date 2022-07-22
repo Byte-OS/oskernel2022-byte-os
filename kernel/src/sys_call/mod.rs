@@ -337,8 +337,25 @@ impl Task {
             }
             Trap::Exception(Exception::IllegalInstruction) => {
                 info!("中断 {:#x} 地址 {:#x} stval: {:#x}", scause.bits(), sepc::read(), stval);
-                context.sepc += 4;
-                panic!("指令页错误");
+                let instruction_addr_virt = context.sepc;
+                // context.sepc += 4;
+                // drop(context);
+                let process = task_inner.process.borrow_mut();
+                let instruction_addr = VirtAddr::from(instruction_addr_virt).translate(process.pmm.clone());
+                let instruction = instruction_addr.tranfer::<u32>();
+                let mut ins = instruction.clone();
+                if ins&0x7f == 0x7 {
+                    debug!("warn: {:#b}", 1<<2);
+                    ins = ins & !(1 << 2);
+                }
+                *instruction = ins;
+                debug!("instruction :{:#x}", instruction.clone());
+                drop(instruction);
+                let instruction_addr = VirtAddr::from(instruction_addr_virt).translate(process.pmm.clone());
+                let instruction = instruction_addr.tranfer::<u32>();
+
+                debug!("instruction :{:#x}", instruction.clone());
+                // panic!("指令页错误");
 
             }
             Trap::Exception(Exception::InstructionPageFault) => {
