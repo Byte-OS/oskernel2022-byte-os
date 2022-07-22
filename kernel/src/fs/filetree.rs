@@ -3,7 +3,7 @@ use core::{cell::RefCell, slice};
 
 use alloc::{string::{String, ToString}, vec::Vec, rc::{Rc, Weak}, alloc::dealloc};
 
-use crate::{sync::mutex::Mutex, device::BLK_CONTROL, memory::{addr::{PAGE_SIZE, PhysAddr}, page::{alloc_more, dealloc_more}}, runtime_err::RuntimeError};
+use crate::{sync::mutex::Mutex, device::BLK_CONTROL, memory::{addr::{PAGE_SIZE, PhysAddr}, page::{alloc_more, dealloc_more}, mem_map::MemMap}, runtime_err::RuntimeError};
 
 use super::file::{FileType, File, DEFAULT_VIRT_FILE_PAGE};
 
@@ -27,6 +27,7 @@ pub struct INodeInner {
 	pub st_mtime_nsec: u64,             // 最后修改微秒
 	pub st_ctime_sec: u64,              // 最后创建秒
 	pub st_ctime_nsec: u64,             // 最后创建微秒
+    pub mem_map: Option<Rc<MemMap>>,    // 暂存地址
     pub children: Vec<Rc<INode>>,       // 子节点
 }
 
@@ -39,6 +40,7 @@ impl INode {
             filename: name.to_string(), 
             file_type, 
             parent, 
+            mem_map: None,
             children: vec![],
             size: 0,
             cluster,
@@ -123,8 +125,10 @@ impl INode {
             let mut inner = inode.0.borrow_mut();
             if inner.cluster == 0 {
                 inner.file_type = FileType::VirtFile;
-                let page_index = alloc_more(DEFAULT_VIRT_FILE_PAGE)?;
-                inner.cluster = PhysAddr::from(page_index).0;
+                let page_map = MemMap::new_kernel_buf(DEFAULT_VIRT_FILE_PAGE)?;
+                // let page_index = alloc_more(DEFAULT_VIRT_FILE_PAGE)?;
+                inner.cluster = PhysAddr::from(page_map.ppn).0;
+                inner.mem_map = Some(Rc::new(page_map));
             }
         }
         File::new(inode)
@@ -247,9 +251,6 @@ impl INode {
     pub fn del_self(&self) {
         let inner = self.0.borrow_mut();
         let parent = inner.parent.clone();
-        if inner.file_type == FileType::VirtFile {
-            dealloc_more(PhysAddr::from(inner.cluster).into(), DEFAULT_VIRT_FILE_PAGE);
-        }
         if let Some(parent) = parent {
             let parent = parent.upgrade().unwrap();
             let filename = inner.filename.clone();
