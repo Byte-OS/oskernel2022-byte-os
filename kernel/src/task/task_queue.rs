@@ -39,7 +39,6 @@ lazy_static! {
         "runtest.exe -w entry-static.exe dn_expand_ptr_0",
         "runtest.exe -w entry-static.exe fgets_eof",
         "runtest.exe -w entry-static.exe fgetwc_buffering",
-        "runtest.exe -w entry-static.exe flockfile_list",
         "runtest.exe -w entry-static.exe fpclassify_invalid_ld80",
         "runtest.exe -w entry-static.exe getpwnam_r_crash",
         "runtest.exe -w entry-static.exe getpwnam_r_errno",
@@ -73,7 +72,6 @@ lazy_static! {
         "runtest.exe -w entry-dynamic.exe clock_gettime",
         "runtest.exe -w entry-dynamic.exe crypt",
         "runtest.exe -w entry-dynamic.exe dirname",   
-        "runtest.exe -w entry-dynamic.exe fdopen",  
         "runtest.exe -w entry-dynamic.exe inet_pton",
         "runtest.exe -w entry-dynamic.exe mbc",
         "runtest.exe -w entry-dynamic.exe random",
@@ -96,8 +94,6 @@ lazy_static! {
         "runtest.exe -w entry-dynamic.exe dn_expand_ptr_0",
         "runtest.exe -w entry-dynamic.exe fgets_eof",
         "runtest.exe -w entry-dynamic.exe fgetwc_buffering",
-        "runtest.exe -w entry-dynamic.exe flockfile_list",
-        "runtest.exe -w entry-dynamic.exe getpwnam_r_crash",
         "runtest.exe -w entry-dynamic.exe getpwnam_r_errno",
         "runtest.exe -w entry-dynamic.exe iconv_roundtrips",
         "runtest.exe -w entry-dynamic.exe inet_ntop_v4mapped",
@@ -124,8 +120,15 @@ lazy_static! {
         "runtest.exe -w entry-dynamic.exe wcsstr_false_negative",
         // k210 可能出现异常
         "runtest.exe -w entry-dynamic.exe fnmatch",    
+        "runtest.exe -w entry-static.exe fdopen",        // k210 偶尔异常 loadmisaligned
+        "runtest.exe -w entry-dynamic.exe fdopen",  
+
         "runtest.exe -w entry-dynamic.exe iconv_open",      
         "runtest.exe -w entry-dynamic.exe fpclassify_invalid_ld80",
+        "runtest.exe -w entry-dynamic.exe getpwnam_r_crash",
+        "runtest.exe -w entry-static.exe flockfile_list",
+        "runtest.exe -w entry-dynamic.exe flockfile_list",
+
 
 
         // "runtest.exe -w entry-dynamic.exe tls_align",       // 错误
@@ -133,7 +136,6 @@ lazy_static! {
 
 
         // "runtest.exe -w entry-static.exe env",           // 此异常 0 is not an allocated pointer 无法通过
-        // "runtest.exe -w entry-static.exe fdopen",        // k210 偶尔异常 loadmisaligned
         // "runtest.exe -w entry-static.exe fscanf",        // 异常
         // "runtest.exe -w entry-static.exe fwscanf",       // 异常
         // "runtest.exe -w entry-static.exe memstream",         // k210异常
@@ -247,6 +249,7 @@ pub fn exec_by_str(str: &str) {
 // 加载下一个任务
 pub fn load_next_task() -> bool {
     if let Some(pro_name) = TASK_QUEUE.lock().pop_front() {
+        error!("剩余页表: {}", get_free_page_num());
         exec_by_str(pro_name);
         true
     } else {

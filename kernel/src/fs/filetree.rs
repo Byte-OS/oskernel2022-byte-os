@@ -1,9 +1,9 @@
 
 use core::{cell::RefCell, slice};
 
-use alloc::{string::{String, ToString}, vec::Vec, rc::{Rc, Weak}};
+use alloc::{string::{String, ToString}, vec::Vec, rc::{Rc, Weak}, alloc::dealloc};
 
-use crate::{sync::mutex::Mutex, device::BLK_CONTROL, memory::{addr::{PAGE_SIZE, PhysAddr}, page::alloc_more}, runtime_err::RuntimeError};
+use crate::{sync::mutex::Mutex, device::BLK_CONTROL, memory::{addr::{PAGE_SIZE, PhysAddr}, page::{alloc_more, dealloc_more}}, runtime_err::RuntimeError};
 
 use super::file::{FileType, File, DEFAULT_VIRT_FILE_PAGE};
 
@@ -247,6 +247,9 @@ impl INode {
     pub fn del_self(&self) {
         let inner = self.0.borrow_mut();
         let parent = inner.parent.clone();
+        if inner.file_type == FileType::VirtFile {
+            dealloc_more(PhysAddr::from(inner.cluster).into(), DEFAULT_VIRT_FILE_PAGE);
+        }
         if let Some(parent) = parent {
             let parent = parent.upgrade().unwrap();
             let filename = inner.filename.clone();
