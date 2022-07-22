@@ -220,6 +220,44 @@ impl PageMapping {
         Ok(PhysAddr::from(usize::from(PhysAddr::from(l0_pte.ppn())) + virt_addr.page_offset()))
     }
 
+    pub fn get_entry(&self, virt_addr: VirtAddr) -> Result<PageTableEntry, RuntimeError> {
+        // 如果没有pte则申请pte
+        if usize::from(self.0) == 0 {
+            return Err(RuntimeError::NoMatchedAddr);
+        }
+
+        // 得到 列表中的项
+        let l2_pte_ptr = unsafe {
+            PageTableEntry::get_mut_ptr_from_phys(PhysAddr::from(self.0)).add(virt_addr.l2())
+        };
+        let l2_pte = unsafe { l2_pte_ptr.read() };
+
+        // 判断 是否有指向下一级的页表
+        if !l2_pte.flags().contains(PTEFlags::V) {
+            return Err(RuntimeError::NoMatchedAddr);
+        }
+
+        let l1_pte_ptr = unsafe {
+            PageTableEntry::get_mut_ptr_from_phys(PhysAddr::from(l2_pte.ppn())).add(virt_addr.l1())
+        };
+        let l1_pte = unsafe { l1_pte_ptr.read() };
+
+        // 判断 是否有指向下一级的页表
+        if !l1_pte.flags().contains(PTEFlags::V) {
+            return Err(RuntimeError::NoMatchedAddr);
+        }
+
+        // 获取pte项
+        let l0_pte_ptr = unsafe {
+            PageTableEntry::get_mut_ptr_from_phys(PhysAddr::from(l1_pte.ppn())).add(virt_addr.l0())
+        };
+        let l0_pte = unsafe { l0_pte_ptr.read() };
+        if !l0_pte.flags().contains(PTEFlags::V) {
+            return Err(RuntimeError::NoMatchedAddr);
+        }
+        Ok(l0_pte)
+    }
+
     pub fn add_mapping(&self, ppn: PhysPageNum, vpn: VirtPageNum, flags: PTEFlags) -> Result<MemSet, RuntimeError>{
         let mut mem_set = MemSet::new();
         let l_vec = vpn.get_l_vec();
@@ -323,6 +361,12 @@ impl PageMappingManager {
     pub fn get_phys_addr(&self, virt_addr: VirtAddr) -> Result<PhysAddr, RuntimeError> {
         self.pte.get_phys_addr(virt_addr)
     }
+
+    // 获取物理地址
+    pub fn get_entry(&self, virt_addr: VirtAddr) -> Result<PageTableEntry, RuntimeError> {
+        self.pte.get_entry(virt_addr)
+    }
+    
 
     // 更改pte
     pub fn change_satp(&self) {

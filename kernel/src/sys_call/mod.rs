@@ -340,22 +340,41 @@ impl Task {
                 let instruction_addr_virt = context.sepc;
                 // context.sepc += 4;
                 // drop(context);
-                let process = task_inner.process.borrow_mut();
-                let instruction_addr = VirtAddr::from(instruction_addr_virt).translate(process.pmm.clone());
-                let instruction = instruction_addr.tranfer::<u32>();
-                let mut ins = instruction.clone();
-                if ins&0x7f == 0x7 {
-                    debug!("warn: {:#b}", 1<<2);
-                    ins = ins & !(1 << 2);
+                let process = task_inner.process.clone();
+                let process = process.borrow_mut();
+                // let instruction_addr = VirtAddr::from(instruction_addr_virt).translate(process.pmm.clone());
+                // let instruction = instruction_addr.tranfer::<u32>();
+                // let mut ins = instruction.clone();
+                if stval&0x7f == 0x7 {
+                    let rd = (stval >> 7) & 0x1f;
+                    let op_type = (stval >> 12) & 0x7;
+                    let rs1 = (stval >> 15) & 0x1f;
+                    let imm = ((stval >> 20) & 0x8ff) as isize;
+                    let sign = (stval >> 31) & 1;
+                    let imm = if sign == 1 { 
+                        -imm
+                    } else { 
+                        imm 
+                    };
+                    if op_type == 0b011 {
+                        debug!("成功模拟");
+                        let mem_addr = VirtAddr::from((task_inner.context.x[rs1] as isize + imm) as usize);
+                        let value = mem_addr.translate(process.pmm.clone()).tranfer::<usize>();
+                        task_inner.context.x[rd] = value.clone();
+                        task_inner.context.sepc += 4; 
+                    }
                 }
-                *instruction = ins;
-                debug!("instruction :{:#x}", instruction.clone());
+                // *instruction = ins;
+                // debug!("instruction :{:#x}", instruction.clone());
                 // panic!("指令页错误");
 
             }
             Trap::Exception(Exception::InstructionPageFault) => {
                 info!("中断 {:#x} 地址 {:#x} stval: {:#x}", scause.bits(), sepc::read(), stval);
-                // panic!("指令页错误");
+                let process = task_inner.process.borrow_mut();
+                let pte_entry = process.pmm.get_entry(VirtAddr::from(stval))?;
+                // debug!("flags: {:?}", pte_entry.flags());
+                panic!("指令页错误");
             }
             // 其他情况，终止当前线程
             _ => {
