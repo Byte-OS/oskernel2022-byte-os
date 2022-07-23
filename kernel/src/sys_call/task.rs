@@ -144,15 +144,17 @@ impl Task {
         new_task_inner.context.clone_from(&inner.context);
         new_task_inner.context.x[2] = new_sp;
         new_task_inner.context.x[4] = tls;
+        new_task_inner.context.x[10] = 0;
         add_task_to_scheduler(new_task.clone());
         inner.context.x[10] = 0;
         drop(new_task_inner);
+        // switch_next();
+        for i in 0..32 {
+            debug!("context x[{}]:{:#x}", i, inner.context.x[i]);
+        }
         drop(inner);
-        switch_next();
         unsafe { ptid_ref.write(ptid) };
         unsafe { ctid_ref.write(ctid) };
-
-
         Err(RuntimeError::ChangeTask)
     }
     
@@ -223,6 +225,13 @@ impl Task {
             signum
         );
         inner.context.x[10] = 1;
+        Ok(())
+    }
+
+    pub fn sys_futex(&self, uaddr: usize, op: u32, value: u32, value2: usize, value3: usize) -> Result<(), RuntimeError> {
+        let mut inner = self.inner.borrow_mut();
+        info!("futex called");
+        inner.context.x[10] = 0;
         Ok(())
     }
 }

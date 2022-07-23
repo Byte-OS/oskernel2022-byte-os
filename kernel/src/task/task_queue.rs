@@ -162,7 +162,7 @@ lazy_static! {
         // "runtest.exe -w entry-static.exe strptime",          // 异常
         // "runtest.exe -w entry-dynamic.exe strptime",          // 异常
 
-        // "runtest.exe -w entry-static.exe pthread_cancel_points", // 异常
+        "runtest.exe -w entry-static.exe pthread_cancel_points", // 异常
         // "runtest.exe -w entry-static.exe pthread_cancel",    // 异常
         // "runtest.exe -w entry-static.exe pthread_cond",      // 异常
         // "runtest.exe -w entry-static.exe pthread_tsd",       // 异常
@@ -211,7 +211,7 @@ lazy_static! {
 
         // "runtest.exe -w entry-static.exe env",           // 此异常 0 is not an allocated pointer 无法通过
         // "runtest.exe -w entry-static.exe fscanf",        // 异常
-        "runtest.exe -w entry-static.exe fwscanf",       // 异常
+        // "runtest.exe -w entry-static.exe fwscanf",       // 异常
         // "runtest.exe -w entry-static.exe snprintf",          // 异常
         // "runtest.exe -w entry-static.exe sscanf",            // 异常
         // "runtest.exe -w entry-static.exe strtod",            // 异常

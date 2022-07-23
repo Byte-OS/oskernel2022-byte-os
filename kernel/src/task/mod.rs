@@ -241,7 +241,7 @@ pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path
     let mut task_inner = task.inner.borrow_mut();
     task_inner.context.x.fill(0);
     task_inner.context.sepc = base + entry_point;
-    task_inner.context.x[2] =process.stack.get_stack_top();
+    task_inner.context.x[2] = process.stack.get_stack_top();
     drop(task_inner);
 
     // 映射堆

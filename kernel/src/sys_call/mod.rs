@@ -41,6 +41,7 @@ pub const SYS_UTIMEAT:usize = 88;
 pub const SYS_EXIT:  usize  = 93;
 pub const SYS_EXIT_GROUP: usize = 94;
 pub const SYS_SET_TID_ADDRESS: usize = 96;
+pub const SYS_FUTEX: usize  = 98;
 pub const SYS_NANOSLEEP: usize = 101;
 pub const SYS_GETTIME: usize = 113;
 pub const SYS_SCHED_YIELD: usize = 124;
@@ -205,6 +206,8 @@ impl Task {
             SYS_EXIT_GROUP => self.sys_exit_group(args[0]),
             // 设置tid
             SYS_SET_TID_ADDRESS => self.sys_set_tid_address(args[0]),
+            // 互斥锁
+            SYS_FUTEX => self.sys_futex(args[0].into(), args[1] as u32, args[2] as u32, args[3], args[4]),
             // 文件休眠
             SYS_NANOSLEEP => self.sys_nanosleep(args[0], args[1]),
             // 获取系统时间
@@ -342,30 +345,30 @@ impl Task {
                 // drop(context);
                 let process = task_inner.process.clone();
                 let process = process.borrow_mut();
-                // let instruction_addr = VirtAddr::from(instruction_addr_virt).translate(process.pmm.clone());
-                // let instruction = instruction_addr.tranfer::<u32>();
-                // let mut ins = instruction.clone();
-                if stval&0x7f == 0x7 {
-                    let rd = (stval >> 7) & 0x1f;
-                    let op_type = (stval >> 12) & 0x7;
-                    let rs1 = (stval >> 15) & 0x1f;
-                    let imm = ((stval >> 20) & 0x8ff) as isize;
-                    let sign = (stval >> 31) & 1;
-                    let imm = if sign == 1 { 
-                        -imm
-                    } else { 
-                        imm 
-                    };
-                    if op_type == 0b011 {
-                        debug!("成功模拟");
-                        let mem_addr = VirtAddr::from((task_inner.context.x[rs1] as isize + imm) as usize);
-                        let value = mem_addr.translate(process.pmm.clone()).tranfer::<usize>();
-                        task_inner.context.x[rd] = value.clone();
-                        task_inner.context.sepc += 4; 
-                    }
-                }
+                let instruction_addr = VirtAddr::from(instruction_addr_virt).translate(process.pmm.clone());
+                let instruction = instruction_addr.tranfer::<u32>();
+                // // let mut ins = instruction.clone();
+                // if stval&0x7f == 0x7 {
+                //     let rd = (stval >> 7) & 0x1f;
+                //     let op_type = (stval >> 12) & 0x7;
+                //     let rs1 = (stval >> 15) & 0x1f;
+                //     let imm = ((stval >> 20) & 0x8ff) as isize;
+                //     let sign = (stval >> 31) & 1;
+                //     let imm = if sign == 1 { 
+                //         -imm
+                //     } else { 
+                //         imm 
+                //     };
+                //     if op_type == 0b011 {
+                //         debug!("成功模拟");
+                //         let mem_addr = VirtAddr::from((task_inner.context.x[rs1] as isize + imm) as usize);
+                //         let value = mem_addr.translate(process.pmm.clone()).tranfer::<usize>();
+                //         task_inner.context.x[rd] = value.clone();
+                //         task_inner.context.sepc += 4; 
+                //     }
+                // }
                 // *instruction = ins;
-                // debug!("instruction :{:#x}", instruction.clone());
+                debug!("instruction :{:#x}", instruction.clone());
                 // panic!("指令页错误");
 
             }
