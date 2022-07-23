@@ -103,7 +103,7 @@ pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
     cache_file("runtest.exe");
     // cache_file("entry-static.exe");
     // cache_file("entry-dynamic.exe");
-    cache_file("libc.so");
+    // cache_file("libc.so");
 
     // 初始化多任务
     task::init();
