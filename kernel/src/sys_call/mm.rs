@@ -48,7 +48,6 @@ impl Task {
 
         if flags.contains(MapFlags::MAP_FIXED) {
             warn!("contains: fixed");
-            buf.fill(0);
         }
 
         if fd == FD_NULL {

@@ -120,7 +120,7 @@ impl MemMap {
 
     // 释放map页表资源
     pub fn release(&self) {
-        get_buf_from_phys_page(self.ppn, self.page_num).fill(0);
+        // get_buf_from_phys_page(self.ppn, self.page_num).fill(0);
         dealloc_more(self.ppn, self.page_num);
     }
 }

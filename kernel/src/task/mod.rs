@@ -154,8 +154,6 @@ pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path
         info!("has interp");
         if let Ok(SegmentData::Undefined(_data)) = header.get_data(&elf) {
             // 对 动态链接文件进行转发
-            // let len = (0..).find(|&i| data[i] == 0).unwrap();
-            // let mut path = core::str::from_utf8(&data[..len]).unwrap();
             let path = "libc.so";
             let mut new_args = vec![path];
             new_args.extend_from_slice(&args[..]);
