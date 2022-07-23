@@ -157,6 +157,8 @@ lazy_static! {
         "runtest.exe -w entry-dynamic.exe printf_fmt_g_round",
         "runtest.exe -w entry-dynamic.exe printf_fmt_g_zeros",
         "runtest.exe -w entry-dynamic.exe sscanf_eof",
+        "runtest.exe -w entry-dynamic.exe lseek_large",
+        "runtest.exe -w entry-static.exe lseek_large",
 
         // 扩大栈可过
         "runtest.exe -w entry-static.exe qsort",             // k210异常
@@ -219,8 +221,6 @@ lazy_static! {
 
         // "runtest.exe -w entry-dynamic.exe ftello_unflushed_append",    // 超出写入异常
         // "runtest.exe -w entry-static.exe ftello_unflushed_append",    // 异常
-        // "runtest.exe -w entry-dynamic.exe lseek_large",           // 异常
-        // "runtest.exe -w entry-static.exe lseek_large",           // 异常
 
         // Exception(StoreMisaligned)   k210 error
         // "runtest.exe -w entry-static.exe memstream",                     // k210异常

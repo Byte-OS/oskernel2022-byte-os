@@ -8,6 +8,7 @@ pub struct StdIn;
 pub struct StdOut;
 pub struct StdErr;
 pub struct StdZero;
+pub struct StdNull;
 
 impl FileOP for StdIn {
     fn readable(&self) -> bool {
@@ -127,6 +128,36 @@ impl FileOP for StdZero {
 
     fn write_at(&self, pos: usize, data: &[u8], count: usize) -> usize {
         todo!()
+    }
+
+    fn get_size(&self) -> usize {
+        todo!()
+    }
+}
+
+impl FileOP for StdNull {
+    fn readable(&self) -> bool {
+        false
+    }
+
+    fn writeable(&self) -> bool {
+        true
+    }
+
+    fn read(&self, data: &mut [u8]) -> usize {
+        0
+    }
+
+    fn write(&self, data: &[u8], count: usize) -> usize {
+        count
+    }
+
+    fn read_at(&self, pos: usize, data: &mut [u8]) -> usize {
+        0
+    }
+
+    fn write_at(&self, pos: usize, data: &[u8], count: usize) -> usize {
+        count
     }
 
     fn get_size(&self) -> usize {

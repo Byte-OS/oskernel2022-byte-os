@@ -4,6 +4,7 @@ use alloc::rc::Rc;
 
 use crate::fs::StatFS;
 use crate::fs::file::FileType;
+use crate::fs::stdio::StdNull;
 use crate::fs::stdio::StdZero;
 use crate::task::fd_table::IoVec;
 use crate::task::task::Task;
@@ -55,6 +56,7 @@ impl Task {
         // 判断是否存在文件描述符
         let fd_v = process.fd_table.get(fd)?;
         process.fd_table.set(new_fd, fd_v);
+        warn!("? fd: {:#x}", fd);
         drop(process);
         inner.context.x[10] = new_fd;
         Ok(())
@@ -89,6 +91,8 @@ impl Task {
         // 获取参数
         let filename = process.pmm.get_phys_addr(VirtAddr::from(filename)).unwrap();
         let filename = get_string_from_raw(filename);
+
+        debug!("unlink file {}", filename);
 
         // 判断文件描述符是否存在
         let current = if fd == FD_NULL {
@@ -132,6 +136,11 @@ impl Task {
             drop(process);
             inner.context.x[10] = fd;
             return Ok(())
+        } else if filename == "/dev/null" {
+            let fd = process.fd_table.push(Rc::new(StdNull));
+            drop(process);
+            inner.context.x[10] = fd;
+            return Ok(())
         }
 
         debug!("读取文件: {}, flags:{:?}", filename, flags);
@@ -152,6 +161,7 @@ impl Task {
         let fd = process.fd_table.alloc();
         process.fd_table.set(fd, file);
         drop(process);
+        debug!("return fd: {}", fd);
         inner.context.x[10] = fd;
         Ok(())
     }

@@ -343,13 +343,11 @@ impl Task {
             }
             Trap::Exception(Exception::IllegalInstruction) => {
                 warn!("中断 {:#x} 地址 {:#x} stval: {:#x}", scause.bits(), sepc::read(), stval);
-                debug!("instruction :{:#x}", instruction.clone());
                 // panic!("指令页错误");
 
             }
             Trap::Exception(Exception::InstructionPageFault) => {
                 warn!("中断 {:#x} 地址 {:#x} stval: {:#x}", scause.bits(), sepc::read(), stval);
-                debug!("flags: {:?}", pte_entry.flags());
                 panic!("指令页错误");
             }
             // 其他情况，终止当前线程

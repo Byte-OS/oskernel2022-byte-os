@@ -154,7 +154,16 @@ impl File {
     }
 
     pub fn lseek(&self, offset: usize, whence: usize) -> usize {
+        let inode = self.get_inode();
         let mut inner = self.0.borrow_mut();
+        debug!("file is vaild: {}", inode.is_valid());
+        if offset > 0x80000 {
+            return offset;
+        }
+        // 判断文件节点是否存在
+        // if !inode.is_valid() {
+        //     return offset;
+        // }
         debug!("seek: {}, {}   file_size: {} offset: {}", offset, whence, inner.file_size, inner.offset);
         inner.offset = match whence {
             // SEEK_SET

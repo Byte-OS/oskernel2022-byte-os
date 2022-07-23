@@ -261,4 +261,15 @@ impl INode {
             parent.delete(&filename);
         }
     }
+
+    // 删除自身
+    pub fn is_valid(&self) -> bool {
+        let inner = self.0.borrow_mut();
+        let parent = inner.parent.clone();
+        if let Some(parent) = parent {
+            parent.upgrade().is_some()
+        } else {
+            false
+        }
+    }
 }
