@@ -46,7 +46,7 @@ fn breakpoint(context: &mut Context) {
 
 // 中断错误
 fn fault(_context: &mut Context, scause: Scause, stval: usize) {
-    info!("中断 {:#x} 地址 {:#x} stval: {:#x}", scause.bits(), sepc::read(), stval);
+    debug!("中断 {:#x} 地址 {:#x} stval: {:#x}", scause.bits(), sepc::read(), stval);
     panic!("未知中断")
 }
 
