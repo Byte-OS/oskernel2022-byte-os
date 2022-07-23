@@ -9,9 +9,7 @@ lazy_static! {
     pub static ref TASK_QUEUE: Mutex<VecDeque<&'static str>> = Mutex::new(VecDeque::from(vec![
         "runtest.exe -w entry-static.exe argv",
         "runtest.exe -w entry-static.exe basename",
-        "runtest.exe -w entry-static.exe clocale_mbfuncs",
         "runtest.exe -w entry-static.exe clock_gettime",
-        "runtest.exe -w entry-static.exe crypt",
         "runtest.exe -w entry-static.exe dirname",   
         "runtest.exe -w entry-static.exe fnmatch",    
         "runtest.exe -w entry-static.exe iconv_open",      
@@ -89,9 +87,7 @@ lazy_static! {
         // dynamic
         "runtest.exe -w entry-dynamic.exe argv",
         "runtest.exe -w entry-dynamic.exe basename",
-        "runtest.exe -w entry-dynamic.exe clocale_mbfuncs",
         "runtest.exe -w entry-dynamic.exe clock_gettime",
-        "runtest.exe -w entry-dynamic.exe crypt",
         "runtest.exe -w entry-dynamic.exe dirname",   
         "runtest.exe -w entry-dynamic.exe fnmatch",    
         "runtest.exe -w entry-dynamic.exe inet_pton",
@@ -175,6 +171,11 @@ lazy_static! {
         "runtest.exe -w entry-dynamic.exe getpwnam_r_crash",
         "runtest.exe -w entry-dynamic.exe flockfile_list",
 
+        // 比较耗时的
+        "runtest.exe -w entry-static.exe clocale_mbfuncs",
+        "runtest.exe -w entry-static.exe crypt",
+        "runtest.exe -w entry-dynamic.exe clocale_mbfuncs",
+        "runtest.exe -w entry-dynamic.exe crypt",
 
         // 待完成功能
         // "runtest.exe -w entry-static.exe putenv_doublefree",             // 异常
