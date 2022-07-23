@@ -3,6 +3,7 @@ pub mod file;
 mod partition;
 pub mod filetree;
 pub mod stdio;
+pub mod cache;
 
 pub use partition::Partition;
 

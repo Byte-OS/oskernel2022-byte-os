@@ -6,7 +6,7 @@ use core::cell::RefCell;
 use crate::interrupt::timer::TimeSpec;
 use crate::{memory::mem_map::MemMap, runtime_err::RuntimeError};
 use crate::memory::addr::{get_buf_from_phys_page, get_pages_num, PAGE_SIZE, VirtAddr, PhysAddr};
-use crate::memory::page::alloc_more;
+use crate::memory::page::{alloc_more, alloc_more_front};
 use crate::memory::page_table::{PageMappingManager, PTEFlags};
 
 use super::filetree::INode;
@@ -58,7 +58,7 @@ pub trait FileOP: Any {
 	fn get_size(&self) -> usize;
 }
 
-pub struct File(RefCell<FileInner>);
+pub struct File(pub RefCell<FileInner>);
 
 pub struct FileInner {
     pub file: Rc<INode>,
@@ -106,6 +106,29 @@ impl File {
                 mem_map: Some(Rc::new(mem_map))
             }))))
         }
+        
+    }
+
+    pub fn cache(inode: Rc<INode>) -> Result<Rc<Self>, RuntimeError>{
+        // 申请页表存储程序
+        let elf_pages = get_pages_num(inode.get_file_size());
+        // 申请页表
+        let elf_phy_start = alloc_more_front(elf_pages)?;
+        let mem_map = MemMap::exists_page(elf_phy_start, elf_phy_start.0.into(),
+            elf_pages, PTEFlags::VRWX);
+        // 获取缓冲区地址并读取
+        let buf = get_buf_from_phys_page(elf_phy_start, elf_pages);
+        inode.read_to(buf);
+        let file_size = inode.get_file_size();
+        warn!("读取文件: {}", inode.get_filename());
+        Ok(Rc::new(Self(RefCell::new(FileInner {
+            file: inode,
+            offset: 0,
+            file_size,
+            buf,
+            mem_size: elf_pages * PAGE_SIZE,
+            mem_map: Some(Rc::new(mem_map))
+        }))))
         
     }
 

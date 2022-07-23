@@ -34,7 +34,7 @@ use core::arch::global_asm;
 use alloc::rc::Rc;
 use riscv::register::sstatus;
 
-use crate::{fs::filetree::INode, memory::page::get_free_page_num};
+use crate::{fs::{filetree::INode, file::FileOP, cache::cache_file}, memory::{page::get_free_page_num, addr::PAGE_SIZE}};
 
 
 mod virtio_impl;
@@ -89,7 +89,6 @@ pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
     memory::init();
 
     // 初始化中断
-
     interrupt::init();
 
     // 初始化设备
@@ -100,6 +99,11 @@ pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
 
     // 输出文件树
     print_file_tree(INode::get(None, "/", false).unwrap());
+
+    // cache_file("runtest.exe");
+    // cache_file("entry-static.exe");
+    cache_file("entry-dynamic.exe");
+    cache_file("libc.so");
 
     // 初始化多任务
     task::init();

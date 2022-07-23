@@ -5,7 +5,7 @@ use alloc::{string::{String, ToString}, vec::Vec, rc::{Rc, Weak}, alloc::dealloc
 
 use crate::{sync::mutex::Mutex, device::BLK_CONTROL, memory::{addr::{PAGE_SIZE, PhysAddr}, page::{alloc_more, dealloc_more}, mem_map::MemMap}, runtime_err::RuntimeError, interrupt::timer::{get_time_ms, get_time_sec}};
 
-use super::file::{FileType, File, DEFAULT_VIRT_FILE_PAGE};
+use super::{file::{FileType, File, DEFAULT_VIRT_FILE_PAGE}, cache::get_cache_file};
 
 
 lazy_static! {
@@ -121,6 +121,9 @@ impl INode {
     // 根据路径 获取文件节点
     pub fn open(current: Option<Rc<INode>>, path: &str, create_sign: bool) -> Result<Rc<File>, RuntimeError> {
         let inode = Self::get(current, path, create_sign)?;
+        if let Some(file) = get_cache_file(&inode.get_filename()) {
+            return Ok(file.clone());
+        }
         if create_sign {
             let mut inner = inode.0.borrow_mut();
             if inner.cluster == 0 {
