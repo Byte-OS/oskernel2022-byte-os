@@ -5,21 +5,21 @@
 .set    CONTEXT_SIZE, 34
 
 # 宏：将寄存器存到栈上
-.macro SAVE reg, offset
+.macro SAVE_K reg, offset
     sd  \reg, \offset*8(sp)
 .endm
 
-.macro SAVE_N n
-    SAVE  x\n, \n
+.macro SAVE_K_N n
+    SAVE_K  x\n, \n
 .endm
 
 # 宏：将寄存器从栈中取出
-.macro LOAD reg, offset
+.macro LOAD_K reg, offset
     ld  \reg, \offset*8(sp)
 .endm
 
-.macro LOAD_N n
-    LOAD  x\n, \n
+.macro LOAD_K_N n
+    LOAD_K  x\n, \n
 .endm
 
     .section .text
@@ -29,21 +29,21 @@ kernel_callback_entry:
     addi    sp, sp, CONTEXT_SIZE*-8
 
     # 保存通用寄存器，除了 x0（固定为 0）
-    SAVE    x1, 1
+    SAVE_K    x1, 1
     # 将原来的 sp（sp 又名 x2）写入 2 位置
     addi    x1, sp, 34*8
-    SAVE    x1, 2
+    SAVE_K    x1, 2
      # 保存 x3 至 x31
     .set    n, 3
     .rept   29
-        SAVE_N  %n
+        SAVE_K_N  %n
         .set    n, n + 1
     .endr
     # 取出 CSR 并保存
     csrr    t0, sstatus
     csrr    t1, sepc
-    SAVE    t0, 32
-    SAVE    t1, 33
+    SAVE_K    t0, 32
+    SAVE_K    t1, 33
 
     # 将第一个参数设置为栈顶 便于Context引用访问
     add a0, x0, sp
@@ -56,21 +56,21 @@ kernel_callback_entry:
     call kernel_callback
 
     # 恢复 CSR
-    LOAD    s1, 32
-    LOAD    s2, 33
+    LOAD_K    s1, 32
+    LOAD_K    s2, 33
     csrw    sstatus, s1
     csrw    sepc, s2
 
     # 恢复通用寄存器
-    LOAD    x1, 1
+    LOAD_K    x1, 1
 
     # 恢复 x3 至 x31
     .set    n, 3
     .rept   29
-        LOAD_N  %n
+        LOAD_K_N  %n
         .set    n, n + 1
     .endr
 
     # 恢复 sp（又名 x2）这里最后恢复是为了上面可以正常使用 LOAD 宏
-    LOAD    x2, 2
+    LOAD_K    x2, 2
     sret
