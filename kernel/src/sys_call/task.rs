@@ -146,16 +146,14 @@ impl Task {
         new_task_inner.context.x[4] = tls;
         new_task_inner.context.x[10] = 0;
         add_task_to_scheduler(new_task.clone());
-        inner.context.x[10] = 0;
+        inner.context.x[10] = ctid;
         drop(new_task_inner);
         // switch_next();
-        for i in 0..32 {
-            debug!("context x[{}]:{:#x}", i, inner.context.x[i]);
-        }
         drop(inner);
-        unsafe { ptid_ref.write(ptid) };
+        unsafe { ptid_ref.write(ctid) };
         unsafe { ctid_ref.write(ctid) };
-        Err(RuntimeError::ChangeTask)
+        // Err(RuntimeError::ChangeTask)
+        Ok(())
     }
     
     pub fn sys_execve(&self, filename: VirtAddr, argv: VirtAddr, envp: VirtAddr) -> Result<(), RuntimeError> {
