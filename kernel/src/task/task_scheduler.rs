@@ -41,7 +41,7 @@ impl TaskScheduler {
             let task = self.queue[0].clone();
             self.is_run = true;
             task.run();
-            info!("执行pid: {}", task.pid);
+            warn!("执行pid: {}", task.pid);
             task.catch();
         }
     }
@@ -70,7 +70,7 @@ pub fn start_tasks() {
     task_time_refresh();
     let mut task_scheduler = TASK_SCHEDULER.force_get();
     task_scheduler.start();
-    info!("恢复任务");
+    warn!("恢复任务");
 }
 
 pub fn add_task_to_scheduler(task: Rc<Task>) {

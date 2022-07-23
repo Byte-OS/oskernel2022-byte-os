@@ -109,7 +109,7 @@ pub fn sys_write_wrap(pmm: Rc<PageMappingManager>, fd: Rc<INode>, buf: usize, co
         FileType::VirtFile => {
             fd.write(buf);
         }
-        _ => {info!("SYS_WRITE暂未找到设备");}
+        _ => {warn!("SYS_WRITE暂未找到设备");}
     }
     count
 }
@@ -251,7 +251,7 @@ impl Task {
 
     pub fn catch(&self) {
         let result = self.interrupt();
-        info!("catch");
+        debug!("catch");
         if let Err(err) = result {
             match err {
                 RuntimeError::KillSelfTask => {
@@ -319,7 +319,7 @@ impl Task {
             // 用户请求
             Trap::Exception(Exception::UserEnvCall) => {
                 // 将 恢复地址 + 4 跳过调用地址
-                info!("中断号: {} 调用地址: {:#x}", context.x[17], sepc::read());
+                debug!("中断号: {} 调用地址: {:#x}", context.x[17], sepc::read());
 
                 // 对sepc + 4
                 context.sepc += 4;
@@ -339,57 +339,22 @@ impl Task {
             },
             // 页面未对齐错误
             Trap::Exception(Exception::StoreMisaligned) => {
-                info!("页面未对齐");
+                warn!("页面未对齐");
             }
             Trap::Exception(Exception::IllegalInstruction) => {
-                info!("中断 {:#x} 地址 {:#x} stval: {:#x}", scause.bits(), sepc::read(), stval);
-                let instruction_addr_virt = context.sepc;
-                // context.sepc += 4;
-                // drop(context);
-                let process = task_inner.process.clone();
-                let process = process.borrow_mut();
-                let instruction_addr = VirtAddr::from(instruction_addr_virt).translate(process.pmm.clone());
-                let instruction = instruction_addr.tranfer::<u32>();
-                let mut ins = instruction.clone() as usize;
-                if ins&0x7f == 0x7 {
-                    let rd = (ins >> 7) & 0x1f;
-                    let op_type = (ins >> 12) & 0x7;
-                    let rs1 = (ins >> 15) & 0x1f;
-                    let imm = ((ins >> 20) & 0x8ff) as isize;
-                    let sign = (ins >> 31) & 1;
-                    let imm = if sign == 1 { 
-                        -imm
-                    } else { 
-                        imm 
-                    };
-                    if op_type == 0b011 {
-                        debug!("成功模拟");
-                        let mem_addr = VirtAddr::from((task_inner.context.x[rs1] as isize + imm) as usize);
-                        let value = mem_addr.translate(process.pmm.clone()).tranfer::<usize>();
-                        task_inner.context.x[rd] = value.clone();
-                        task_inner.context.sepc += 4; 
-                    }
-                }
-                *instruction = ins as u32;
+                warn!("中断 {:#x} 地址 {:#x} stval: {:#x}", scause.bits(), sepc::read(), stval);
                 debug!("instruction :{:#x}", instruction.clone());
                 // panic!("指令页错误");
 
             }
             Trap::Exception(Exception::InstructionPageFault) => {
-                info!("中断 {:#x} 地址 {:#x} stval: {:#x}", scause.bits(), sepc::read(), stval);
-                let instruction_addr_virt = context.sepc;
-                let process = task_inner.process.clone();
-                let process = process.borrow_mut();
-                let pte_entry = process.pmm.get_entry(VirtAddr::from(stval))?;
-                let instruction_addr = VirtAddr::from(instruction_addr_virt).translate(process.pmm.clone());
-                let instruction = instruction_addr.tranfer::<u32>();
-                let mut ins = instruction.clone() as usize;
+                warn!("中断 {:#x} 地址 {:#x} stval: {:#x}", scause.bits(), sepc::read(), stval);
                 debug!("flags: {:?}", pte_entry.flags());
                 panic!("指令页错误");
             }
             // 其他情况，终止当前线程
             _ => {
-                info!("未知 中断 {:#x} 地址 {:#x} stval: {:#x}", scause.bits(), sepc::read(), stval);
+                warn!("未知 中断 {:#x} 地址 {:#x} stval: {:#x}", scause.bits(), sepc::read(), stval);
                 return Err(RuntimeError::KillSelfTask);
             },
         }

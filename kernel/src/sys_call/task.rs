@@ -21,7 +21,7 @@ impl Task {
         let inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
         process.exit(exit_code);
-        info!("exit_code: {:#x}", exit_code);
+        debug!("exit_code: {:#x}", exit_code);
         Err(RuntimeError::ChangeTask)
     }
     
@@ -119,7 +119,7 @@ impl Task {
     }
     
     pub fn sys_clone(&self, flags: usize, new_sp: usize, ptid: VirtAddr, tls: usize, ctid: VirtAddr) -> Result<(), RuntimeError> {
-        info!(
+        debug!(
             "clone: flags={:#x}, newsp={:#x}, parent_tid={:#x}, child_tid={:#x}, newtls={:#x}",
             flags, new_sp, ptid.0, tls, ctid.0
         );
@@ -179,7 +179,7 @@ impl Task {
         ).collect();
         let envp: Vec<String> = envp.iter().map(|x| get_string_from_raw(x.clone())).collect();
         for i in envp {
-            info!("envp: {}", i);
+            debug!("envp: {}", i);
         }
         let task = process.tasks[self.tid].clone().upgrade().unwrap();
         process.reset()?;
@@ -218,7 +218,7 @@ impl Task {
     
     pub fn sys_kill(&self, pid: usize, signum: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
-        info!(
+        debug!(
             "kill: thread {} kill process {} with signal {:?}",
             0,
             pid,
@@ -230,7 +230,7 @@ impl Task {
 
     pub fn sys_futex(&self, uaddr: usize, op: u32, value: u32, value2: usize, value3: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
-        info!("futex called");
+        debug!("futex called");
         inner.context.x[10] = 0;
         Ok(())
     }

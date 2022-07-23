@@ -33,8 +33,8 @@ impl Task {
         } else {
             start
         };
-        info!("mmap start: {:#x}, len: {:#x}, prot: {}, flags: {}, fd: {:#x}, offset: {:#x}", start, len, _prot, flags, fd, offset);
-        info!("mmap pages: {}", len / PAGE_SIZE);
+        debug!("mmap start: {:#x}, len: {:#x}, prot: {}, flags: {}, fd: {:#x}, offset: {:#x}", start, len, _prot, flags, fd, offset);
+        debug!("mmap pages: {}", len / PAGE_SIZE);
         let flags = MapFlags::from_bits_truncate(flags as u32);
         let mut p_start = process.pmm.get_phys_addr(start.into())?;
         if p_start.0 == start {
@@ -58,7 +58,7 @@ impl Task {
             Ok(())
         } else {
             let file = process.fd_table.get_file(fd)?;
-            info!("file size: {:#x}", file.get_size() / PAGE_SIZE);
+            debug!("file size: {:#x}", file.get_size() / PAGE_SIZE);
             file.copy_to(offset, buf);
             drop(process);
             inner.context.x[10] = start;

@@ -124,7 +124,7 @@ pub fn get_new_pid() -> usize {
 
 pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path: &'a str, args: Vec<&'a str>) 
         -> Result<Rc<Task>, RuntimeError> {
-    info!("读取path: {}", path);
+    debug!("读取path: {}", path);
 
     // 如果存在write
     let file = INode::open(None, path, false)?;
@@ -152,7 +152,7 @@ pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path
         .program_iter()
         .find(|ph| ph.get_type() == Ok(Type::Interp));
     if let Some(header) = header {
-        info!("has interp");
+        debug!("has interp");
         if let Ok(SegmentData::Undefined(_data)) = header.get_data(&elf) {
             // 对 动态链接文件进行转发
             let path = "libc.so";
@@ -171,11 +171,11 @@ pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path
     base = match elf.relocate(process.pmm.clone(), base) {
         Ok(arr) => {
             relocated_arr = arr;
-            info!("relocate success");
+            debug!("relocate success");
             base
         },
         Err(value) => {
-            info!("test: {}", value);
+            debug!("test: {}", value);
             0
         }
     };

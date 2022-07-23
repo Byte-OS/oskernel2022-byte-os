@@ -15,7 +15,7 @@ macro_rules! print {
 #[macro_export]
 macro_rules! info {
     ($fmt: literal $(, $($arg: tt)+)?) => {
-        // $crate::console::print(format_args!(concat!("\x1b[1;34m", "[INFO] ", $fmt, "\x1b[0m", "\n") $(, $($arg)+)?));
+        $crate::console::print(format_args!(concat!("\x1b[1;34m", "[INFO] ", $fmt, "\x1b[0m", "\n") $(, $($arg)+)?));
     }
 }
 

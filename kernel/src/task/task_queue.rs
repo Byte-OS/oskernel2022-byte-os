@@ -263,7 +263,7 @@ pub fn load_next_task() -> bool {
         exec_by_str(pro_name);
         true
     } else {
-        info!("剩余页表: {}", get_free_page_num());
+        debug!("剩余页表: {}", get_free_page_num());
         false
     }
 }

@@ -134,7 +134,7 @@ impl Task {
             return Ok(())
         }
 
-        info!("读取文件: {}, flags:{:?}", filename, flags);
+        debug!("读取文件: {}, flags:{:?}", filename, flags);
 
         // 判断文件描述符是否存在
         let current = if fd == FD_NULL {
