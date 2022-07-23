@@ -1,7 +1,7 @@
 use core::slice;
 
 use alloc::{string::String, vec::Vec, rc::Rc};
-use riscv::register::{sepc, scause::{self, Trap, Exception, Interrupt}, stval};
+use riscv::register::{sepc, scause::{self, Trap, Exception, Interrupt}, stval, sstatus};
 
 use crate::{memory::{page_table::PageMappingManager, addr::{VirtAddr, PhysAddr}}, interrupt::timer, fs::filetree::INode, task::task_scheduler::kill_task, sys_call::consts::EBADF};
 
@@ -283,6 +283,9 @@ impl Task {
     }
 
     pub fn interrupt(&self) -> Result<(), RuntimeError> {
+        unsafe {
+            sstatus::set_fs(sstatus::FS::Dirty);
+        }
         let scause = scause::read();
         let stval = stval::read();
         let mut task_inner = self.inner.borrow_mut();

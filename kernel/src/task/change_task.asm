@@ -63,7 +63,7 @@ change_task:
     LOAD    t0, 32
     LOAD    t1, 33
 
-    csrw sstatus, t0
+    # csrw sstatus, t0
     csrw sepc, t1
 
     # 恢复通用寄存器

@@ -32,6 +32,7 @@ use core::arch::global_asm;
 
 
 use alloc::rc::Rc;
+use riscv::register::sstatus;
 
 use crate::{fs::filetree::INode, memory::page::get_free_page_num};
 
@@ -68,6 +69,10 @@ pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
     #[cfg(feature = "board_k210")]
     if hart_id != 0 {
         sbi::hart_suspend(0x00000000, support_hart_resume as usize, 0);
+    }
+
+    unsafe {
+        sstatus::set_fs(sstatus::FS::Dirty);
     }
     
     // 清空bss段
