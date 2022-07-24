@@ -41,7 +41,7 @@ impl TaskScheduler {
             let task = self.queue[0].clone();
             self.is_run = true;
             task.run();
-            warn!("执行pid: {}", task.pid);
+            warn!("执行pid: {}   tid: {}", task.pid, task.tid);
             task.catch();
         }
     }

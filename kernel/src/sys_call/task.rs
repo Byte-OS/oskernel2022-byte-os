@@ -5,6 +5,17 @@ use crate::task::task::TaskStatus;
 
 use super::{UTSname, write_string_to_raw, SYS_CALL_ERR, get_string_from_raw, get_usize_vec_from_raw};
 
+bitflags! {
+    struct FutexFlags: u32 {
+        const WAIT      = 0;
+        const WAKE      = 1;
+        const REQUEUE   = 3;
+        const LOCK_PI   = 6;
+        const UNLOCK_PI = 7;
+        const PRIVATE   = 0x80;
+    }
+}
+
 impl Task {
     pub fn sys_exit(&self, exit_code: usize) -> Result<(), RuntimeError> {
         let inner = self.inner.borrow();
@@ -147,9 +158,10 @@ impl Task {
         new_task_inner.context.x[10] = 0;
         add_task_to_scheduler(new_task.clone());
         inner.context.x[10] = ctid;
+        
         drop(new_task_inner);
-        // switch_next();
         drop(inner);
+        switch_next();
         unsafe { ptid_ref.write(ctid) };
         unsafe { ctid_ref.write(ctid) };
         // Err(RuntimeError::ChangeTask)
@@ -226,10 +238,17 @@ impl Task {
         Ok(())
     }
 
-    pub fn sys_futex(&self, uaddr: usize, op: u32, value: u32, value2: usize, value3: usize) -> Result<(), RuntimeError> {
+    pub fn sys_futex(&self, uaddr: usize, op: u32, value: u32, value2: usize, _value3: usize) -> Result<(), RuntimeError> {
+        let op = FutexFlags::from_bits_truncate(op);
         let mut inner = self.inner.borrow_mut();
         debug!("futex called");
+        debug!(
+            "Futex uaddr: {:#x}, op: {:?}, val: {}, val2(timeout_addr): {:x}",
+            uaddr, op, value, value2,
+        );
         inner.context.x[10] = 0;
+        drop(inner);
+        switch_next();
         Ok(())
     }
 }
