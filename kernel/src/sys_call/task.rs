@@ -243,7 +243,7 @@ impl Task {
     pub fn sys_futex(&self, uaddr: usize, op: u32, value: u32, value2: usize, _value3: usize) -> Result<(), RuntimeError> {
         let op = FutexFlags::from_bits_truncate(op);
         let mut inner = self.inner.borrow_mut();
-        let mut process = inner.process.borrow_mut();
+        let process = inner.process.borrow_mut();
         let uaddr_value = VirtAddr::from(uaddr).translate(process.pmm.clone());
         let uaddr_value = uaddr_value.tranfer::<u32>();
         let op = op - FutexFlags::PRIVATE;
@@ -257,6 +257,7 @@ impl Task {
             FutexFlags::WAIT => {
                 if *uaddr_value == value {
                     drop(process);
+                    debug!("等待进程");
                     inner.context.x[10] = 0;
                     inner.status = TaskStatus::WAITING;
                     drop(inner);

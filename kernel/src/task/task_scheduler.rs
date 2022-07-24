@@ -27,7 +27,7 @@ impl TaskScheduler {
         while let Some(task) = self.queue.pop_front() {
             let inner = task.inner.borrow_mut();
             self.queue.push_back(task.clone());
-            if inner.status == TaskStatus::READY {
+            if inner.status == TaskStatus::READY || inner.status == TaskStatus::RUNNING {
                 drop(inner);
                 break;
             }

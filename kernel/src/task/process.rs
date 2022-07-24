@@ -52,7 +52,7 @@ impl Process {
     // 进程进行等待
     pub fn wait(&self) {
         let task = self.get_task(0);
-        task.inner.borrow_mut().status = TaskStatus::WAITING;
+        // task.inner.borrow_mut().status = TaskStatus::WAITING;
     }
 
     // 判断是否在等待状态
