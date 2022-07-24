@@ -257,7 +257,7 @@ impl Task {
         debug!("stasks {}", TASK_SCHEDULER.force_get().queue.len());
         match op {
             FutexFlags::WAIT => {
-                if *uaddr_value == value && value <= 0x7fffffff {
+                if *uaddr_value == value {
                     drop(process);
                     debug!("等待进程");
                     inner.context.x[10] = 0;
@@ -273,7 +273,8 @@ impl Task {
             FutexFlags::WAKE => {
                 // *uaddr_value = 1000;
                 drop(process);
-                inner.context.x[10] = 1;
+                // 值为唤醒的线程数
+                inner.context.x[10] = 0;
                 drop(inner);
                 futex_wake(uaddr);
                 switch_next();
