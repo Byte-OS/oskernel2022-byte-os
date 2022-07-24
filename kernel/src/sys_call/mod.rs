@@ -208,7 +208,7 @@ impl Task {
             // 设置tid
             SYS_SET_TID_ADDRESS => self.sys_set_tid_address(args[0]),
             // 互斥锁
-            SYS_FUTEX => self.sys_futex(args[0].into(), args[1] as u32, args[2] as u32, args[3], args[4]),
+            SYS_FUTEX => self.sys_futex(args[0].into(), args[1] as u32, args[2] as _, args[3], args[4]),
             // 文件休眠
             SYS_NANOSLEEP => self.sys_nanosleep(args[0], args[1]),
             // 获取系统时间

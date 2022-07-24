@@ -193,11 +193,11 @@ lazy_static! {
         // "runtest.exe -w entry-static.exe strptime",          // 异常
         // "runtest.exe -w entry-dynamic.exe strptime",          // 异常
 
-        // "runtest.exe -w entry-static.exe pthread_cancel_points", // 异常
+        "runtest.exe -w entry-static.exe pthread_cancel_points", // 异常
         // "runtest.exe -w entry-static.exe pthread_cancel",    // 异常
         // "runtest.exe -w entry-static.exe pthread_cond",      // 异常
         // "runtest.exe -w entry-static.exe pthread_tsd",       // 异常
-        "runtest.exe -w entry-static.exe pthread_robust_detach",         // 异常
+        // "runtest.exe -w entry-static.exe pthread_robust_detach",         // 异常
         // "runtest.exe -w entry-static.exe pthread_cancel_sem_wait",       // 异常
         // "runtest.exe -w entry-static.exe pthread_cond_smasher",          // 异常
         // "runtest.exe -w entry-static.exe pthread_condattr_setclock",     // 异常

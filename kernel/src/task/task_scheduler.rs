@@ -24,25 +24,22 @@ impl TaskScheduler {
 
     // 执行下一个任务
     pub fn switch_next(&mut self) {
-        while let Some(task) = self.queue.pop_front() {
-            let inner = task.inner.borrow_mut();
-            self.queue.push_back(task.clone());
-            if inner.status == TaskStatus::READY || inner.status == TaskStatus::RUNNING {
-                drop(inner);
-                break;
-            }
+        if let Some(task) = self.queue.pop_front() {
+            task.inner.borrow_mut().status = TaskStatus::READY;
+            self.queue.push_back(task);
         }
+        task_time_refresh();     
     }
 
     // 执行第一个任务
     pub fn start(&mut self) {
-        load_next_task();
         loop {
             if self.queue.len() == 0 {
                 if !load_next_task() {
                     break;
                 }
             }
+            debug!("tasks len: {}", self.queue.len());
             let task = self.queue[0].clone();
             self.is_run = true;
             task.run();

@@ -161,13 +161,15 @@ impl Task {
         add_task_to_scheduler(new_task.clone());
         inner.context.x[10] = ctid;
         
+        debug!("tasks: len {}", TASK_SCHEDULER.force_get().queue.len());
+
         drop(new_task_inner);
         drop(inner);
-        // switch_next();
+        switch_next();   
         unsafe { ptid_ref.write(ctid) };
         unsafe { ctid_ref.write(ctid) };
-        // Err(RuntimeError::ChangeTask)
-        Ok(())
+        Err(RuntimeError::ChangeTask)
+        // Ok(())
     }
     
     pub fn sys_execve(&self, filename: VirtAddr, argv: VirtAddr, envp: VirtAddr) -> Result<(), RuntimeError> {
@@ -247,15 +249,15 @@ impl Task {
         let uaddr_value = VirtAddr::from(uaddr).translate(process.pmm.clone());
         let uaddr_value = uaddr_value.tranfer::<u32>();
         let op = op - FutexFlags::PRIVATE;
-        debug!("futex called uaddr: {}", uaddr_value);
+        debug!("futex called uaddr: {:#x}", uaddr_value);
         debug!(
-            "Futex uaddr: {:#x}, op: {:?}, val: {}, val2(timeout_addr): {:x}",
+            "Futex uaddr: {:#x}, op: {:?}, val: {:#x}, val2(timeout_addr): {:x}",
             uaddr, op, value, value2,
         );
         debug!("stasks {}", TASK_SCHEDULER.force_get().queue.len());
         match op {
             FutexFlags::WAIT => {
-                if *uaddr_value == value {
+                if *uaddr_value == value && value <= 0x7fffffff {
                     drop(process);
                     debug!("等待进程");
                     inner.context.x[10] = 0;
@@ -263,14 +265,18 @@ impl Task {
                     drop(inner);
                     futex_wait(uaddr);
                     switch_next();
+                } else {
+                    drop(process);
+                    inner.context.x[10] = 0;
                 }
             },
             FutexFlags::WAKE => {
                 // *uaddr_value = 1000;
                 drop(process);
-                inner.context.x[10] = 0;
+                inner.context.x[10] = 1;
                 drop(inner);
                 futex_wake(uaddr);
+                switch_next();
             }
             _ => todo!(),
         }
