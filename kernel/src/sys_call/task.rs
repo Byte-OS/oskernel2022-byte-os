@@ -1,6 +1,8 @@
-use alloc::{vec::Vec, string::String, rc::Rc};
 
-use crate::{task::{task_scheduler::{add_task_to_scheduler, switch_next}, exec, process::{Process, self}, pid::get_next_pid, task::Task, exec_with_process}, runtime_err::RuntimeError, memory::{addr::{PhysAddr, VirtAddr}, page::{get_mut_from_virt_addr, get_ptr_from_virt_addr}}};
+use alloc::{vec::Vec, string::String, rc::Rc};
+use hashbrown::HashMap;
+
+use crate::{task::{task_scheduler::{add_task_to_scheduler, switch_next, TASK_SCHEDULER, kill_task, get_current_task}, exec, process::{Process, self}, pid::get_next_pid, task::Task, exec_with_process, task_queue::TASK_QUEUE}, runtime_err::RuntimeError, memory::{addr::{PhysAddr, VirtAddr}, page::{get_mut_from_virt_addr, get_ptr_from_virt_addr}}, sync::mutex::Mutex};
 use crate::task::task::TaskStatus;
 
 use super::{UTSname, write_string_to_raw, SYS_CALL_ERR, get_string_from_raw, get_usize_vec_from_raw};
@@ -161,7 +163,7 @@ impl Task {
         
         drop(new_task_inner);
         drop(inner);
-        switch_next();
+        // switch_next();
         unsafe { ptid_ref.write(ctid) };
         unsafe { ctid_ref.write(ctid) };
         // Err(RuntimeError::ChangeTask)
@@ -241,14 +243,64 @@ impl Task {
     pub fn sys_futex(&self, uaddr: usize, op: u32, value: u32, value2: usize, _value3: usize) -> Result<(), RuntimeError> {
         let op = FutexFlags::from_bits_truncate(op);
         let mut inner = self.inner.borrow_mut();
-        debug!("futex called");
+        let mut process = inner.process.borrow_mut();
+        let uaddr_value = VirtAddr::from(uaddr).translate(process.pmm.clone());
+        let uaddr_value = uaddr_value.tranfer::<u32>();
+        let op = op - FutexFlags::PRIVATE;
+        debug!("futex called uaddr: {}", uaddr_value);
         debug!(
             "Futex uaddr: {:#x}, op: {:?}, val: {}, val2(timeout_addr): {:x}",
             uaddr, op, value, value2,
         );
-        inner.context.x[10] = 0;
-        drop(inner);
-        switch_next();
+        debug!("stasks {}", TASK_SCHEDULER.force_get().queue.len());
+        match op {
+            FutexFlags::WAIT => {
+                if *uaddr_value == value {
+                    drop(process);
+                    inner.context.x[10] = 0;
+                    inner.status = TaskStatus::WAITING;
+                    drop(inner);
+                    futex_wait(uaddr);
+                    switch_next();
+                }
+            },
+            FutexFlags::WAKE => {
+                // *uaddr_value = 1000;
+                drop(process);
+                inner.context.x[10] = 0;
+                drop(inner);
+                futex_wake(uaddr);
+            }
+            _ => todo!(),
+        }
+        if op.contains(FutexFlags::WAKE) {
+            // *uaddr_value = 0;
+        }
         Ok(())
+    }
+
+    pub fn sys_tkill(&self, tid: usize, signum: usize) -> Result<(), RuntimeError> {
+        let mut inner = self.inner.borrow_mut();
+        kill_task(self.pid, tid);
+        inner.context.x[10] = 0;
+        Ok(())
+    }
+}
+
+lazy_static! {
+    pub static ref WAIT_MAP: Mutex<HashMap<usize, Rc<Task>>> = Mutex::new(HashMap::new());
+}
+
+pub fn futex_wait(addr: usize) {
+    let task = get_current_task().unwrap();
+    WAIT_MAP.force_get().insert(addr, task);
+}
+
+pub fn futex_wake(addr: usize) {
+    let mut wait_map = WAIT_MAP.force_get();
+    let task = wait_map.get(&addr);
+    if let Some(task) = task {
+        task.inner.borrow_mut().status = TaskStatus::READY;
+        wait_map.remove(&addr);
     }
 }

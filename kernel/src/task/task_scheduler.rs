@@ -24,14 +24,19 @@ impl TaskScheduler {
 
     // 执行下一个任务
     pub fn switch_next(&mut self) {
-        if let Some(task) = self.queue.pop_front() {
-            task.inner.borrow_mut().status = TaskStatus::READY;
-            self.queue.push_back(task);
+        while let Some(task) = self.queue.pop_front() {
+            let inner = task.inner.borrow_mut();
+            self.queue.push_back(task.clone());
+            if inner.status == TaskStatus::READY {
+                drop(inner);
+                break;
+            }
         }
     }
 
     // 执行第一个任务
     pub fn start(&mut self) {
+        load_next_task();
         loop {
             if self.queue.len() == 0 {
                 if !load_next_task() {
@@ -87,4 +92,11 @@ pub fn kill_task(pid: usize, tid: usize) {
 
 pub fn switch_next() {
     TASK_SCHEDULER.force_get().switch_next();
+}
+
+pub fn get_current_task() -> Option<Rc<Task>> {
+    match TASK_SCHEDULER.force_get().queue.front() {
+        Some(task) => Some(task.clone()),
+        None => None
+    }
 }

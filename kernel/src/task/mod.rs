@@ -15,7 +15,7 @@ use crate::memory::page::{alloc_more, dealloc_more, alloc};
 use crate::runtime_err::RuntimeError;
 use crate::task::process::Process;
 use crate::task::task_scheduler::start_tasks;
-use crate::{memory::{page_table::PTEFlags, addr::{PAGE_SIZE, VirtAddr, PhysAddr, PhysPageNum}, page::PAGE_ALLOCATOR}};
+use crate::memory::{page_table::PTEFlags, addr::{PAGE_SIZE, VirtAddr, PhysAddr, PhysPageNum}, page::PAGE_ALLOCATOR};
 use self::pipe::PipeBuf;
 use self::task::Task;
 use self::task_scheduler::NEXT_PID;

@@ -46,6 +46,7 @@ pub const SYS_NANOSLEEP: usize = 101;
 pub const SYS_GETTIME: usize = 113;
 pub const SYS_SCHED_YIELD: usize = 124;
 pub const SYS_KILL: usize = 129;
+pub const SYS_TKILL: usize = 130;
 pub const SYS_TIMES: usize  = 153;
 pub const SYS_UNAME: usize  = 160;
 pub const SYS_GETTIMEOFDAY: usize= 169;
@@ -216,6 +217,8 @@ impl Task {
             SYS_SCHED_YIELD => self.sys_sched_yield(),
             // 结束进程
             SYS_KILL => self.sys_kill(args[0], args[1]),
+            // 结束任务进程
+            SYS_TKILL => self.sys_tkill(args[0], args[1]),
             // 获取文件时间
             SYS_TIMES => self.sys_times(args[0]),
             // 获取系统信息
@@ -290,7 +293,7 @@ impl Task {
         let stval = stval::read();
         let mut task_inner = self.inner.borrow_mut();
         let context = &mut task_inner.context;
-        // warn!("中断发生: {:#x}, 地址: {:#x}", scause.bits(), context.sepc);
+        warn!("中断发生: {:#x}, 地址: {:#x}", scause.bits(), context.sepc);
         // 更新TICKS
         set_last_ticks();
 
