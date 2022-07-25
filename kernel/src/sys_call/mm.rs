@@ -58,7 +58,7 @@ impl Task {
             Ok(())
         } else {
             let file = process.fd_table.get_file(fd)?;
-            debug!("file size: {:#x}", file.get_size() / PAGE_SIZE);
+            debug!("file size: {:#x}", file.get_size());
             file.copy_to(offset, buf);
             drop(process);
             inner.context.x[10] = start;

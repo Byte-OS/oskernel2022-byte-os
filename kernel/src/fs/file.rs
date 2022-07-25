@@ -139,8 +139,9 @@ impl File {
 
     pub fn copy_to(&self, offset: usize, buf: &mut [u8]) {
         let inner = self.0.borrow_mut();
-        let len = inner.buf.len() - offset;
-        buf[..len].clone_from_slice(&inner.buf[offset..]);
+        let mut len = inner.buf.len() - offset;
+        if len > buf.len() { len = buf.len(); }
+        buf[..len].clone_from_slice(&inner.buf[offset..offset + len]);
     }
 
     pub fn mmap(&self, pmm: Rc<PageMappingManager>, virt_addr: VirtAddr) {
