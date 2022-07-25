@@ -15,6 +15,7 @@ pub mod task;
 pub mod time;
 pub mod mm;
 pub mod consts;
+pub mod signal;
 
 // 中断调用列表
 pub const SYS_GETCWD:usize  = 17;
@@ -47,6 +48,8 @@ pub const SYS_GETTIME: usize = 113;
 pub const SYS_SCHED_YIELD: usize = 124;
 pub const SYS_KILL: usize = 129;
 pub const SYS_TKILL: usize = 130;
+pub const SYS_SIGACTION: usize = 134;
+pub const SYS_SIGPROCMASK: usize = 135;
 pub const SYS_TIMES: usize  = 153;
 pub const SYS_UNAME: usize  = 160;
 pub const SYS_GETTIMEOFDAY: usize= 169;
@@ -219,6 +222,10 @@ impl Task {
             SYS_KILL => self.sys_kill(args[0], args[1]),
             // 结束任务进程
             SYS_TKILL => self.sys_tkill(args[0], args[1]),
+            // 释放sigacrtion
+            SYS_SIGACTION => self.sys_sigaction(args[0], args[1].into(),args[2].into(), args[3]),
+            // 遮盖信号
+            SYS_SIGPROCMASK => self.sys_sigprocmask(args[0] as _, args[1].into(),args[2].into(), args[3] as _),
             // 获取文件时间
             SYS_TIMES => self.sys_times(args[0]),
             // 获取系统信息

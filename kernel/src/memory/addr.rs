@@ -214,6 +214,11 @@ impl VirtAddr {
     pub fn translate(&self, pmm: Rc<PageMappingManager>) -> PhysAddr {
         pmm.get_phys_addr(self.clone()).unwrap()
     }
+    #[inline]
+    // 判断地址是否有效
+    pub fn is_valid(&self) -> bool {
+        self.0 != 0
+    }
 }
 
 impl PhysAddr {

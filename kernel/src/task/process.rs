@@ -4,11 +4,11 @@ use alloc::{vec::Vec, rc::{Rc, Weak}};
 
 use crate::{memory::{page_table::PageMappingManager, mem_set::MemSet, addr::VirtAddr}, runtime_err::RuntimeError, interrupt::timer::TMS, fs::filetree::INode};
 
-use super::{task::{Task, TaskStatus}, stack::UserStack, UserHeap, fd_table::FDTable, task_scheduler::kill_process};
+use super::{task::{Task, TaskStatus}, stack::UserStack, UserHeap, fd_table::FDTable, task_scheduler::kill_process, signal::SigAction};
 
 pub struct Process {
     pub pid: usize,                             // 进程id
-    pub parent: Option<Weak<RefCell<Process>>>,   // 父进程
+    pub parent: Option<Weak<RefCell<Process>>>, // 父进程
     pub pmm: Rc<PageMappingManager>,            // 内存页映射管理 
     pub mem_set: MemSet,                        // 内存使用集
     pub tasks: Vec<Weak<Task>>,                 // 任务管理器
@@ -18,6 +18,7 @@ pub struct Process {
     pub workspace: Rc<INode>,                   // 工作目录
     pub fd_table: FDTable,                      // 文件描述表
     pub tms: TMS,                               // 时间记录结构
+    pub signal: SigAction,                      // 信号结构
     pub children: Vec<Rc<RefCell<Process>>>,    // 子结构
     pub exit_code: Option<usize>                // 退出代码
 }
@@ -39,6 +40,7 @@ impl Process {
             workspace: INode::get(None, "/", false)?.clone(), 
             fd_table: FDTable::new(),
             children: vec![],
+            signal: SigAction::new(),
             tms: TMS::new(),
             exit_code: None
         };

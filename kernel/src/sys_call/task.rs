@@ -2,7 +2,7 @@
 use alloc::{vec::Vec, string::String, rc::Rc};
 use hashbrown::HashMap;
 
-use crate::{task::{task_scheduler::{add_task_to_scheduler, switch_next, TASK_SCHEDULER, kill_task, get_current_task}, exec, process::{Process, self}, pid::get_next_pid, task::Task, exec_with_process, task_queue::TASK_QUEUE}, runtime_err::RuntimeError, memory::{addr::{PhysAddr, VirtAddr}, page::{get_mut_from_virt_addr, get_ptr_from_virt_addr}}, sync::mutex::Mutex};
+use crate::{task::{task_scheduler::{add_task_to_scheduler, switch_next, TASK_SCHEDULER, kill_task, get_current_task}, process::{Process}, pid::get_next_pid, task::Task, exec_with_process}, runtime_err::RuntimeError, memory::{addr::{PhysAddr, VirtAddr}, page::{get_ptr_from_virt_addr}}, sync::mutex::Mutex};
 use crate::task::task::TaskStatus;
 
 use super::{UTSname, write_string_to_raw, SYS_CALL_ERR, get_string_from_raw, get_usize_vec_from_raw};
@@ -242,12 +242,12 @@ impl Task {
         Ok(())
     }
 
-    pub fn sys_futex(&self, uaddr: usize, op: u32, value: u32, value2: usize, _value3: usize) -> Result<(), RuntimeError> {
+    pub fn sys_futex(&self, uaddr: usize, op: u32, value: i32, value2: usize, _value3: usize) -> Result<(), RuntimeError> {
         let op = FutexFlags::from_bits_truncate(op);
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
         let uaddr_value = VirtAddr::from(uaddr).translate(process.pmm.clone());
-        let uaddr_value = uaddr_value.tranfer::<u32>();
+        let uaddr_value = uaddr_value.tranfer::<i32>();
         let op = op - FutexFlags::PRIVATE;
         debug!("futex called uaddr: {:#x}", uaddr_value);
         debug!(
@@ -271,8 +271,9 @@ impl Task {
                 }
             },
             FutexFlags::WAKE => {
-                // *uaddr_value = 1000;
+                *uaddr_value = -1;
                 drop(process);
+                debug!("debug for ");
                 // 值为唤醒的线程数
                 inner.context.x[10] = 0;
                 drop(inner);
