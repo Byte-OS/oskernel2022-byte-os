@@ -4,7 +4,8 @@ use alloc::rc::Rc;
 use core::cell::RefCell;
 
 use crate::interrupt::timer::TimeSpec;
-use crate::{memory::mem_map::MemMap, runtime_err::RuntimeError};
+use crate::memory::mem_map::MemMap;
+use crate::runtime_err::RuntimeError;
 use crate::memory::addr::{get_buf_from_phys_page, get_pages_num, PAGE_SIZE, VirtAddr, PhysAddr};
 use crate::memory::page::{alloc_more, alloc_more_front};
 use crate::memory::page_table::{PageMappingManager, PTEFlags};

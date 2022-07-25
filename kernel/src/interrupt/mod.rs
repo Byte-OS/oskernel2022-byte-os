@@ -1,12 +1,19 @@
 pub mod timer;
 
-use core::arch::{global_asm, asm};
-use riscv::register::{scause::{Trap, Exception, Interrupt,Scause}, sepc};
+use core::arch::global_asm;
+use core::arch::asm;
+use riscv::register::scause::Trap;
+use riscv::register::scause::Exception;
+use riscv::register::scause::Interrupt;
+use riscv::register::scause::Scause;
+use riscv::register::sepc;
 
 pub use timer::TICKS;
 
-use crate::memory::{addr::{VirtAddr, PhysAddr},  page_table::{PTEFlags, KERNEL_PAGE_MAPPING}};
-
+use crate::memory::addr::VirtAddr;
+use crate::memory::addr::PhysAddr;
+use crate::memory::page_table::PTEFlags;
+use crate::memory::page_table::KERNEL_PAGE_MAPPING;
 
 
 #[repr(C)]

@@ -212,7 +212,7 @@ lazy_static! {
         // "runtest.exe -w entry-static.exe socket",            // 异常
         // "runtest.exe -w entry-dynamic.exe socket",            // 异常
 
-        // "runtest.exe -w entry-static.exe pthread_cancel_points", // 异常
+        "runtest.exe -w entry-static.exe pthread_cancel_points", // 异常
         // "runtest.exe -w entry-static.exe pthread_cancel",    // 异常
         // "runtest.exe -w entry-static.exe pthread_cond",      // 异常
         // "runtest.exe -w entry-static.exe pthread_tsd",       // 异常
@@ -237,7 +237,7 @@ lazy_static! {
 
         // "runtest.exe -w entry-dynamic.exe tls_align",       // 错误
         // "runtest.exe -w entry-dynamic.exe pleval",          // 错误
-        "runtest.exe -w entry-dynamic.exe tls_init",       // 错误
+        // "runtest.exe -w entry-dynamic.exe tls_init",       // 错误
         // "runtest.exe -w entry-dynamic.exe tls_local_exec",          // 错误
 
         // "runtest.exe -w entry-dynamic.exe ftello_unflushed_append",    // 超出写入异常

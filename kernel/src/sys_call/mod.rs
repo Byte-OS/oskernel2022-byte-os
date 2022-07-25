@@ -1,9 +1,23 @@
 use core::slice;
 
-use alloc::{string::String, vec::Vec, rc::Rc};
-use riscv::register::{sepc, scause::{self, Trap, Exception, Interrupt}, stval, sstatus};
+use alloc::string::String;
+use alloc::vec::Vec;
+use alloc::rc::Rc;
+use riscv::register::sepc;
+use riscv::register::scause;
+use riscv::register::scause::Trap;
+use riscv::register::scause::Exception;
+use riscv::register::scause::Interrupt;
+use riscv::register::stval;
+use riscv::register::sstatus;
 
-use crate::{memory::{page_table::PageMappingManager, addr::{VirtAddr, PhysAddr}}, interrupt::timer, fs::filetree::INode, task::task_scheduler::kill_task, sys_call::consts::EBADF};
+use crate::memory::page_table::PageMappingManager;
+use crate::memory::addr::VirtAddr;
+use crate::memory::addr::PhysAddr;
+use crate::interrupt::timer;
+use crate::fs::filetree::INode;
+use crate::task::task_scheduler::kill_task;
+use crate::sys_call::consts::EBADF;
 
 use crate::fs::file::FileType;
 use crate::interrupt::timer::set_last_ticks;

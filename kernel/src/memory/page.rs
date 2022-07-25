@@ -2,9 +2,14 @@ use core::{mem::size_of, slice::from_raw_parts_mut};
 
 use alloc::{vec::Vec, rc::Rc};
 
-use crate::{sync::mutex::Mutex, memory::addr::{PAGE_SIZE, PhysAddr}, runtime_err::RuntimeError};
+use crate::sync::mutex::Mutex;
+use crate::memory::addr::PAGE_SIZE;
+use crate::memory::addr::PhysAddr;
+use crate::runtime_err::RuntimeError;
 
-use super::{addr::{PhysPageNum, VirtAddr}, page_table::PageMappingManager};
+use super::addr::PhysPageNum;
+use super::addr::VirtAddr;
+use super::page_table::PageMappingManager;
 
 const USIZE_PER_PAGES: usize = PAGE_SIZE / size_of::<usize>();
 

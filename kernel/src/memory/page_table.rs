@@ -1,10 +1,21 @@
-use core::{arch::asm, slice::{from_raw_parts_mut, self}};
+use core::arch::asm;
+use core::slice::from_raw_parts_mut;
+use core::slice;
 use _core::cell::RefCell;
 use bitflags::*;
 
-use crate::{memory::addr::PhysAddr, sync::mutex::Mutex, runtime_err::RuntimeError};
+use crate::memory::addr::PhysAddr;
+use crate::sync::mutex::Mutex;
+use crate::runtime_err::RuntimeError;
 
-use super::{addr::{PhysPageNum,  VirtAddr, PAGE_PTE_NUM, PAGE_SIZE, VirtPageNum}, page::PAGE_ALLOCATOR, mem_map::MemMap, mem_set::MemSet};
+use super::addr::PhysPageNum;
+use super::addr::VirtAddr;
+use super::addr::PAGE_PTE_NUM;
+use super::addr::PAGE_SIZE;
+use super::addr::VirtPageNum;
+use super::page::PAGE_ALLOCATOR;
+use super::mem_map::MemMap;
+use super::mem_set::MemSet;
 
 bitflags! {
     pub struct PTEFlags: u8 {
@@ -82,6 +93,7 @@ pub enum PagingMode {
     Sv39 = 8,
     Sv48 = 9
 }
+
 #[derive(Clone)]
 pub struct PageMappingManager {
     pub paging_mode: PagingMode,
