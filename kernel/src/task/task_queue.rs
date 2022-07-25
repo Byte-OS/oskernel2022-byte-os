@@ -161,10 +161,12 @@ lazy_static! {
         "runtest.exe -w entry-static.exe lseek_large",
         "runtest.exe -w entry-static.exe setjmp",
         "runtest.exe -w entry-dynamic.exe setjmp",
+        "runtest.exe -w entry-static.exe daemon_failure",
+        // "runtest.exe -w entry-dynamic.exe daemon_failure",   // 指令页错误  待修复
 
         // 扩大栈可过
-        "runtest.exe -w entry-static.exe qsort",             // k210异常
-        "runtest.exe -w entry-dynamic.exe qsort",             // k210异常
+        "runtest.exe -w entry-static.exe qsort",
+        "runtest.exe -w entry-dynamic.exe qsort",
 
         // 申请临时内存作为虚拟文件
         "runtest.exe -w entry-static.exe fdopen", 
@@ -241,9 +243,7 @@ lazy_static! {
         // "runtest.exe -w entry-static.exe env",           // 此异常 0 is not an allocated pointer 无法通过
         // "runtest.exe -w entry-dynamic.exe env",           // 此异常 0 is not an allocated pointer 无法通过
 
-        // "runtest.exe -w entry-static.exe daemon_failure",    // 异常
         // "runtest.exe -w entry-static.exe fflush_exit",       // 异常
-        // "runtest.exe -w entry-dynamic.exe daemon_failure",    // 异常
         // "runtest.exe -w entry-dynamic.exe fflush_exit",       // 异常
     ]));
 }

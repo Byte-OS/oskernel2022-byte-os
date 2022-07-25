@@ -13,6 +13,7 @@ pub struct IoVec {
     pub iov_len: usize
 }
 
+#[derive(Clone)]
 pub struct FDTable(HashMap<usize, Rc<dyn FileOP>>);
 
 impl FDTable {

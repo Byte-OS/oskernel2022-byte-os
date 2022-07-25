@@ -121,7 +121,9 @@ impl Task {
         let mut child_process = child_process.borrow_mut();
         child_process.mem_set = process.mem_set.clone_with_data()?;
         child_process.stack = process.stack.clone_with_data(child_process.pmm.clone())?;
-    
+        // 复制fd_table
+        child_process.fd_table = process.fd_table.clone();
+
         child_process.pmm.add_mapping_by_set(&child_process.mem_set)?;
         drop(process);
         drop(child_process);

@@ -3,10 +3,12 @@ use core::slice;
 use alloc::rc::Rc;
 
 use crate::fs::StatFS;
+use crate::fs::file::FileOP;
 use crate::fs::file::FileType;
 use crate::fs::stdio::StdNull;
 use crate::fs::stdio::StdZero;
 use crate::task::fd_table::IoVec;
+use crate::task::pipe::PipeWriter;
 use crate::task::task::Task;
 use crate::task::fd_table::FD_NULL;
 use crate::task::pipe::new_pipe;
@@ -167,7 +169,6 @@ impl Task {
     }
     // 关闭文件
     pub fn sys_close(&self, fd: usize) -> Result<(), RuntimeError> {
-        warn!("close fd: {}",fd);
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
         process.fd_table.dealloc(fd);
@@ -325,11 +326,18 @@ impl Task {
         let buf = process.pmm.get_phys_addr(buf_ptr.into()).unwrap();
         // 寻找物理地址
         let buf = get_buf_from_phys_addr(buf, count);
-
+        
         // 判断文件描述符是否存在
         let writer = process.fd_table.get(fd)?;
         let value = if writer.writeable() {
-            writer.write(buf, buf.len())
+            match writer.clone().downcast::<PipeWriter>() {
+                Ok(writer) => {
+                    writer.write(buf, buf.len())
+                },
+                Err(_) => {
+                    writer.write(buf, buf.len())
+                }
+            }
         } else {
             usize::MAX
         };
