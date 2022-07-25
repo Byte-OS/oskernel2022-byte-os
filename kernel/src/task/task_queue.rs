@@ -185,6 +185,18 @@ lazy_static! {
         "runtest.exe -w entry-dynamic.exe fpclassify_invalid_ld80",
         "runtest.exe -w entry-dynamic.exe getpwnam_r_crash",
 
+        // 可能出现 Exception(StoreMisaligned)   k210 error
+        "runtest.exe -w entry-static.exe memstream",
+        "runtest.exe -w entry-static.exe regex_backref_0",
+        "runtest.exe -w entry-static.exe regex_bracket_icase",
+        "runtest.exe -w entry-static.exe regex_ere_backref",
+        "runtest.exe -w entry-static.exe regex_negated_range",
+        "runtest.exe -w entry-dynamic.exe memstream",
+        "runtest.exe -w entry-dynamic.exe regex_backref_0",
+        "runtest.exe -w entry-dynamic.exe regex_bracket_icase",
+        "runtest.exe -w entry-dynamic.exe regex_ere_backref",
+        "runtest.exe -w entry-dynamic.exe regex_negated_range",
+
         // 比较耗时的
         "runtest.exe -w entry-static.exe clocale_mbfuncs",
         "runtest.exe -w entry-static.exe crypt",
@@ -228,20 +240,6 @@ lazy_static! {
 
         // "runtest.exe -w entry-dynamic.exe ftello_unflushed_append",    // 超出写入异常
         // "runtest.exe -w entry-static.exe ftello_unflushed_append",    // 异常
-
-        // Exception(StoreMisaligned)   k210 error
-        // "runtest.exe -w entry-static.exe memstream",                     // k210异常
-        // "runtest.exe -w entry-static.exe regex_backref_0",               // k210异常
-        // "runtest.exe -w entry-static.exe regex_bracket_icase",           // k210异常
-        // "runtest.exe -w entry-static.exe regex_ere_backref",             // k210异常
-        // "runtest.exe -w entry-static.exe regex_negated_range",           // k210异常
-        // "runtest.exe -w entry-dynamic.exe memstream",                    // k210异常
-        // "runtest.exe -w entry-dynamic.exe regex_backref_0",               // k210异常
-        // "runtest.exe -w entry-dynamic.exe regex_bracket_icase",           // k210异常
-        // "runtest.exe -w entry-dynamic.exe regex_ere_backref",             // k210异常
-        // "runtest.exe -w entry-dynamic.exe regex_negated_range",           // k210异常
-
-        // 指令页异常
     ]));
 }
 
