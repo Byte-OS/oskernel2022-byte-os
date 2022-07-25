@@ -36,6 +36,7 @@ pub const SYS_READ:  usize  = 63;
 pub const SYS_WRITE: usize  = 64;
 pub const SYS_READV:  usize  = 65;
 pub const SYS_WRITEV: usize = 66;
+pub const SYS_PREAD: usize  = 67;
 pub const SYS_FSTATAT: usize= 79;
 pub const SYS_FSTAT: usize  = 80;
 pub const SYS_UTIMEAT:usize = 88;
@@ -198,6 +199,8 @@ impl Task {
             SYS_READV => self.sys_readv(args[0], args[1].into(), args[2]),
             // 写入数据
             SYS_WRITEV => self.sys_writev(args[0], args[1].into(), args[2]),
+            // 读取数据
+            SYS_PREAD => self.sys_pread(args[0], args[1].into(), args[2], args[3]),
             // 获取文件数据信息
             SYS_FSTATAT => self.sys_fstatat(args[0], args[1].into(), args[2], args[3]),
             // 获取文件数据信息

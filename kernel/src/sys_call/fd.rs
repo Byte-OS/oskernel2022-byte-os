@@ -482,4 +482,18 @@ impl Task {
         Ok(())
     }
 
+    pub fn sys_pread(&self, fd: usize, ptr: VirtAddr, len: usize, offset: usize) -> Result<(), RuntimeError> {
+        let mut inner = self.inner.borrow_mut();
+        let mut process = inner.process.borrow_mut();
+        let buf = get_buf_from_phys_addr(ptr.translate(process.pmm.clone()), len);
+        let file = process.fd_table.get_file(fd)?;
+        // let curr_offset = file.lseek(0, 1);
+        // let ret = file.read_at(offset, buf);
+        // file.lseek(curr_offset, 0);
+        let ret = file.read_at(offset, buf);
+        drop(process);
+        inner.context.x[10] = ret;
+        Ok(())
+    }
+
 }

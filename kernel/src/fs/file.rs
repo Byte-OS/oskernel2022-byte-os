@@ -243,7 +243,11 @@ impl FileOP for File {
     }
 
     fn read_at(&self, pos: usize, data: &mut [u8]) -> usize {
-        todo!()
+        let inner = self.0.borrow_mut();
+        let remain = inner.file_size - pos;
+        let len = if remain < data.len() { remain } else { data.len() };
+        data[..len].clone_from_slice(&inner.buf[pos..pos + len]);
+        len
     }
 
     fn write_at(&self, pos: usize, data: &[u8], count: usize) -> usize {
