@@ -36,15 +36,22 @@ impl Task {
     pub fn sys_sigaction(&self, signum: usize, act: VirtAddr, oldact: VirtAddr, sigsetsize: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
-        let act = act.translate(process.pmm.clone()).tranfer::<SigAction>();
-        info!(
-            "rt_sigaction: signal={:?}, act={:?}, oldact={:?}, sigsetsize={}, thread={}",
-            signum,
-            act,
-            oldact,
-            sigsetsize,
-            self.tid
-        );
+        if oldact.is_valid() {
+            let act = oldact.translate(process.pmm.clone()).tranfer::<SigAction>();
+            act.copy_from(&process.signal);
+        }
+        if act.is_valid() {
+            let act = act.translate(process.pmm.clone()).tranfer::<SigAction>();
+            debug!(
+                "rt_sigaction: signal={:?}, act={:?}, oldact={:?}, sigsetsize={}, thread={}",
+                signum,
+                act,
+                oldact,
+                sigsetsize,
+                self.tid
+            );
+            process.signal.copy_from(act);
+        }
         drop(process);
         inner.context.x[10] = 0;
         Ok(())
