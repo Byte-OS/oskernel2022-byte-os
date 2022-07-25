@@ -13,6 +13,7 @@ impl Task {
             self.tid
         );
         if oldset.is_valid() {
+            debug!("clone");
             let sig = oldset.translate(process.pmm.clone()).tranfer::<SigSet>();
             sig.copy_from(&process.signal.mask)
         }

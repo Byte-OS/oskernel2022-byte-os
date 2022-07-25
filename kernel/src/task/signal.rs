@@ -3,11 +3,11 @@ pub struct SigSet(u64);
 
 impl SigSet {
     pub fn block(&mut self, set: &SigSet) {
-        self.0 = self.0 & !set.0;
+        self.0 |= set.0;
     }
 
     pub fn unblock(&mut self, set: &SigSet) {
-        self.0 = self.0 | set.0;
+        self.0 ^= self.0 & set.0;
     }
 
     pub fn copy_from(&mut self, target: &Self) {
