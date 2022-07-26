@@ -14,7 +14,7 @@ use riscv::register::sstatus;
 use crate::memory::page_table::PageMappingManager;
 use crate::memory::addr::VirtAddr;
 use crate::memory::addr::PhysAddr;
-use crate::interrupt::timer;
+use crate::interrupt::{Context, timer};
 use crate::fs::filetree::INode;
 use crate::task::task_scheduler::kill_task;
 use crate::sys_call::consts::EBADF;
@@ -307,6 +307,34 @@ impl Task {
                 }
             }
         }
+    }
+
+    pub fn signal(&self, signal: usize) -> Result<(), RuntimeError> {
+        let mut inner = self.inner.borrow_mut();
+        let process = inner.process.borrow_mut();
+        let handler = process.signal.handler;
+        debug!("signal handler: {:#x}", handler);
+        // 保存上下文
+        let mut temp_context = Context::new();
+        drop(process);
+        temp_context.clone_from(&inner.context);
+        inner.context.sepc = handler;
+        inner.context.x[10] = signal;
+        // inner.context.x[11] = 0x10000;
+        // inner.context.x[12] = 0x10000;
+        drop(inner);
+        self.run();
+        // loop {
+        //     self.run();
+        //     let result = self.interrupt();
+        //     if let Err(RuntimeError::ChangeTask ) = result {
+        //         break;
+        //     }
+        // }
+        // 恢复上下文
+        let mut inner = self.inner.borrow_mut();
+        inner.context.clone_from(&temp_context);
+        Ok(())
     }
 
     pub fn interrupt(&self) -> Result<(), RuntimeError> {

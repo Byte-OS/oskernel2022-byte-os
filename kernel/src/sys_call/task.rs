@@ -3,7 +3,7 @@ use alloc::string::String;
 use alloc::rc::Rc;
 use hashbrown::HashMap;
 
-use crate::task::task_scheduler::add_task_to_scheduler;
+use crate::task::task_scheduler::{add_task_to_scheduler, get_task};
 use crate::task::task_scheduler::switch_next;
 use crate::task::task_scheduler::TASK_SCHEDULER;
 use crate::task::task_scheduler::kill_task;
@@ -263,6 +263,7 @@ impl Task {
     }
 
     pub fn sys_futex(&self, uaddr: usize, op: u32, value: i32, value2: usize, _value3: usize) -> Result<(), RuntimeError> {
+        debug!("sys_futex uaddr: {:#x} op: {:#x} value: {:#x}", uaddr, op, value);
         let op = FutexFlags::from_bits_truncate(op);
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
@@ -310,7 +311,11 @@ impl Task {
 
     pub fn sys_tkill(&self, tid: usize, signum: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
-        kill_task(self.pid, tid);
+        let signal_task = get_task(self.pid, tid);
+        if let Some(signal_task) = signal_task {
+            signal_task.signal(signum);
+            kill_task(self.pid, tid);
+        }
         inner.context.x[10] = 0;
         Ok(())
     }

@@ -37,7 +37,6 @@ impl Into<u64> for SigSet {
 #[repr(C)]
 pub struct SigAction {
     pub handler: usize,
-    pub sigaction: usize,
     pub mask: SigSet,
     pub flags: usize,
     pub restorer: usize,
@@ -48,7 +47,6 @@ impl SigAction {
         Self {
             handler: 0,
             flags: 0,
-            sigaction: 0,
             restorer: 0,
             mask: Default::default()
         }
@@ -58,7 +56,6 @@ impl SigAction {
         self.handler = target.handler;
         self.flags = target.flags;
         self.restorer = target.restorer;
-        self.sigaction = target.sigaction;
         self.mask.copy_from(&target.mask);
     }
 }

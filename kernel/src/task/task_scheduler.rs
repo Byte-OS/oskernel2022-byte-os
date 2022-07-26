@@ -97,3 +97,14 @@ pub fn get_current_task() -> Option<Rc<Task>> {
         None => None
     }
 }
+
+pub fn get_task(pid: usize, tid: usize) -> Option<Rc<Task>> {
+    let task_scheduler = TASK_SCHEDULER.force_get();
+    for i in 0..task_scheduler.queue.len() {
+        let task = task_scheduler.queue[i].clone();
+        if task.pid == pid && task.tid == tid {
+            return Some(task.clone());
+        }
+    }
+    None
+}
