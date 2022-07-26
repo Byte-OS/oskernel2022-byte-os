@@ -212,7 +212,7 @@ lazy_static! {
         // "runtest.exe -w entry-static.exe socket",            // 异常
         // "runtest.exe -w entry-dynamic.exe socket",            // 异常
 
-        "runtest.exe -w entry-static.exe pthread_cancel_points", // 异常
+        // "runtest.exe -w entry-static.exe pthread_cancel_points", // 异常
         // "runtest.exe -w entry-static.exe pthread_cancel",    // 异常
         // "runtest.exe -w entry-static.exe pthread_cond",      // 异常
         // "runtest.exe -w entry-static.exe pthread_tsd",       // 异常
@@ -220,7 +220,7 @@ lazy_static! {
         // "runtest.exe -w entry-static.exe pthread_cancel_sem_wait",       // 异常
         // "runtest.exe -w entry-static.exe pthread_cond_smasher",          // 异常
         // "runtest.exe -w entry-static.exe pthread_condattr_setclock",     // 异常
-        // "runtest.exe -w entry-static.exe pthread_exit_cancel",           // 异常
+        "runtest.exe -w entry-static.exe pthread_exit_cancel",           // 异常
         // "runtest.exe -w entry-static.exe pthread_once_deadlock",         // 异常
         // "runtest.exe -w entry-static.exe pthread_rwlock_ebusy",          // 异常
         // "runtest.exe -w entry-dynamic.exe pthread_cancel_points", // 异常

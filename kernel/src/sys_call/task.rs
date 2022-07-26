@@ -335,12 +335,12 @@ pub struct FutexWait {
 }
 
 pub fn futex_wait(addr: usize) {
-    let task = get_current_task().unwrap();
-    let futex_wait = WAIT_MAP.force_get().entry(&addr).or_insert(FutexWait {
-        woken: false,
-        wait_queue: vec![]
-    });
-    futex_wait.wait_queue.push(task);
+    // let task = get_current_task().unwrap();
+    // let futex_wait = WAIT_MAP.force_get().entry(addr).or_insert(FutexWait {
+    //     woken: false,
+    //     wait_queue: vec![]
+    // });
+    // futex_wait.wait_queue.push(task);
 }
 
 pub fn futex_wake(addr: usize) {
