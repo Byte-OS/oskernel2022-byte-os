@@ -314,20 +314,25 @@ impl Task {
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
         let handler = process.signal.handler;
-        debug!("signal handler: {:#x}", handler);
+        debug!("signal handler: {:#x}  pid: {}  tid: {}", handler, self.pid, self.tid);
         // 保存上下文
         let temp_context = inner.context.clone();
-        let ucontext = process.heap.get_temp().tranfer::<SignalUserContext>();
+        let pmm = process.pmm.clone();
+        let ucontext = process.heap.get_temp(pmm).tranfer::<SignalUserContext>();
         drop(process);
         inner.context.sepc = handler;
         inner.context.x[10] = signal;
         inner.context.x[11] = 0;
         inner.context.x[12] = 0xe0000000;
         ucontext.context.clone_from(&temp_context);
+        ucontext.context.x[0] = ucontext.context.sepc;
         drop(inner);
         self.run();
-        self.interrupt();
-        panic!("signal exit");
+        if let Err(RuntimeError::ChangeTask) = self.interrupt() {
+            debug!("切换任务");
+        }
+        debug!("信号处理完毕");
+        // panic!("signal exit");
         // loop {
         //     self.run();
         //     let result = self.interrupt();

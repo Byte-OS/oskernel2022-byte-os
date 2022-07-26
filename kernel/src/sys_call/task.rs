@@ -11,7 +11,7 @@ use crate::task::task_scheduler::get_current_task;
 use crate::task::process::Process;
 use crate::task::pid::get_next_pid;
 use crate::task::task::Task;
-use crate::task::exec_with_process;
+use crate::task::{exec_with_process, UserHeap};
 use crate::runtime_err::RuntimeError;
 use crate::memory::addr::PhysAddr;
 use crate::memory::addr::VirtAddr;
@@ -141,7 +141,8 @@ impl Task {
         child_process.stack = process.stack.clone_with_data(child_process.pmm.clone())?;
         // 复制fd_table
         child_process.fd_table = process.fd_table.clone();
-
+        // 创建新的heap
+        child_process.heap = UserHeap::new(child_process.pmm.clone())?;
         child_process.pmm.add_mapping_by_set(&child_process.mem_set)?;
         drop(process);
         drop(child_process);

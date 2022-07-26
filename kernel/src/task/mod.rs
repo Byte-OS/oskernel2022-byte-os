@@ -80,11 +80,12 @@ impl UserHeap {
     }
 
     // 获取临时页表
-    pub fn get_temp(&mut self) -> PhysAddr {
+    pub fn get_temp(&mut self, pmm: Rc<PageMappingManager>) -> PhysAddr {
         if self.temp == 0 {
             let mem_map = MemMap::new(0xe0000usize.into(), 1, PTEFlags::UVRWX).unwrap();
             self.temp = mem_map.ppn.into();
-            self.pmm.add_mapping_by_map(&mem_map).expect("临时页表申请内存不足");
+            pmm.add_mapping(mem_map.ppn, mem_map.vpn, PTEFlags::UVRWX);
+            // self.pmm.add_mapping_by_map(&mem_map).expect("临时页表申请内存不足");
             self.mem_set.0.push(mem_map);
         }
         PhysPageNum::from(self.temp).into()

@@ -86,6 +86,6 @@ pub struct SignalUserContext {
     pub link: usize,
     pub stack: SignalStack,
     pub sig_mask: SigSet,
-    pub _pad: [u64; 15], // very strange, maybe a bug of musl libc
+    // pub _pad: [u64; 15], // very strange, maybe a bug of musl libc
     pub context: Context,
 }
