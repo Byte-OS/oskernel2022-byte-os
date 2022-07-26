@@ -27,7 +27,7 @@ impl Process {
     pub fn new(pid: usize, parent: Option<Weak<RefCell<Process>>>)
         -> Result<(Rc<RefCell<Process>>, Rc<Task>), RuntimeError> {
         let pmm = Rc::new(PageMappingManager::new()?);
-        let heap = UserHeap::new()?;
+        let heap = UserHeap::new(pmm.clone())?;
         let process = Self { 
             pid, 
             parent, 

@@ -16,6 +16,8 @@ use crate::runtime_err::RuntimeError;
 use crate::task::process::Process;
 use crate::task::task_scheduler::start_tasks;
 use crate::memory::{page_table::PTEFlags, addr::{PAGE_SIZE, VirtAddr, PhysAddr, PhysPageNum}};
+use crate::memory::mem_set::MemSet;
+use crate::memory::page_table::PageMappingManager;
 use self::pipe::PipeBuf;
 use self::task::Task;
 use self::task_scheduler::NEXT_PID;
@@ -40,63 +42,24 @@ pub const STDERR: usize = 2;
 pub struct UserHeap {
     start: PhysPageNum, 
     pointer: usize,
-    size: usize
-}
-
-// 文件描述符类型
-pub enum FileDescEnum {
-    File(Rc<INode>),
-    Pipe(PipeBuf),
-    Device(String)
-}
-
-// 文件描述符
-pub struct FileDesc {
-    pub target: FileDescEnum,
-    pub pointer: usize,
-    pub readable: bool,
-    pub writable: bool
-}
-
-impl FileDesc {
-    // 创建文件描述符
-    pub fn new(target: FileDescEnum) -> Self {
-        FileDesc {
-            target,
-            pointer: 0,
-            readable: true,
-            writable: true
-        }
-    }
-
-    // 创建pipe
-    pub fn new_pipe() -> (Self, Self) {
-        let buf = PipeBuf::new();
-        let read_pipe = FileDesc {
-            target: FileDescEnum::Pipe(buf.clone()),
-            pointer: 0,
-            readable: true,
-            writable: false
-        };
-        let write_pipe = FileDesc {
-            target: FileDescEnum::Pipe(buf.clone()),
-            pointer: 0,
-            readable: false,
-            writable: true
-        };
-        (read_pipe, write_pipe)
-    }
+    size: usize,
+    temp: usize,
+    pmm: Rc<PageMappingManager>,
+    mem_set: MemSet
 }
 
 impl UserHeap {
     // 创建heap
-    pub fn new() -> Result<Self, RuntimeError> {
+    pub fn new(pmm: Rc<PageMappingManager>) -> Result<Self, RuntimeError> {
         // let phy_start = alloc()?;
         // 申请页表作为heap
         Ok(UserHeap {
             start: 0usize.into(),
             pointer: 0,
-            size: PAGE_SIZE
+            size: PAGE_SIZE,
+            temp: 0,
+            pmm,
+            mem_set: MemSet::new()
         })
     }
 
@@ -114,6 +77,21 @@ impl UserHeap {
         let origin_top = self.pointer;
         self.pointer = top;
         origin_top
+    }
+
+    // 获取临时页表
+    pub fn get_temp(&mut self) -> PhysAddr {
+        if self.temp == 0 {
+            let mem_map = MemMap::new(0xe0000usize.into(), 1, PTEFlags::UVRWX).unwrap();
+            self.temp = mem_map.ppn.into();
+            self.pmm.add_mapping_by_map(&mem_map).expect("临时页表申请内存不足");
+            self.mem_set.0.push(mem_map);
+        }
+        PhysPageNum::from(self.temp).into()
+    }
+
+    pub fn release_temp(&self) {
+        get_buf_from_phys_page(self.temp.into(), 1).fill(0)
     }
 }
 

@@ -22,6 +22,7 @@ use crate::sys_call::consts::EBADF;
 use crate::fs::file::FileType;
 use crate::interrupt::timer::set_last_ticks;
 use crate::runtime_err::RuntimeError;
+use crate::task::signal::SignalUserContext;
 use crate::task::task::Task;
 
 pub mod fd;
@@ -311,19 +312,22 @@ impl Task {
 
     pub fn signal(&self, signal: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
-        let process = inner.process.borrow_mut();
+        let mut process = inner.process.borrow_mut();
         let handler = process.signal.handler;
         debug!("signal handler: {:#x}", handler);
         // 保存上下文
-        let mut temp_context = Context::new();
+        let temp_context = inner.context.clone();
+        let ucontext = process.heap.get_temp().tranfer::<SignalUserContext>();
         drop(process);
-        temp_context.clone_from(&inner.context);
         inner.context.sepc = handler;
         inner.context.x[10] = signal;
-        // inner.context.x[11] = 0x10000;
-        // inner.context.x[12] = 0x10000;
+        inner.context.x[11] = 0;
+        inner.context.x[12] = 0xe0000000;
+        ucontext.context.clone_from(&temp_context);
         drop(inner);
         self.run();
+        self.interrupt();
+        panic!("signal exit");
         // loop {
         //     self.run();
         //     let result = self.interrupt();
@@ -331,8 +335,12 @@ impl Task {
         //         break;
         //     }
         // }
-        // 恢复上下文
+
+        // 恢复上下文 并 移除临时页
         let mut inner = self.inner.borrow_mut();
+        let process = inner.process.borrow_mut();
+        process.heap.release_temp();
+        drop(process);
         inner.context.clone_from(&temp_context);
         Ok(())
     }
