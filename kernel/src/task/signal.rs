@@ -1,3 +1,5 @@
+use crate::interrupt::Context;
+
 #[derive(Clone, Copy, Debug)]
 pub struct SigSet(u64);
 
@@ -58,4 +60,32 @@ impl SigAction {
         self.restorer = target.restorer;
         self.mask.copy_from(&target.mask);
     }
+}
+
+bitflags! {
+    pub struct SignalStackFlags : u32 {
+        const ONSTACK = 1;
+        const DISABLE = 2;
+        const AUTODISARM = 0x80000000;
+    }
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct SignalStack {
+    pub sp: usize,
+    pub flags: SignalStackFlags,
+    pub size: usize,
+}
+
+
+#[repr(C)]
+#[derive(Clone, Debug)]
+pub struct SignalUserContext {
+    pub flags: usize,
+    pub link: usize,
+    pub stack: SignalStack,
+    pub sig_mask: SigSet,
+    pub _pad: [u64; 15], // very strange, maybe a bug of musl libc
+    pub context: Context,
 }

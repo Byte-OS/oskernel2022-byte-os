@@ -17,7 +17,7 @@ use crate::memory::page_table::KERNEL_PAGE_MAPPING;
 
 
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 // 上下文
 pub struct Context {
     pub x: [usize; 32],     // 32 个通用寄存器
