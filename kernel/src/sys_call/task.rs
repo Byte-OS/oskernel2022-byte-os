@@ -30,6 +30,7 @@ bitflags! {
         const WAIT      = 0;
         const WAKE      = 1;
         const REQUEUE   = 3;
+        const FUTEX_WAKE_OP = 5;
         const LOCK_PI   = 6;
         const UNLOCK_PI = 7;
         const PRIVATE   = 0x80;
@@ -315,7 +316,7 @@ impl Task {
         let signal_task = get_task(self.pid, tid);
         if let Some(signal_task) = signal_task {
             signal_task.signal(signum);
-            kill_task(self.pid, tid);
+            // kill_task(self.pid, tid);
         }
         inner.context.x[10] = 0;
         Ok(())
@@ -323,19 +324,30 @@ impl Task {
 }
 
 lazy_static! {
-    pub static ref WAIT_MAP: Mutex<HashMap<usize, Rc<Task>>> = Mutex::new(HashMap::new());
+    pub static ref WAIT_MAP: Mutex<HashMap<usize, FutexWait>> = Mutex::new(HashMap::new());
+}
+
+// TODO: 切换到任务处理信号 防止信号丢失
+
+pub struct FutexWait {
+    woken: bool,
+    wait_queue: Vec<Rc<Task>>
 }
 
 pub fn futex_wait(addr: usize) {
     let task = get_current_task().unwrap();
-    WAIT_MAP.force_get().insert(addr, task);
+    let futex_wait = WAIT_MAP.force_get().entry(&addr).or_insert(FutexWait {
+        woken: false,
+        wait_queue: vec![]
+    });
+    futex_wait.wait_queue.push(task);
 }
 
 pub fn futex_wake(addr: usize) {
-    let mut wait_map = WAIT_MAP.force_get();
-    let task = wait_map.get(&addr);
-    if let Some(task) = task {
-        task.inner.borrow_mut().status = TaskStatus::READY;
-        wait_map.remove(&addr);
-    }
+    // let mut wait_map = WAIT_MAP.force_get();
+    // let task = wait_map.get(&addr);
+    // if let Some(task) = task {
+    //     task.inner.borrow_mut().status = TaskStatus::READY;
+    //     wait_map.remove(&addr);
+    // }
 }

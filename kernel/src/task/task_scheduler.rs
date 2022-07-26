@@ -108,3 +108,15 @@ pub fn get_task(pid: usize, tid: usize) -> Option<Rc<Task>> {
     }
     None
 }
+
+pub fn switch_to_task(pid: usize, tid: usize) {
+    let mut task_scheduler = TASK_SCHEDULER.force_get();
+
+    while let Some(task) = task_scheduler.queue.pop_front() {
+        let ctask = task.clone();
+        task_scheduler.queue.push_back(task);
+        if ctask.tid == tid && ctask.pid == pid {
+            break;
+        }
+    }
+}
