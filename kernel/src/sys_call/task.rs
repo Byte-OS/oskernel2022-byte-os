@@ -293,7 +293,7 @@ impl Task {
                 }
             },
             FutexFlags::WAKE => {
-                *uaddr_value = -1;
+                // *uaddr_value = -1;
                 drop(process);
                 debug!("debug for ");
                 // 值为唤醒的线程数
