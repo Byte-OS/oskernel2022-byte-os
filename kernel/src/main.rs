@@ -100,7 +100,7 @@ pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
     // 输出文件树
     print_file_tree(INode::get(None, "/", false).unwrap());
 
-    // cache_file("runtest.exe");
+    cache_file("runtest.exe");
     // cache_file("entry-static.exe");
     // cache_file("entry-dynamic.exe");
     // cache_file("libc.so");

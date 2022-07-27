@@ -49,7 +49,7 @@ impl Task {
         let clear_child_tid_ptr = VirtAddr::from(self.clear_child_tid.borrow().clone());
         if clear_child_tid_ptr.0 != 0 {
             debug!("clear_child_tid ?= {}", clear_child_tid_ptr.0);
-            let uaddr = clear_child_tid_ptr.translate(process.pmm.clone()).tranfer::<usize>();
+            let uaddr = clear_child_tid_ptr.translate(process.pmm.clone()).tranfer::<u32>();
             *uaddr = 0;
         }
         Err(RuntimeError::ChangeTask)
@@ -162,7 +162,7 @@ impl Task {
     pub fn sys_clone(&self, flags: usize, new_sp: usize, ptid: VirtAddr, tls: usize, ctid_ptr: VirtAddr) -> Result<(), RuntimeError> {
         debug!(
             "clone: flags={:#x}, newsp={:#x}, parent_tid={:#x}, child_tid={:#x}, newtls={:#x}",
-            flags, new_sp, ptid.0, tls, ctid_ptr.0
+            flags, new_sp, ptid.0, ctid_ptr.0, tls
         );
     
         if flags == 0x4111 || flags == 0x11 {
@@ -174,8 +174,8 @@ impl Task {
         let process = inner.process.clone();
         let process = process.borrow();
 
-        let ptid_ref = ptid.translate(process.pmm.clone()).0 as *mut usize;
-        let ctid_ref = ctid_ptr.translate(process.pmm.clone()).0 as *mut usize;
+        let ptid_ref = ptid.translate(process.pmm.clone()).tranfer::<u32>();
+        let ctid_ref = ctid_ptr.translate(process.pmm.clone()).tranfer::<u32>();
 
         let ptid = self.tid;
         let ctid = process.tasks.len();
@@ -194,8 +194,9 @@ impl Task {
         drop(new_task_inner);
         drop(inner);
         // switch_next();
-        unsafe { ptid_ref.write(ctid) };
-        unsafe { ctid_ref.write(ctid) };
+        *ptid_ref = ctid as u32;
+        *ctid_ref = ctid as u32;
+        debug!("wrap?");
         new_task.set_tid_address(ctid_ptr.0);
         Err(RuntimeError::ChangeTask)
         // Ok(())
@@ -328,7 +329,7 @@ impl Task {
             let signal_task_inner = signal_task.inner.borrow_mut();
             let process = signal_task_inner.process.borrow_mut();
             if clear_child_tid_ptr.0 != 0 {
-                let uaddr = clear_child_tid_ptr.translate(process.pmm.clone()).tranfer::<usize>();
+                let uaddr = clear_child_tid_ptr.translate(process.pmm.clone()).tranfer::<u32>();
                 debug!("clear_child_tid ?= {:#x}    uaddr value: {}", clear_child_tid_ptr.0, *uaddr);
                 *uaddr = 0;
             }
