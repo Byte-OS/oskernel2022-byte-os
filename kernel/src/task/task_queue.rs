@@ -8,12 +8,12 @@ use super::exec;
 lazy_static! {
     pub static ref TASK_QUEUE: Mutex<VecDeque<&'static str>> = Mutex::new(VecDeque::from(vec![
         // "runtest.exe -w entry-static.exe argv",
-        // "runtest.exe -w entry-static.exe env", 
+        // "runtest.exe -w entry-static.exe env",
         // "runtest.exe -w entry-static.exe basename",
         // "runtest.exe -w entry-static.exe clock_gettime",
-        // "runtest.exe -w entry-static.exe dirname",   
-        // "runtest.exe -w entry-static.exe fnmatch",    
-        // "runtest.exe -w entry-static.exe iconv_open",      
+        // "runtest.exe -w entry-static.exe dirname",
+        // "runtest.exe -w entry-static.exe fnmatch",
+        // "runtest.exe -w entry-static.exe iconv_open",
         // "runtest.exe -w entry-static.exe inet_pton",
         // "runtest.exe -w entry-static.exe mbc",
         // "runtest.exe -w entry-static.exe random",
@@ -90,8 +90,8 @@ lazy_static! {
         // "runtest.exe -w entry-dynamic.exe env",
         // "runtest.exe -w entry-dynamic.exe basename",
         // "runtest.exe -w entry-dynamic.exe clock_gettime",
-        // "runtest.exe -w entry-dynamic.exe dirname",   
-        // "runtest.exe -w entry-dynamic.exe fnmatch",    
+        // "runtest.exe -w entry-dynamic.exe dirname",
+        // "runtest.exe -w entry-dynamic.exe fnmatch",
         // "runtest.exe -w entry-dynamic.exe inet_pton",
         // "runtest.exe -w entry-dynamic.exe mbc",
         // "runtest.exe -w entry-dynamic.exe random",
@@ -173,18 +173,18 @@ lazy_static! {
         // "runtest.exe -w entry-dynamic.exe strftime",
         // "runtest.exe -w entry-static.exe search_hsearch",
         // "runtest.exe -w entry-dynamic.exe search_hsearch",
-
+        //
         // // 扩大栈可过
         // "runtest.exe -w entry-static.exe qsort",
         // "runtest.exe -w entry-dynamic.exe qsort",
-
+        //
         // // 申请临时内存作为虚拟文件
-        // "runtest.exe -w entry-static.exe fdopen", 
-        // "runtest.exe -w entry-dynamic.exe fdopen",  
-        // "runtest.exe -w entry-dynamic.exe iconv_open",      
+        // "runtest.exe -w entry-static.exe fdopen",
+        // "runtest.exe -w entry-dynamic.exe fdopen",
+        // "runtest.exe -w entry-dynamic.exe iconv_open",
         // "runtest.exe -w entry-dynamic.exe fpclassify_invalid_ld80",
         // "runtest.exe -w entry-dynamic.exe getpwnam_r_crash",
-
+        //
         // // 可能出现 Exception(StoreMisaligned)   k210 error
         // "runtest.exe -w entry-static.exe memstream",
         // "runtest.exe -w entry-static.exe regex_backref_0",
@@ -197,7 +197,22 @@ lazy_static! {
         // "runtest.exe -w entry-dynamic.exe regex_ere_backref",
         // "runtest.exe -w entry-dynamic.exe regex_negated_range",
 
-        // // 比较耗时的
+        // 刚刚完成 未测试的
+        // "runtest.exe -w entry-static.exe pthread_tsd",
+        // "runtest.exe -w entry-static.exe pthread_robust_detach",
+        // "runtest.exe -w entry-static.exe pthread_condattr_setclock",
+        // "runtest.exe -w entry-dynamic.exe pthread_condattr_setclock",
+        // "runtest.exe -w entry-static.exe pthread_once_deadlock",
+        // "runtest.exe -w entry-static.exe pthread_rwlock_ebusy",
+        // "runtest.exe -w entry-static.exe pthread_exit_cancel",
+
+        "runtest.exe -w entry-dynamic.exe pthread_tsd",
+        // "runtest.exe -w entry-dynamic.exe pthread_robust_detach",
+        // "runtest.exe -w entry-dynamic.exe pthread_once_deadlock",
+        // "runtest.exe -w entry-dynamic.exe pthread_rwlock_ebusy",
+        // "runtest.exe -w entry-dynamic.exe pthread_exit_cancel",
+
+        // 比较耗时的
         // "runtest.exe -w entry-static.exe clocale_mbfuncs",
         // "runtest.exe -w entry-static.exe crypt",
         // "runtest.exe -w entry-dynamic.exe clocale_mbfuncs",
@@ -215,25 +230,13 @@ lazy_static! {
         // "runtest.exe -w entry-static.exe pthread_cancel_points", // 异常
         // "runtest.exe -w entry-static.exe pthread_cancel",    // 异常
         // "runtest.exe -w entry-static.exe pthread_cond",      // 异常
-        // "runtest.exe -w entry-static.exe pthread_tsd",       // 异常
-        // "runtest.exe -w entry-static.exe pthread_robust_detach",         // 异常
         // "runtest.exe -w entry-static.exe pthread_cancel_sem_wait",       // 异常
         // "runtest.exe -w entry-static.exe pthread_cond_smasher",          // 异常
-        // "runtest.exe -w entry-static.exe pthread_condattr_setclock",     // 异常
-        "runtest.exe -w entry-static.exe pthread_exit_cancel",           // 异常
-        // "runtest.exe -w entry-static.exe pthread_once_deadlock",         // 异常
-        // "runtest.exe -w entry-static.exe pthread_rwlock_ebusy",          // 异常
         // "runtest.exe -w entry-dynamic.exe pthread_cancel_points", // 异常
         // "runtest.exe -w entry-dynamic.exe pthread_cancel",    // 异常
         // "runtest.exe -w entry-dynamic.exe pthread_cond",      // 异常
-        // "runtest.exe -w entry-dynamic.exe pthread_tsd",       // 异常
-        // "runtest.exe -w entry-dynamic.exe pthread_robust_detach",         // 异常
         // "runtest.exe -w entry-dynamic.exe pthread_cancel_sem_wait",       // 异常
         // "runtest.exe -w entry-dynamic.exe pthread_cond_smasher",          // 异常
-        // "runtest.exe -w entry-dynamic.exe pthread_condattr_setclock",     // 异常
-        // "runtest.exe -w entry-dynamic.exe pthread_exit_cancel",           // 异常
-        // "runtest.exe -w entry-dynamic.exe pthread_once_deadlock",         // 异常
-        // "runtest.exe -w entry-dynamic.exe pthread_rwlock_ebusy",          // 异常
 
         // "runtest.exe -w entry-dynamic.exe tls_align",       // 错误
         // "runtest.exe -w entry-dynamic.exe pleval",          // 错误

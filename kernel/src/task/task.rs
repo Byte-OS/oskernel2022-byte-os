@@ -28,6 +28,7 @@ pub struct TaskInner {
 pub struct Task {
     pub tid: usize,
     pub pid: usize,
+    pub clear_child_tid: RefCell<usize>,
     pub inner: Rc<RefCell<TaskInner>>
 }
 
@@ -37,7 +38,8 @@ impl Task {
         let pid = process.borrow().pid;
         Rc::new(Self {
             tid,
-            pid, 
+            pid,
+            clear_child_tid: RefCell::new(0),
             inner: Rc::new(RefCell::new(TaskInner { 
                 context: Context::new(), 
                 process, 
@@ -49,6 +51,11 @@ impl Task {
     // 退出进程
     pub fn exit(&self) {
         kill_task(self.pid, self.tid);
+    }
+
+    // 设置 tid ptr
+    pub fn set_tid_address(&self, tid_ptr: usize) {
+        *self.clear_child_tid.borrow_mut() = tid_ptr;
     }
 
     // 运行当前任务
