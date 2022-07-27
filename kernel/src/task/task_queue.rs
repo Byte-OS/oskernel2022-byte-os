@@ -228,6 +228,7 @@ lazy_static! {
         "runtest.exe -w entry-dynamic.exe tls_align",
         "runtest.exe -w entry-dynamic.exe pleval",
         "runtest.exe -w entry-dynamic.exe tls_local_exec",
+        "runtest.exe -w entry-dynamic.exe tls_init",
 
         // 比较耗时的
         "runtest.exe -w entry-dynamic.exe clocale_mbfuncs",
@@ -253,7 +254,6 @@ lazy_static! {
         // "runtest.exe -w entry-dynamic.exe pthread_cancel_sem_wait",       // 异常
         // "runtest.exe -w entry-dynamic.exe pthread_cond_smasher",          // 异常
 
-        // "runtest.exe -w entry-dynamic.exe tls_init",       // 错误
     ]));
 }
 

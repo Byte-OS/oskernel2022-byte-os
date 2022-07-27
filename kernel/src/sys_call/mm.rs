@@ -41,7 +41,8 @@ impl Task {
         debug!("mmap pages: {}", len / PAGE_SIZE);
         let flags = MapFlags::from_bits_truncate(flags as u32);
         let mut p_start = process.pmm.get_phys_addr(start.into())?;
-        if p_start.0 == start {
+        debug!("申请: {}", p_start.0);
+        if p_start.0 < 0x8000_0000 {
             let page_num = len / PAGE_SIZE;
             let mem_map = MemMap::new(VirtAddr::from(start).into(), page_num, PTEFlags::UVRWX)?;
             p_start = mem_map.ppn.into();
@@ -49,7 +50,10 @@ impl Task {
             process.mem_set.0.push(mem_map);
         }
         let buf = get_buf_from_phys_addr(p_start, len);
-
+        if start == 0x205000 {
+            debug!("addr :{:#x}", p_start.0);
+            buf[0] = 1;
+        }
         if flags.contains(MapFlags::MAP_FIXED) {
             warn!("contains: fixed");
         }
@@ -111,6 +115,7 @@ impl Task {
     }
 
     pub fn sys_mprotect(&self, addr: usize, len: usize, prot: usize) -> Result<(), RuntimeError> {
+        debug!("保护页面: {:#x}  len: {:#x}", addr, len);
         let mut inner = self.inner.borrow_mut();
         inner.context.x[10] = 0;
         Ok(())
