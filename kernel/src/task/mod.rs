@@ -132,7 +132,6 @@ pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path
         .program_iter()
         .find(|ph| ph.get_type() == Ok(Type::Interp));
     if let Some(header) = header {
-        debug!("has interp");
         if let Ok(SegmentData::Undefined(_data)) = header.get_data(&elf) {
             // 对 动态链接文件进行转发
             let path = "libc.so";
@@ -151,11 +150,9 @@ pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path
     base = match elf.relocate(process.pmm.clone(), base) {
         Ok(arr) => {
             relocated_arr = arr;
-            debug!("relocate success");
             base
         },
         Err(value) => {
-            debug!("test: {}", value);
             0
         }
     };

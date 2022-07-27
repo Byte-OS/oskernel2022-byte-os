@@ -1,6 +1,7 @@
 use core::cell::RefCell;
 
 use alloc::rc::Rc;
+use k210_soc::sleep::usleep;
 
 use crate::{interrupt::Context, memory::page_table::PagingMode};
 use crate::task::task_scheduler::kill_task;
@@ -66,7 +67,8 @@ impl Task {
         }
         let inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
-        
+        // 可能需要更换内存
+        // usleep(1000);
         let pte_ppn = process.pmm.get_pte() >> 12;
         let context_ptr = &inner.context as *const Context as usize;
         warn!("恢复任务");

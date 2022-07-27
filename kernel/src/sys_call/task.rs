@@ -201,7 +201,6 @@ impl Task {
         // switch_next();
         *ptid_ref = ctid as u32;
         *ctid_ref = ctid as u32;
-        debug!("wrap?");
         new_task.set_tid_address(ctid_ptr.0);
         Err(RuntimeError::ChangeTask)
         // Ok(())
@@ -330,14 +329,14 @@ impl Task {
         let signal_task = get_task(self.pid, tid);
         if let Some(signal_task) = signal_task {
             // signal_task.signal(signum);
-            let clear_child_tid_ptr = VirtAddr::from(signal_task.clear_child_tid.borrow().clone());
-            let signal_task_inner = signal_task.inner.borrow_mut();
-            let process = signal_task_inner.process.borrow_mut();
-            if clear_child_tid_ptr.0 != 0 {
-                let uaddr = clear_child_tid_ptr.translate(process.pmm.clone()).tranfer::<u32>();
-                debug!("clear_child_tid ?= {:#x}    uaddr value: {}", clear_child_tid_ptr.0, *uaddr);
-                *uaddr = 0;
-            }
+            // let clear_child_tid_ptr = VirtAddr::from(signal_task.clear_child_tid.borrow().clone());
+            // let signal_task_inner = signal_task.inner.borrow_mut();
+            // let process = signal_task_inner.process.borrow_mut();
+            // if clear_child_tid_ptr.0 != 0 {
+            //     let uaddr = clear_child_tid_ptr.translate(process.pmm.clone()).tranfer::<u32>();
+            //     debug!("clear_child_tid ?= {:#x}    uaddr value: {}", clear_child_tid_ptr.0, *uaddr);
+            //     *uaddr = 0;
+            // }
             kill_task(self.pid, tid);
         }
         inner.context.x[10] = 0;

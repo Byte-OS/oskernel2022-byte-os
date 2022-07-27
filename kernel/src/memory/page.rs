@@ -97,7 +97,6 @@ impl MemoryPageAllocator {
     pub fn alloc_more_front(&mut self, pages: usize) -> Result<PhysPageNum, RuntimeError> {
         let mut i = 0;
         let mut value = 0;
-        debug!("申请pages: {}", pages);
         loop {
             if !self.pages[i] {
                 value += 1;
@@ -182,7 +181,6 @@ pub fn init() {
     extern "C"{
         fn end();
     }
-
     // 初始化页表 Vector中每一个元素代表一个页表 通过这种方法来分配页表
-    PAGE_ALLOCATOR.lock().init(end as usize, ADDR_END);
+    PAGE_ALLOCATOR.lock().init(end as usize + 0x10000, ADDR_END);
 }

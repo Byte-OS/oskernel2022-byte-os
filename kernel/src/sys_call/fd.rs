@@ -94,7 +94,6 @@ impl Task {
         let filename = process.pmm.get_phys_addr(VirtAddr::from(filename)).unwrap();
         let filename = get_string_from_raw(filename);
 
-        debug!("unlink file {}", filename);
 
         // 判断文件描述符是否存在
         let current = if fd == FD_NULL {
@@ -145,7 +144,6 @@ impl Task {
             return Ok(())
         }
 
-        debug!("读取文件: {}, flags:{:?}", filename, flags);
 
         // 判断文件描述符是否存在
         let current = if fd == FD_NULL {
@@ -160,6 +158,9 @@ impl Task {
         } else {
             INode::open(current, &filename, false)?
         };
+        if flags.contains(OpenFlags::WRONLY) {
+            file.lseek(0, 2);
+        }
         let fd = process.fd_table.alloc();
         process.fd_table.set(fd, file);
         drop(process);

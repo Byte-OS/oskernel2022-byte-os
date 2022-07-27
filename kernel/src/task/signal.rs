@@ -71,7 +71,7 @@ bitflags! {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone,  Eq, PartialEq)]
 pub struct SignalStack {
     pub sp: usize,
     pub flags: SignalStackFlags,
@@ -80,7 +80,7 @@ pub struct SignalStack {
 
 
 #[repr(C)]
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct SignalUserContext {
     pub flags: usize,
     pub link: usize,

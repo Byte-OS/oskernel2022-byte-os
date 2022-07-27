@@ -81,7 +81,7 @@ impl INode {
         }
         // 分割文件路径
         let location: Vec<&str> = path.split("/").collect();
-        
+
         // 根据路径匹配文件
         for locate in location {
             current = match locate {
@@ -97,14 +97,20 @@ impl INode {
                 "."=> Ok(current),        // 如果是. 则不做处理
                 ""=> Ok(current),         // 空，不做处理 出现多个// 复用的情况
                 _ => {          // 默认情况则搜索
+                    let mut sign = false;
                     // 遍历名称
                     for node in current.get_children() {
                         if node.get_filename() == locate {
-                            return Ok(node);
+                            // debug!("filename: {}", node.get_filename());
+                            // return Ok(node);
+                            current = node;
+                            sign = true;
+                            break;
                         }
                     }
+                    if sign { continue; }
                     if create_sign {
-                        let node = Self::new(locate, FileType::Directory, 
+                        let node = Self::new(locate, FileType::Directory,
                             Some(Rc::downgrade(&current)), 0);
                         Self::add(current, node.clone());
                         Ok(node.clone())
@@ -114,7 +120,6 @@ impl INode {
                 }
             }?;
         }
-        
         Ok(current)
     }
 
