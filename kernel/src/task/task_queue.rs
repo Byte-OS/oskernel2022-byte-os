@@ -205,12 +205,16 @@ lazy_static! {
         "runtest.exe -w entry-static.exe pthread_once_deadlock",
         "runtest.exe -w entry-static.exe pthread_rwlock_ebusy",
         "runtest.exe -w entry-static.exe pthread_exit_cancel",
-
         "runtest.exe -w entry-dynamic.exe pthread_tsd",
         "runtest.exe -w entry-dynamic.exe pthread_robust_detach",
         "runtest.exe -w entry-dynamic.exe pthread_once_deadlock",
         "runtest.exe -w entry-dynamic.exe pthread_rwlock_ebusy",
         "runtest.exe -w entry-dynamic.exe pthread_exit_cancel",
+
+        // 不稳定的
+        "runtest.exe -w entry-dynamic.exe tls_align",
+        "runtest.exe -w entry-dynamic.exe pleval",
+        "runtest.exe -w entry-dynamic.exe tls_local_exec",
 
         // 比较耗时的
         "runtest.exe -w entry-static.exe clocale_mbfuncs",
@@ -238,10 +242,7 @@ lazy_static! {
         // "runtest.exe -w entry-dynamic.exe pthread_cancel_sem_wait",       // 异常
         // "runtest.exe -w entry-dynamic.exe pthread_cond_smasher",          // 异常
 
-        // "runtest.exe -w entry-dynamic.exe tls_align",       // 错误
-        // "runtest.exe -w entry-dynamic.exe pleval",          // 错误
         // "runtest.exe -w entry-dynamic.exe tls_init",       // 错误
-        // "runtest.exe -w entry-dynamic.exe tls_local_exec",          // 错误
 
         // "runtest.exe -w entry-dynamic.exe ftello_unflushed_append",    // 超出写入异常
         // "runtest.exe -w entry-static.exe ftello_unflushed_append",    // 异常
