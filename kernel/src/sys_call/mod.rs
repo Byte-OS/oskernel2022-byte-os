@@ -66,6 +66,7 @@ pub const SYS_KILL: usize = 129;
 pub const SYS_TKILL: usize = 130;
 pub const SYS_SIGACTION: usize = 134;
 pub const SYS_SIGPROCMASK: usize = 135;
+pub const SYS_SIGRETURN: usize = 139;
 pub const SYS_TIMES: usize  = 153;
 pub const SYS_UNAME: usize  = 160;
 pub const SYS_GETTIMEOFDAY: usize= 169;
@@ -93,6 +94,16 @@ bitflags! {
         const CREATE = 1 << 6;
         const TRUNC = 1 << 10;
         const O_DIRECTORY = 1 << 21;
+    }
+
+    pub struct SignalFlag: usize {
+        const SA_NOCLDSTOP = 0x1;
+        const SA_NOCLDWAIT = 0x2;
+        const SA_SIGINFO   = 0x4;
+        const SA_RESTART   = 0x10000000;
+        const SA_NODEFER   = 0x40000000;
+        const SA_RESETHAND = 0x80000000;
+        const SA_RESTORER  = 0x04000000;
     }
 }
 
@@ -244,6 +255,8 @@ impl Task {
             SYS_SIGACTION => self.sys_sigaction(args[0], args[1].into(),args[2].into(), args[3]),
             // 遮盖信号
             SYS_SIGPROCMASK => self.sys_sigprocmask(args[0] as _, args[1].into(),args[2].into(), args[3] as _),
+            // 信号返回程序
+            SYS_SIGRETURN => self.sys_sigreturn(),
             // 获取文件时间
             SYS_TIMES => self.sys_times(args[0]),
             // 获取系统信息
@@ -316,22 +329,36 @@ impl Task {
         let handler = process.signal.handler;
         debug!("signal handler: {:#x}  pid: {}  tid: {}", handler, self.pid, self.tid);
         // 保存上下文
-        let temp_context = inner.context.clone();
+        let mut temp_context = inner.context.clone();
         let pmm = process.pmm.clone();
         let ucontext = process.heap.get_temp(pmm).tranfer::<SignalUserContext>();
+        let restorer = process.signal.restorer;
+        let flags = SignalFlag::from_bits_truncate(process.signal.flags);
+        debug!("signal flags: {:?}", flags);
+        
         drop(process);
+        info!("restorer: {:#x}", restorer);
         inner.context.sepc = handler;
+        inner.context.x[1] = restorer;
         inner.context.x[10] = signal;
         inner.context.x[11] = 0;
         inner.context.x[12] = 0xe0000000;
         ucontext.context.clone_from(&temp_context);
         ucontext.context.x[0] = ucontext.context.sepc;
+        debug!("回调地址: {:#x}", ucontext.context.sepc);
         drop(inner);
-        self.run();
-        if let Err(RuntimeError::ChangeTask) = self.interrupt() {
-            debug!("切换任务");
+
+        loop {
+            self.run();
+            if let Err(RuntimeError::SigReturn) = self.interrupt() {
+                break;
+                debug!("切换任务");
+            }
         }
         debug!("信号处理完毕");
+        // 修改回调地址
+        debug!("恢复回调地址: {:#x}", ucontext.context.x[0]);
+        temp_context.sepc = ucontext.context.x[0];
         // panic!("signal exit");
         // loop {
         //     self.run();

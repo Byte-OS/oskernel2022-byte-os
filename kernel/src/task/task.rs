@@ -1,7 +1,7 @@
 use core::cell::RefCell;
 
 use alloc::rc::Rc;
-use k210_soc::sleep::usleep;
+
 
 use crate::{interrupt::Context, memory::page_table::PagingMode};
 use crate::task::task_scheduler::kill_task;

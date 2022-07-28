@@ -12,5 +12,7 @@ pub enum RuntimeError {
     // 杀死当前任务
     KillSelfTask,
     // 触发EBADF
-    EBADF
+    EBADF,
+    // 信号返回程序
+    SigReturn
 }

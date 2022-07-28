@@ -39,9 +39,9 @@ impl Into<u64> for SigSet {
 #[repr(C)]
 pub struct SigAction {
     pub handler: usize,
-    pub mask: SigSet,
     pub flags: usize,
     pub restorer: usize,
+    pub mask: SigSet,
 }
 
 impl SigAction {
@@ -82,10 +82,10 @@ pub struct SignalStack {
 #[repr(C)]
 #[derive(Clone)]
 pub struct SignalUserContext {
-    pub flags: usize,
-    pub link: usize,
-    pub stack: SignalStack,
-    pub sig_mask: SigSet,
-    // pub _pad: [u64; 15], // very strange, maybe a bug of musl libc
-    pub context: Context,
+    pub flags: usize,           // 0
+    pub link: usize,            // 1
+    pub stack: SignalStack,     // 2
+    pub sig_mask: SigSet,       // 5
+    pub _pad: [u64; 16], // very strange, maybe a bug of musl libc
+    pub context: Context,       // pc offset = 22 - 6=16
 }

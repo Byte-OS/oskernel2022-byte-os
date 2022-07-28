@@ -311,9 +311,10 @@ impl Task {
                 drop(process);
                 debug!("debug for ");
                 // 值为唤醒的线程数
-                inner.context.x[10] = 0;
+                let count = futex_wake(uaddr, value as usize);
+                inner.context.x[10] = count;
+                debug!("wake count : {}", count);
                 drop(inner);
-                futex_wake(uaddr);
                 switch_next();
             }
             _ => todo!(),
@@ -326,9 +327,12 @@ impl Task {
 
     pub fn sys_tkill(&self, tid: usize, signum: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
+        inner.context.x[10] = 0;
         let signal_task = get_task(self.pid, tid);
+        debug!("signum: {}", signum);
         if let Some(signal_task) = signal_task {
-            // signal_task.signal(signum);
+            drop(inner);
+            signal_task.signal(signum);
             // let clear_child_tid_ptr = VirtAddr::from(signal_task.clear_child_tid.borrow().clone());
             // let signal_task_inner = signal_task.inner.borrow_mut();
             // let process = signal_task_inner.process.borrow_mut();
@@ -337,9 +341,8 @@ impl Task {
             //     debug!("clear_child_tid ?= {:#x}    uaddr value: {}", clear_child_tid_ptr.0, *uaddr);
             //     *uaddr = 0;
             // }
-            kill_task(self.pid, tid);
+            // kill_task(self.pid, tid);
         }
-        inner.context.x[10] = 0;
         Ok(())
     }
 }
@@ -356,19 +359,25 @@ pub struct FutexWait {
 }
 
 pub fn futex_wait(addr: usize) {
-    // let task = get_current_task().unwrap();
-    // let futex_wait = WAIT_MAP.force_get().entry(addr).or_insert(FutexWait {
-    //     woken: false,
-    //     wait_queue: vec![]
-    // });
-    // futex_wait.wait_queue.push(task);
+    let task = get_current_task().unwrap();
+    let mut wait_map = WAIT_MAP.force_get();
+    let futex_wait = wait_map.entry(addr).or_insert(FutexWait {
+        woken: false,
+        wait_queue: vec![]
+    });
+    futex_wait.wait_queue.push(task);
 }
 
-pub fn futex_wake(addr: usize) {
-    // let mut wait_map = WAIT_MAP.force_get();
-    // let task = wait_map.get(&addr);
-    // if let Some(task) = task {
-    //     task.inner.borrow_mut().status = TaskStatus::READY;
-    //     wait_map.remove(&addr);
-    // }
+pub fn futex_wake(addr: usize, count: usize) -> usize {
+    let mut wait_map = WAIT_MAP.force_get();
+    match wait_map.get_mut(&addr) {
+        Some(tasks_queue) => {
+            let mut n = 0;
+            while let Some(_) = tasks_queue.wait_queue.pop() {
+                n+=1;
+            }
+            n
+        }
+        None => 0
+    }
 }

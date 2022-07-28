@@ -60,4 +60,9 @@ impl Task {
         inner.context.x[10] = 0;
         Ok(())
     }
+
+    pub fn sys_sigreturn(&self) -> Result<(), RuntimeError> {
+        debug!("sig return");
+        Err(RuntimeError::SigReturn)
+    }
 }
