@@ -116,6 +116,7 @@ lazy_static! {
         "runtest.exe -w entry-static.exe pthread_once_deadlock",
         "runtest.exe -w entry-static.exe pthread_rwlock_ebusy",
         "runtest.exe -w entry-static.exe pthread_exit_cancel",
+        "runtest.exe -w entry-static.exe strptime",
 
         // dynamic
         "runtest.exe -w entry-dynamic.exe argv",
@@ -223,6 +224,7 @@ lazy_static! {
         "runtest.exe -w entry-dynamic.exe pthread_once_deadlock",
         "runtest.exe -w entry-dynamic.exe pthread_rwlock_ebusy",
         "runtest.exe -w entry-dynamic.exe pthread_exit_cancel",
+        "runtest.exe -w entry-dynamic.exe strptime",
 
         // 不稳定的
         "runtest.exe -w entry-dynamic.exe tls_align",
@@ -237,8 +239,6 @@ lazy_static! {
         // 待完成功能
         // "runtest.exe -w entry-static.exe sscanf_long",       // 异常
         // "runtest.exe -w entry-dynamic.exe sscanf_long",       // 异常
-        // "runtest.exe -w entry-static.exe strptime",          // 异常
-        // "runtest.exe -w entry-dynamic.exe strptime",          // 异常
 
         // "runtest.exe -w entry-static.exe socket",            // 异常
         // "runtest.exe -w entry-dynamic.exe socket",            // 异常

@@ -104,10 +104,10 @@ pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
     cache_file("entry-static.exe");
     cache_file("entry-dynamic.exe");
     cache_file("libc.so");
-    cache_file("libdlopen_dso.so");
-    cache_file("libtls_align_dso.so");
-    cache_file("libtls_get_new-dtv_dso.so");
-    cache_file("libtls_init_dso.so");
+    cache_file("dlopen_dso.so");
+    cache_file("tls_align_dso.so");
+    cache_file("tls_get_new-dtv_dso.so");
+    cache_file("tls_init_dso.so");
 
     // 初始化多任务
     task::init();
