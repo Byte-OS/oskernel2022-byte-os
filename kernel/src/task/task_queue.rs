@@ -117,6 +117,9 @@ lazy_static! {
         // "runtest.exe -w entry-static.exe pthread_rwlock_ebusy",
         // "runtest.exe -w entry-static.exe pthread_exit_cancel",
         // "runtest.exe -w entry-static.exe strptime",
+        // "runtest.exe -w entry-static.exe pthread_cancel",
+        // "runtest.exe -w entry-static.exe pthread_cancel_sem_wait",
+
         //
         // // dynamic
         // "runtest.exe -w entry-dynamic.exe argv",
@@ -227,6 +230,8 @@ lazy_static! {
         // "runtest.exe -w entry-dynamic.exe strptime",
         // "runtest.exe -w entry-dynamic.exe dlopen",
         // // "runtest.exe -w entry-dynamic.exe tls_get_new_dtv",  futex error
+        // "runtest.exe -w entry-dynamic.exe pthread_cancel",
+        // "runtest.exe -w entry-dynamic.exe pthread_cancel_sem_wait",
         //
         // // 不稳定的
         // "runtest.exe -w entry-dynamic.exe tls_align",
@@ -246,14 +251,10 @@ lazy_static! {
         // "runtest.exe -w entry-dynamic.exe socket",            // 异常
 
         // "runtest.exe -w entry-static.exe pthread_cancel_points", // 异常
-        "runtest.exe -w entry-static.exe pthread_cancel",    // 异常
         // "runtest.exe -w entry-static.exe pthread_cond",      // 异常
-        // "runtest.exe -w entry-static.exe pthread_cancel_sem_wait",       // 异常
-        // "runtest.exe -w entry-static.exe pthread_cond_smasher",          // 异常
+        "runtest.exe -w entry-static.exe pthread_cond_smasher",          // 异常
         // "runtest.exe -w entry-dynamic.exe pthread_cancel_points", // 异常
-        // "runtest.exe -w entry-dynamic.exe pthread_cancel",    // 异常
         // "runtest.exe -w entry-dynamic.exe pthread_cond",      // 异常
-        // "runtest.exe -w entry-dynamic.exe pthread_cancel_sem_wait",       // 异常
         // "runtest.exe -w entry-dynamic.exe pthread_cond_smasher",          // 异常
 
     ]));

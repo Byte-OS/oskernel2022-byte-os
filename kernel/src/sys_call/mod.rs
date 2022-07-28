@@ -332,6 +332,10 @@ impl Task {
         let mut temp_context = inner.context.clone();
         let pmm = process.pmm.clone();
         let ucontext = process.heap.get_temp(pmm).tranfer::<SignalUserContext>();
+        // 中断正在处理中
+        if ucontext.context.x[0] != 0 {
+            return Ok(());
+        }
         let restorer = process.signal.restorer;
         let flags = SignalFlag::from_bits_truncate(process.signal.flags);
         debug!("signal flags: {:?}", flags);
