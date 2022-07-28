@@ -359,25 +359,26 @@ pub struct FutexWait {
 }
 
 pub fn futex_wait(addr: usize) {
-    let task = get_current_task().unwrap();
-    let mut wait_map = WAIT_MAP.force_get();
-    let futex_wait = wait_map.entry(addr).or_insert(FutexWait {
-        woken: false,
-        wait_queue: vec![]
-    });
-    futex_wait.wait_queue.push(task);
+    // let task = get_current_task().unwrap();
+    // let mut wait_map = WAIT_MAP.force_get();
+    // let futex_wait = wait_map.entry(addr).or_insert(FutexWait {
+    //     woken: false,
+    //     wait_queue: vec![]
+    // });
+    // futex_wait.wait_queue.push(task);
 }
 
 pub fn futex_wake(addr: usize, count: usize) -> usize {
-    let mut wait_map = WAIT_MAP.force_get();
-    match wait_map.get_mut(&addr) {
-        Some(tasks_queue) => {
-            let mut n = 0;
-            while let Some(_) = tasks_queue.wait_queue.pop() {
-                n+=1;
-            }
-            n
-        }
-        None => 0
-    }
+    // let mut wait_map = WAIT_MAP.force_get();
+    // match wait_map.get_mut(&addr) {
+    //     Some(tasks_queue) => {
+    //         let mut n = 0;
+    //         while let Some(_) = tasks_queue.wait_queue.pop() {
+    //             n+=1;
+    //         }
+    //         n
+    //     }
+    //     None => 0
+    // }
+    1
 }

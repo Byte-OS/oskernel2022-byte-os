@@ -66,6 +66,7 @@ pub const SYS_KILL: usize = 129;
 pub const SYS_TKILL: usize = 130;
 pub const SYS_SIGACTION: usize = 134;
 pub const SYS_SIGPROCMASK: usize = 135;
+pub const SYS_SIGTIMEDWAIT: usize = 137;
 pub const SYS_SIGRETURN: usize = 139;
 pub const SYS_TIMES: usize  = 153;
 pub const SYS_UNAME: usize  = 160;
@@ -255,6 +256,12 @@ impl Task {
             SYS_SIGACTION => self.sys_sigaction(args[0], args[1].into(),args[2].into(), args[3]),
             // 遮盖信号
             SYS_SIGPROCMASK => self.sys_sigprocmask(args[0] as _, args[1].into(),args[2].into(), args[3] as _),
+            //
+            SYS_SIGTIMEDWAIT => {
+                let mut inner = self.inner.borrow_mut();
+                inner.context.x[10] = 0;
+                Ok(())
+            }
             // 信号返回程序
             SYS_SIGRETURN => self.sys_sigreturn(),
             // 获取文件时间
