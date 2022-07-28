@@ -97,18 +97,18 @@ lazy_static! {
         "runtest.exe -w entry-static.exe qsort",
         "runtest.exe -w entry-static.exe fdopen",
         "runtest.exe -w entry-static.exe ftello_unflushed_append",
-
+        
         // 可能出现exception
         "runtest.exe -w entry-static.exe memstream",
         "runtest.exe -w entry-static.exe regex_backref_0",
         "runtest.exe -w entry-static.exe regex_bracket_icase",
         "runtest.exe -w entry-static.exe regex_ere_backref",
         "runtest.exe -w entry-static.exe regex_negated_range",
-
+        
         // 比较耗时的
         "runtest.exe -w entry-static.exe clocale_mbfuncs",
         "runtest.exe -w entry-static.exe crypt",
-
+        
         // 刚完成 未测试
         "runtest.exe -w entry-static.exe pthread_tsd",
         "runtest.exe -w entry-static.exe pthread_robust_detach",
@@ -117,7 +117,7 @@ lazy_static! {
         "runtest.exe -w entry-static.exe pthread_rwlock_ebusy",
         "runtest.exe -w entry-static.exe pthread_exit_cancel",
         "runtest.exe -w entry-static.exe strptime",
-
+        
         // dynamic
         "runtest.exe -w entry-dynamic.exe argv",
         "runtest.exe -w entry-dynamic.exe env",
@@ -199,24 +199,24 @@ lazy_static! {
         "runtest.exe -w entry-dynamic.exe putenv_doublefree",
         "runtest.exe -w entry-dynamic.exe strftime",
         "runtest.exe -w entry-dynamic.exe search_hsearch",
-
+        
         // 扩大栈可过
         "runtest.exe -w entry-dynamic.exe qsort",
-
+        
         // 申请临时内存作为虚拟文件
         "runtest.exe -w entry-dynamic.exe fdopen",
         "runtest.exe -w entry-dynamic.exe iconv_open",
         "runtest.exe -w entry-dynamic.exe fpclassify_invalid_ld80",
         "runtest.exe -w entry-dynamic.exe getpwnam_r_crash",
         "runtest.exe -w entry-dynamic.exe ftello_unflushed_append",
-
+        
         // 可能出现 Exception(StoreMisaligned)   k210 error
         "runtest.exe -w entry-dynamic.exe memstream",
         "runtest.exe -w entry-dynamic.exe regex_backref_0",
         "runtest.exe -w entry-dynamic.exe regex_bracket_icase",
         "runtest.exe -w entry-dynamic.exe regex_ere_backref",
         "runtest.exe -w entry-dynamic.exe regex_negated_range",
-
+        
         // 刚刚完成 未测试的
         "runtest.exe -w entry-dynamic.exe pthread_tsd",
         "runtest.exe -w entry-dynamic.exe pthread_condattr_setclock",
@@ -225,13 +225,15 @@ lazy_static! {
         "runtest.exe -w entry-dynamic.exe pthread_rwlock_ebusy",
         "runtest.exe -w entry-dynamic.exe pthread_exit_cancel",
         "runtest.exe -w entry-dynamic.exe strptime",
-
+        "runtest.exe -w entry-dynamic.exe dlopen",
+        // "runtest.exe -w entry-dynamic.exe tls_get_new_dtv",  futex error
+        
         // 不稳定的
         "runtest.exe -w entry-dynamic.exe tls_align",
         "runtest.exe -w entry-dynamic.exe pleval",
         "runtest.exe -w entry-dynamic.exe tls_local_exec",
         "runtest.exe -w entry-dynamic.exe tls_init",
-
+        
         // 比较耗时的
         "runtest.exe -w entry-dynamic.exe clocale_mbfuncs",
         "runtest.exe -w entry-dynamic.exe crypt",
@@ -257,9 +259,16 @@ lazy_static! {
     ]));
 }
 
+pub static mut SLEEP_SIGN: bool = false;
+
 pub fn exec_by_str(str: &str) {
     let args: Vec<&str> = str.split(" ").collect();
     // info!("执行任务: {}", str);
+    if args[2] == "entry-dynamic.exe" && unsafe { SLEEP_SIGN } ==false {
+        #[cfg(feature = "board_k210")]
+        usleep(1000000);        // 防止速度过快  内存缓冲异常
+        unsafe {SLEEP_SIGN = true;}
+    }
     if let Ok(task) = exec(args[0], args[0..].to_vec()) {
         add_task_to_scheduler(task);
     }
@@ -277,7 +286,7 @@ pub fn load_next_task() -> bool {
     }
 }
 
-// 注意 后面的机会 是对Task实现Syscall 
-// 这样在 可以在impl 内部使用self 作为task 
+// 注意 后面的机会 是对Task实现Syscall
+// 这样在 可以在impl 内部使用self 作为task
 // 但是需要一个task外的函数 作为调度 可以顺利抛出函数
 // 使用change_task 返回函数主体， 可以让过程更加完善 更像写一个程序 而不是分离开
