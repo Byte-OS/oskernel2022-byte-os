@@ -198,8 +198,8 @@ lazy_static! {
         "runtest.exe -w entry-dynamic.exe sscanf_eof",
         "runtest.exe -w entry-dynamic.exe lseek_large",
         "runtest.exe -w entry-dynamic.exe setjmp",
-        // "runtest.exe -w entry-dynamic.exe daemon_failure",   // 指令页错误  待修复
-        // "runtest.exe -w entry-dynamic.exe fflush_exit",       // 指令页错误 待修复
+        "runtest.exe -w entry-dynamic.exe daemon_failure",
+        "runtest.exe -w entry-dynamic.exe fflush_exit",
         "runtest.exe -w entry-dynamic.exe putenv_doublefree",
         "runtest.exe -w entry-dynamic.exe strftime",
         "runtest.exe -w entry-dynamic.exe search_hsearch",

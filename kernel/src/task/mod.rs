@@ -175,7 +175,7 @@ pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path
             let vr_offset_end = vr_offset + read_size;
 
             // 添加memset
-            process.mem_set.inner().push(MemMap::exists_page(phy_start, VirtAddr::from(ph.virtual_addr()).into(), 
+            process.mem_set.inner().push(MemMap::exists_page(phy_start, VirtAddr::from(ph.virtual_addr() as usize + base).into(), 
                 alloc_pages, PTEFlags::VRWX | PTEFlags::U));
 
             // 初始化
