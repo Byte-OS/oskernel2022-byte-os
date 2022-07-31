@@ -5,6 +5,7 @@
 #![feature(default_alloc_error_handler)]
 #![allow(unaligned_references)]
 #![feature(derive_default_enum)]
+#![feature(const_btree_new)]
 
 
 // 使用定义的命令行宏   
