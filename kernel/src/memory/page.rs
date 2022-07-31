@@ -14,7 +14,7 @@ use super::page_table::PageMappingManager;
 const USIZE_PER_PAGES: usize = PAGE_SIZE / size_of::<usize>();
 
 #[cfg(not(feature = "board_k210"))]
-const ADDR_END: usize = 0x809e0000;
+const ADDR_END: usize = 0x80800000;
 
 #[cfg(feature = "board_k210")]
 const ADDR_END: usize = 0x80800000;
@@ -91,6 +91,7 @@ impl MemoryPageAllocator {
                 i-=1;
             }
         Err(RuntimeError::NoEnoughPage)
+        // alloc_more_front(pages)
     }
 
     // 从前方申请内存

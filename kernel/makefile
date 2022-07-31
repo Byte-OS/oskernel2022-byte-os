@@ -11,8 +11,8 @@ OBJCOPY     := rust-objcopy --binary-architecture=riscv64
 FS_IMG := ../fs.img
 
 # BOARD
-# BOOTLOADER := ../bootloader/rustsbi-qemu.bin
-BOOTLOADER := ../bootloader/opensbi-qemu.bin
+BOOTLOADER := ../bootloader/rustsbi-qemu.bin
+# BOOTLOADER := ../bootloader/opensbi-qemu.bin
 BOOTLOADER_K210 := ../bootloader/rustsbi-k210.bin
 
 K210-SERIALPORT	= /dev/ttyUSB0
@@ -74,7 +74,7 @@ run: qemu
         	-device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0 \
 			-kernel $(BIN_FILE) \
 			-nographic \
-			-smp 4 
+			-smp 4 -m 17m
 
 # qemu-system-riscv64 -machine virt -bios sbi-qemu -device loader,file=kernel-qemu,addr=0x80200000 -drive file=fs.img,if=none,format=raw,id=x0 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0 -kernel kernel-qemu -nographic -smp 4 
 
