@@ -68,14 +68,24 @@ impl Task {
         Err(RuntimeError::ChangeTask)
     }
     
-    pub fn sys_set_tid_address(&self, tid_ptr: usize) -> Result<(), RuntimeError> {
+    pub fn sys_set_tid_address(&self, tid_ptr: VirtAddr) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
-        let tid_ptr_addr = process.pmm.get_phys_addr(tid_ptr.into())?;
-        let tid_ptr = tid_ptr_addr.0 as *mut u32;
-        unsafe {tid_ptr.write(self.tid as u32)};
+
+        let clear_child_tid = self.clear_child_tid.borrow().clone();
+
+        let ctid = if clear_child_tid != 0 {
+            VirtAddr::from(clear_child_tid).
+                translate(process.pmm.clone()).tranfer::<u32>().clone()
+        } else {
+            0
+        };
+
+        *tid_ptr.translate(process.pmm.clone()).tranfer::<u32>() = ctid;
+
         drop(process);
-        inner.context.x[10] = 0;
+
+        inner.context.x[10] = self.tid;
         Ok(())
     }
     

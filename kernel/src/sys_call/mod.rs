@@ -239,7 +239,7 @@ impl Task {
             // 退出组
             SYS_EXIT_GROUP => self.sys_exit_group(args[0]),
             // 设置tid
-            SYS_SET_TID_ADDRESS => self.sys_set_tid_address(args[0]),
+            SYS_SET_TID_ADDRESS => self.sys_set_tid_address(args[0].into()),
             // 互斥锁
             SYS_FUTEX => self.sys_futex(args[0].into(), args[1] as u32, args[2] as _, args[3], args[4]),
             // 文件休眠
@@ -348,7 +348,6 @@ impl Task {
         debug!("signal flags: {:?}", flags);
         
         drop(process);
-        info!("restorer: {:#x}", restorer);
         inner.context.sepc = handler;
         inner.context.x[1] = restorer;
         inner.context.x[10] = signal;
