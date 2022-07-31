@@ -31,11 +31,13 @@ pub mod time;
 pub mod mm;
 pub mod consts;
 pub mod signal;
+pub mod net;
 
 // 中断调用列表
 pub const SYS_GETCWD:usize  = 17;
 pub const SYS_DUP: usize    = 23;
 pub const SYS_DUP3: usize   = 24;
+pub const SYS_FCNTL: usize  = 25;
 pub const SYS_MKDIRAT:usize = 34;
 pub const SYS_UNLINKAT:usize= 35;
 pub const SYS_UMOUNT2: usize= 39;
@@ -74,6 +76,14 @@ pub const SYS_GETTIMEOFDAY: usize= 169;
 pub const SYS_GETPID:usize  = 172;
 pub const SYS_GETPPID:usize = 173;
 pub const SYS_GETTID: usize = 178;
+pub const SYS_SOCKET: usize = 198;
+pub const SYS_BIND: usize   = 200;
+pub const SYS_LISTEN: usize = 201;
+pub const SYS_CONNECT: usize = 203;
+pub const SYS_GETSOCKNAME: usize = 204;
+pub const SYS_SENDTO: usize = 206;
+pub const SYS_RECVFROM: usize = 207;
+pub const SYS_SETSOCKOPT: usize = 208;
 pub const SYS_BRK:   usize  = 214;
 pub const SYS_CLONE: usize  = 220;
 pub const SYS_EXECVE:usize  = 221;
@@ -224,6 +234,8 @@ impl Task {
             SYS_DUP => self.sys_dup(args[0]),
             // 复制文件描述符
             SYS_DUP3 => self.sys_dup3(args[0], args[1]),
+            // 控制资源
+            SYS_FCNTL => self.sys_fcntl(args[0], args[1], args[2]),
             // 创建文件夹
             SYS_MKDIRAT => self.sys_mkdirat(args[0], args[1], args[2]),
             // 取消link
@@ -304,6 +316,22 @@ impl Task {
             SYS_GETPPID => self.sys_getppid(),
             // 获取tid
             SYS_GETTID => self.sys_gettid(),
+            // 申请socket
+            SYS_SOCKET => self.sys_socket(args[0], args[1], args[2]),
+            // 绑定
+            SYS_BIND => self.sys_bind(),
+            // 监听socket
+            SYS_LISTEN => self.sys_listen(),
+            // 连接connect
+            SYS_CONNECT => self.sys_connect(),
+            // 获取socket名称
+            SYS_GETSOCKNAME => self.sys_getsockname(),
+            // 发送
+            SYS_SENDTO => self.sys_sendto(args[0], args[1].into(), args[2], args[3], args[4].into(), args[5]),
+            // 接收数据
+            SYS_RECVFROM => self.sys_recvfrom(args[0],args[1].into(), args[2], args[3], args[4].into(), args[5]),
+            // 设置socket属性
+            SYS_SETSOCKOPT => self.sys_setsockopt(),
             // 申请堆空间
             SYS_BRK => self.sys_brk(args[0]),
             // 复制进程信息

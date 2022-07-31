@@ -1,6 +1,6 @@
 use alloc::vec::Vec;
 use alloc::string::String;
-use alloc::rc::Rc;
+use alloc::rc::{Rc, Weak};
 use hashbrown::HashMap;
 
 use crate::task::task_scheduler::{add_task_to_scheduler, get_task};
@@ -296,7 +296,7 @@ impl Task {
         Ok(())
     }
 
-    pub fn sys_futex(&self, uaddr: usize, op: u32, value: i32, value2: usize, _value3: usize) -> Result<(), RuntimeError> {
+    pub fn sys_futex(&self, uaddr: usize, op: u32, value: i32, value2: usize, value3: usize) -> Result<(), RuntimeError> {
         debug!("sys_futex uaddr: {:#x} op: {:#x} value: {:#x}", uaddr, op, value);
         let op = FutexFlags::from_bits_truncate(op);
         let mut inner = self.inner.borrow_mut();
@@ -337,10 +337,16 @@ impl Task {
                 drop(inner);
                 switch_next();
             }
+            FutexFlags::REQUEUE => {
+                drop(process);
+                inner.context.x[10] = 0;
+
+            }
             _ => todo!(),
         }
         if op.contains(FutexFlags::WAKE) {
             // *uaddr_value = 0;
+            futex_requeue(uaddr, value as u32, value2, value3 as u32);
         }
         Ok(())
     }
@@ -375,30 +381,38 @@ lazy_static! {
 
 pub struct FutexWait {
     woken: bool,
-    wait_queue: Vec<Rc<Task>>
+    wait_queue: Vec<Weak<Task>>
 }
 
 pub fn futex_wait(addr: usize) {
-    // let task = get_current_task().unwrap();
-    // let mut wait_map = WAIT_MAP.force_get();
-    // let futex_wait = wait_map.entry(addr).or_insert(FutexWait {
-    //     woken: false,
-    //     wait_queue: vec![]
-    // });
-    // futex_wait.wait_queue.push(task);
+    let task = get_current_task().unwrap();
+    let mut wait_map = WAIT_MAP.force_get();
+    let futex_wait = wait_map.entry(addr).or_insert(FutexWait {
+        woken: false,
+        wait_queue: vec![]
+    });
+    futex_wait.wait_queue.push(Rc::downgrade(&task));
 }
 
 pub fn futex_wake(addr: usize, count: usize) -> usize {
-    // let mut wait_map = WAIT_MAP.force_get();
-    // match wait_map.get_mut(&addr) {
-    //     Some(tasks_queue) => {
-    //         let mut n = 0;
-    //         while let Some(_) = tasks_queue.wait_queue.pop() {
-    //             n+=1;
-    //         }
-    //         n
-    //     }
-    //     None => 0
-    // }
-    1
+    let mut wait_map = WAIT_MAP.force_get();
+    match wait_map.get_mut(&addr) {
+        Some(tasks_queue) => {
+            let mut n = 0;
+            if n >= count {
+                return n;
+            }
+            while let Some(_) = tasks_queue.wait_queue.pop() {
+                n+=1;
+            }
+            n
+        }
+        None => 0
+    }
+}
+
+pub fn futex_requeue(uaddr: usize, nr_wake: u32, uaddr2: usize, nr_limit: u32) -> isize {
+
+
+    return nr_wake as isize;
 }

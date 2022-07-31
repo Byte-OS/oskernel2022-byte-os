@@ -29,7 +29,12 @@ impl FDTable {
     pub fn alloc(&mut self) -> usize {
         (0..).find(|fd| !self.0.contains_key(fd)).unwrap()
     }
-    
+
+    // 申请fd
+    pub fn alloc_sock(&mut self) -> usize {
+        (50..).find(|fd| !self.0.contains_key(fd)).unwrap()
+    }
+
     // 释放fd
     pub fn dealloc(&mut self, index: usize) {
         self.0.remove(&index);
@@ -55,6 +60,13 @@ impl FDTable {
     pub fn push(&mut self, value: Rc<dyn FileOP>) -> usize {
         let index = self.alloc();
         if index > 41 { return EMFILE; }
+        self.set(index, value);
+        index
+    }
+
+    // 加入描述符
+    pub fn push_sock(&mut self, value: Rc<dyn FileOP>) -> usize {
+        let index = self.alloc_sock();
         self.set(index, value);
         index
     }

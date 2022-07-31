@@ -123,6 +123,8 @@ lazy_static! {
         "runtest.exe -w entry-static.exe pthread_once_deadlock",
         "runtest.exe -w entry-static.exe pthread_cancel_points",
         "runtest.exe -w entry-static.exe sscanf_long",
+        "runtest.exe -w entry-static.exe socket",
+
 
 
 
@@ -240,6 +242,7 @@ lazy_static! {
         "runtest.exe -w entry-dynamic.exe tls_get_new_dtv",
         "runtest.exe -w entry-dynamic.exe pthread_cancel_points",
         "runtest.exe -w entry-dynamic.exe sscanf_long",
+        "runtest.exe -w entry-dynamic.exe socket",
 
 
         // 不稳定的
@@ -251,9 +254,6 @@ lazy_static! {
         "runtest.exe -w entry-dynamic.exe crypt",
 
         // 待完成功能
-
-        // "runtest.exe -w entry-static.exe socket",            // 异常
-        // "runtest.exe -w entry-dynamic.exe socket",            // 异常
 
         // "runtest.exe -w entry-static.exe pthread_cond_smasher",          // 异常
         // "runtest.exe -w entry-dynamic.exe pthread_cond_smasher",          // 异常
