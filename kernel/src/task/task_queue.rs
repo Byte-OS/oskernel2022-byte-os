@@ -98,18 +98,18 @@ lazy_static! {
         "runtest.exe -w entry-static.exe qsort",
         "runtest.exe -w entry-static.exe fdopen",
         "runtest.exe -w entry-static.exe ftello_unflushed_append",
-        
+
         // 可能出现exception
         "runtest.exe -w entry-static.exe memstream",
         "runtest.exe -w entry-static.exe regex_backref_0",
         "runtest.exe -w entry-static.exe regex_bracket_icase",
         "runtest.exe -w entry-static.exe regex_ere_backref",
         "runtest.exe -w entry-static.exe regex_negated_range",
-        
+
         // 比较耗时的
         "runtest.exe -w entry-static.exe clocale_mbfuncs",
         "runtest.exe -w entry-static.exe crypt",
-        
+
         // 刚完成 未测试
         "runtest.exe -w entry-static.exe pthread_tsd",
         "runtest.exe -w entry-static.exe pthread_robust_detach",
@@ -122,8 +122,10 @@ lazy_static! {
         "runtest.exe -w entry-static.exe pthread_cancel_sem_wait",
         "runtest.exe -w entry-static.exe pthread_once_deadlock",
         "runtest.exe -w entry-static.exe pthread_cancel_points",
-        
-        
+        "runtest.exe -w entry-static.exe sscanf_long",
+
+
+
         // dynamic
         "runtest.exe -w entry-dynamic.exe argv",
         "runtest.exe -w entry-dynamic.exe env",
@@ -205,24 +207,24 @@ lazy_static! {
         "runtest.exe -w entry-dynamic.exe putenv_doublefree",
         "runtest.exe -w entry-dynamic.exe strftime",
         "runtest.exe -w entry-dynamic.exe search_hsearch",
-        
+
         // 扩大栈可过
         "runtest.exe -w entry-dynamic.exe qsort",
-        
+
         // 申请临时内存作为虚拟文件
         "runtest.exe -w entry-dynamic.exe fdopen",
         "runtest.exe -w entry-dynamic.exe iconv_open",
         "runtest.exe -w entry-dynamic.exe fpclassify_invalid_ld80",
         "runtest.exe -w entry-dynamic.exe getpwnam_r_crash",
         "runtest.exe -w entry-dynamic.exe ftello_unflushed_append",
-        
+
         // 可能出现 Exception(StoreMisaligned)   k210 error
         "runtest.exe -w entry-dynamic.exe memstream",
         "runtest.exe -w entry-dynamic.exe regex_backref_0",
         "runtest.exe -w entry-dynamic.exe regex_bracket_icase",
         "runtest.exe -w entry-dynamic.exe regex_ere_backref",
         "runtest.exe -w entry-dynamic.exe regex_negated_range",
-        
+
         // 刚刚完成 未测试的
         "runtest.exe -w entry-dynamic.exe pthread_tsd",
         "runtest.exe -w entry-dynamic.exe pthread_condattr_setclock",
@@ -237,19 +239,18 @@ lazy_static! {
         "runtest.exe -w entry-dynamic.exe sem_init",
         "runtest.exe -w entry-dynamic.exe tls_get_new_dtv",
         "runtest.exe -w entry-dynamic.exe pthread_cancel_points",
+        "runtest.exe -w entry-dynamic.exe sscanf_long",
 
-        
+
         // 不稳定的
         "runtest.exe -w entry-dynamic.exe tls_local_exec",
         "runtest.exe -w entry-dynamic.exe tls_init",
-        
+
         // 比较耗时的
         "runtest.exe -w entry-dynamic.exe clocale_mbfuncs",
         "runtest.exe -w entry-dynamic.exe crypt",
 
         // 待完成功能
-        // "runtest.exe -w entry-static.exe sscanf_long",       // 异常
-        // "runtest.exe -w entry-dynamic.exe sscanf_long",       // 异常
 
         // "runtest.exe -w entry-static.exe socket",            // 异常
         // "runtest.exe -w entry-dynamic.exe socket",            // 异常
