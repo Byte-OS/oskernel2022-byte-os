@@ -25,8 +25,9 @@ endif
 .PHONY: doc kernel build clean qemu run k210 flash
 
 # all: build
-all: k210
-	cp $(BIN_FILE) ../os.bin
+all: qemu
+	cp $(BOOTLOADER) ../sbi-qemu
+	cp $(KERNEL_FILE) ../kernel-qemu
 
 build: kernel $(BIN_FILE)
 
