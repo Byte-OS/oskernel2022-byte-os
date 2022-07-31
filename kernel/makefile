@@ -75,7 +75,9 @@ run: qemu
 			-kernel $(BIN_FILE) \
 			-nographic \
 			-smp 4 
-	
+
+# qemu-system-riscv64 -machine virt -bios sbi-qemu -device loader,file=kernel-qemu,addr=0x80200000 -drive file=fs.img,if=none,format=raw,id=x0 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0 -kernel kernel-qemu -nographic -smp 4 
+
 
 debug: qemu
 	@tmux new-session -d \
