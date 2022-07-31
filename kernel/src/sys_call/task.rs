@@ -58,11 +58,11 @@ impl Task {
     pub fn sys_exit_group(&self, exit_code: usize) -> Result<(), RuntimeError> {
         let inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
-        let exit_code = if exit_code == usize::MAX {
-            0
-        } else {
-            exit_code
-        };
+        // let exit_code = if exit_code == usize::MAX {
+        //     0
+        // } else {
+        //     exit_code
+        // };
         process.exit(exit_code);
         debug!("exit_code: {:#x}", exit_code);
         Err(RuntimeError::ChangeTask)
