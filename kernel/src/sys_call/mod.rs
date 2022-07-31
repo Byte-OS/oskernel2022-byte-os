@@ -106,6 +106,34 @@ bitflags! {
         const SA_RESETHAND = 0x80000000;
         const SA_RESTORER  = 0x04000000;
     }
+
+    pub struct CloneFlags: usize {
+        const CSIGNAL		= 0x000000ff;
+        const CLONE_VM	= 0x00000100;
+        const CLONE_FS	= 0x00000200;
+        const CLONE_FILES	= 0x00000400;
+        const CLONE_SIGHAND	= 0x00000800;
+        const CLONE_PIDFD	= 0x00001000;
+        const CLONE_PTRACE	= 0x00002000;
+        const CLONE_VFORK	= 0x00004000;
+        const CLONE_PARENT	= 0x00008000;
+        const CLONE_THREAD	= 0x00010000;
+        const CLONE_NEWNS	= 0x00020000;
+        const CLONE_SYSVSEM	= 0x00040000;
+        const CLONE_SETTLS	= 0x00080000;
+        const CLONE_PARENT_SETTID	= 0x00100000;
+        const CLONE_CHILD_CLEARTID	= 0x00200000;
+        const CLONE_DETACHED	= 0x00400000;
+        const CLONE_UNTRACED	= 0x00800000;
+        const CLONE_CHILD_SETTID	= 0x01000000;
+        const CLONE_NEWCGROUP	= 0x02000000;
+        const CLONE_NEWUTS	= 0x04000000;
+        const CLONE_NEWIPC	= 0x08000000;
+        const CLONE_NEWUSER	= 0x10000000;
+        const CLONE_NEWPID	= 0x20000000;
+        const CLONE_NEWNET	= 0x40000000;
+        const CLONE_IO	= 0x80000000;
+    }
 }
 
 // 系统信息结构
@@ -243,7 +271,7 @@ impl Task {
             // 互斥锁
             SYS_FUTEX => self.sys_futex(args[0].into(), args[1] as u32, args[2] as _, args[3], args[4]),
             // 文件休眠
-            SYS_NANOSLEEP => self.sys_nanosleep(args[0], args[1]),
+            SYS_NANOSLEEP => self.sys_nanosleep(args[0].into(), args[1].into()),
             // 获取系统时间
             SYS_GETTIME => self.sys_gettime(args[0], args[1].into()),
             // 转移文件权限
@@ -257,11 +285,11 @@ impl Task {
             // 遮盖信号
             SYS_SIGPROCMASK => self.sys_sigprocmask(args[0] as _, args[1].into(),args[2].into(), args[3] as _),
             //
-            SYS_SIGTIMEDWAIT => {
-                let mut inner = self.inner.borrow_mut();
-                inner.context.x[10] = 0;
-                Ok(())
-            }
+            // SYS_SIGTIMEDWAIT => {
+            //     let mut inner = self.inner.borrow_mut();
+            //     inner.context.x[10] = 0;
+            //     Ok(())
+            // }
             // 信号返回程序
             SYS_SIGRETURN => self.sys_sigreturn(),
             // 获取文件时间

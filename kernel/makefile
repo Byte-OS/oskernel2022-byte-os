@@ -87,7 +87,7 @@ debug: qemu
 
 gdb:
 	riscv64-elf-gdb \
-        -ex 'file $(KERNEL_FILE)' \
+        -ex 'file $(DEBUG_FILE)' \
         -ex 'set arch riscv:rv64' \
         -ex 'target remote localhost:1234'
 

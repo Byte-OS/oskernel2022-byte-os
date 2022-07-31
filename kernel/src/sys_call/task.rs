@@ -17,6 +17,7 @@ use crate::memory::addr::PhysAddr;
 use crate::memory::addr::VirtAddr;
 use crate::memory::page::get_ptr_from_virt_addr;
 use crate::sync::mutex::Mutex;
+use crate::sys_call::CloneFlags;
 use crate::task::task::TaskStatus;
 
 use super::UTSname;
@@ -44,6 +45,7 @@ impl Task {
         if self.tid == 0 {
             process.exit(exit_code);
         } else {
+            debug!("退出任务: {}", self.tid);
             self.exit();
         }
         let clear_child_tid_ptr = VirtAddr::from(self.clear_child_tid.borrow().clone());
@@ -175,26 +177,30 @@ impl Task {
     }
     
     pub fn sys_clone(&self, flags: usize, new_sp: usize, ptid: VirtAddr, tls: usize, ctid_ptr: VirtAddr) -> Result<(), RuntimeError> {
-        debug!(
-            "clone: flags={:#x}, newsp={:#x}, parent_tid={:#x}, child_tid={:#x}, newtls={:#x}",
-            flags, new_sp, ptid.0, ctid_ptr.0, tls
-        );
-    
         if flags == 0x4111 || flags == 0x11 {
             // VFORK | VM | SIGCHILD
             warn!("sys_clone is calling sys_fork instead, ignoring other args");
             return self.sys_fork();
         }
+
+        let flags = CloneFlags::from_bits_truncate(flags);
+
+        debug!(
+            "clone: flags={:?}, newsp={:#x}, parent_tid={:#x}, child_tid={:#x}, newtls={:#x}",
+            flags, new_sp, ptid.0, ctid_ptr.0, tls
+        );
+
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.clone();
         let process = process.borrow();
 
         let ptid_ref = ptid.translate(process.pmm.clone()).tranfer::<u32>();
         let ctid_ref = ctid_ptr.translate(process.pmm.clone()).tranfer::<u32>();
-
+        
         let ptid = self.tid;
         let ctid = process.tasks.len();
         drop(process);
+
         let new_task = Task::new(ctid, inner.process.clone());
         let mut new_task_inner = new_task.inner.borrow_mut();
         new_task_inner.context.clone_from(&inner.context);
@@ -202,6 +208,7 @@ impl Task {
         new_task_inner.context.x[4] = tls;
         new_task_inner.context.x[10] = 0;
         add_task_to_scheduler(new_task.clone());
+        // 添加到process
         inner.context.x[10] = ctid;
         
         debug!("tasks: len {}", TASK_SCHEDULER.force_get().queue.len());
@@ -210,7 +217,10 @@ impl Task {
         drop(inner);
         // switch_next();
         *ptid_ref = ctid as u32;
-        *ctid_ref = ctid as u32;
+        // if flags.contains(CloneFlags::CLONE_CHILD_SETTID) {
+        //     *ctid_ref = ctid as u32;
+        // }
+        // *ctid_ref = ctid as u32;
         new_task.set_tid_address(ctid_ptr.0);
         Err(RuntimeError::ChangeTask)
         // Ok(())

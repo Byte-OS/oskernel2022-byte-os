@@ -3,7 +3,7 @@ use alloc::vec::Vec;
 use crate::runtime_err::RuntimeError;
 use crate::task::task::Task;
 use crate::task::fd_table::FD_CWD;
-use crate::interrupt::timer::TimeSpec;
+use crate::interrupt::timer::{get_time_us, TimeSpec};
 use crate::interrupt::timer::TMS;
 use crate::memory::addr::VirtAddr;
 use crate::sys_call::get_string_from_raw;
@@ -13,39 +13,55 @@ use crate::fs::filetree::INode;
 use crate::interrupt::timer::get_ticks;
 
 impl Task {
-    pub fn sys_nanosleep(&self, req_ptr: usize, rem_ptr: usize) -> Result<(), RuntimeError> {
+    pub fn sys_nanosleep(&self, req_ptr: VirtAddr, rem_ptr: VirtAddr) -> Result<(), RuntimeError> {
+        debug!("nano sleep: req_ptr: {:#x}, rem_ptr:{:#x}", req_ptr.0, rem_ptr.0);
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
 
         // 获取文件参数
-        let req_ptr = usize::from(process.pmm.get_phys_addr(req_ptr.into()).unwrap()) as *mut TimeSpec;
-        let req = unsafe { req_ptr.as_mut().unwrap() };
-        let rem_ptr = usize::from(process.pmm.get_phys_addr(rem_ptr.into()).unwrap()) as *mut TimeSpec;
-        let rem = unsafe { rem_ptr.as_mut().unwrap() };
-
+        let req_time = req_ptr.translate(process.pmm.clone()).tranfer::<TimeSpec>();
         drop(process);
-
-        // 如果 nsec < 0则此任务已被处理 nsec = - remain_ticks
-        inner.context.x[10] = if rem.tv_nsec < 0 {
-            let remain_ticks = (-rem.tv_nsec) as usize;
-            if remain_ticks <= get_ticks() {
-                0
-            } else {
-                // 减少spec进行重复请求 然后切换任务
-                inner.context.sepc -= 4;
-                0
-            }
-        } else {
-            // 1秒100个TICKS  1ns = 1/1000ms = 1/10000TICKS
-            let wake_ticks = req.tv_sec * 100 + req.tv_nsec as u64 / 10000;
-            let remain_ticks = wake_ticks + get_ticks() as u64;
-    
-            rem.tv_nsec = - (remain_ticks as i64);
-            // 减少spec进行重复请求 然后切换任务
+        if inner.wake_time == 0 {
+            inner.wake_time = get_time_us() + (req_time.tv_sec * 1000000) as usize + req_time.tv_nsec as usize;
             inner.context.sepc -= 4;
-            0
-        };
+            return Ok(())
+        }
+        let task_wake_time = inner.wake_time;
+
+        if get_time_us() > task_wake_time {
+            // 到达解锁时间
+            inner.wake_time = 0;
+        } else {
+            // 未到达解锁时间 重复执行
+            inner.context.sepc -= 4;
+        }
         Ok(())
+
+        // let rem_ptr = usize::from(process.pmm.get_phys_addr(rem_ptr.into()).unwrap()) as *mut TimeSpec;
+        // let rem = unsafe { rem_ptr.as_mut().unwrap() };
+        //
+        // drop(process);
+        //
+        // // 如果 nsec < 0则此任务已被处理 nsec = - remain_ticks
+        // inner.context.x[10] = if rem.tv_nsec < 0 {
+        //     let remain_ticks = (-rem.tv_nsec) as usize;
+        //     if remain_ticks <= get_ticks() {
+        //         0
+        //     } else {
+        //         // 减少spec进行重复请求 然后切换任务
+        //         inner.context.sepc -= 4;
+        //         0
+        //     }
+        // } else {
+        //     // 1秒100个TICKS  1ns = 1/1000ms = 1/10000TICKS
+        //     let wake_ticks = req.tv_sec * 100 + req.tv_nsec as u64 / 10000;
+        //     let remain_ticks = wake_ticks + get_ticks() as u64;
+        //
+        //     rem.tv_nsec = - (remain_ticks as i64);
+        //     // 减少spec进行重复请求 然后切换任务
+        //     inner.context.sepc -= 4;
+        //     0
+        // };
     }
     
     pub fn sys_times(&self, tms_ptr: usize) -> Result<(), RuntimeError> {

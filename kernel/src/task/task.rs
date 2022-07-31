@@ -22,7 +22,8 @@ pub enum TaskStatus {
 pub struct TaskInner {
     pub context: Context,
     pub process: Rc<RefCell<Process>>,
-    pub status: TaskStatus
+    pub status: TaskStatus,
+    pub wake_time: usize,
 }
 
 #[derive(Clone)]
@@ -36,17 +37,21 @@ pub struct Task {
 impl Task {
     // 创建进程
     pub fn new(tid: usize, process: Rc<RefCell<Process>>) -> Rc<Self> {
-        let pid = process.borrow().pid;
-        Rc::new(Self {
+        let mut process_mut = process.borrow_mut();
+        let pid = process_mut.pid;
+        let task = Rc::new(Self {
             tid,
             pid,
             clear_child_tid: RefCell::new(0),
-            inner: Rc::new(RefCell::new(TaskInner { 
+            inner: Rc::new(RefCell::new(TaskInner {
                 context: Context::new(), 
-                process, 
-                status: TaskStatus::READY
+                process: process.clone(), 
+                status: TaskStatus::READY,
+                wake_time: 0
             }))
-        })
+        });
+        process_mut.tasks.push(Rc::downgrade(&task));
+        task
     }
 
     // 退出进程
