@@ -27,7 +27,7 @@ endif
 # all: build
 all: qemu
 #	cp $(BOOTLOADER) ../sbi-qemu
-	cp ../bootloader/open-qemu.bin ../sbi-qemu
+	cp ../bootloader/opensbi-qemu.bin ../sbi-qemu
 	cp $(KERNEL_FILE) ../kernel-qemu
 
 build: kernel $(BIN_FILE)
