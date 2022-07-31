@@ -14,7 +14,7 @@ use super::page_table::PageMappingManager;
 const USIZE_PER_PAGES: usize = PAGE_SIZE / size_of::<usize>();
 
 #[cfg(not(feature = "board_k210"))]
-const ADDR_END: usize = 0x80800000;
+const ADDR_END: usize = 0x81fe0000;
 
 #[cfg(feature = "board_k210")]
 const ADDR_END: usize = 0x80800000;
