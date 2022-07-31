@@ -23,3 +23,5 @@ fs-img:
 	@rm -f $(FS_IMG)
 	@dd if=/dev/zero of=$(FS_IMG) count=81920 bs=512	# 40M
 	@mkfs.vfat $(FS_IMG) -F 32
+docker:
+	docker run --rm -it -v ${PWD}:/mnt -w /mnt qemu:4.2.1 bash

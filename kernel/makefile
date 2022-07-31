@@ -11,7 +11,8 @@ OBJCOPY     := rust-objcopy --binary-architecture=riscv64
 FS_IMG := ../fs.img
 
 # BOARD
-BOOTLOADER := ../bootloader/rustsbi-qemu.bin
+# BOOTLOADER := ../bootloader/rustsbi-qemu.bin
+BOOTLOADER := ../bootloader/opensbi-qemu.bin
 BOOTLOADER_K210 := ../bootloader/rustsbi-k210.bin
 
 K210-SERIALPORT	= /dev/ttyUSB0
@@ -27,7 +28,8 @@ endif
 # all: build
 all: qemu
 #	cp $(BOOTLOADER) ../sbi-qemu
-	cp ../bootloader/opensbi-qemu.bin ../sbi-qemu
+#	rm ../sbi-qemu ../kernel-qemu
+	cp $(BOOTLOADER) ../sbi-qemu
 	cp $(KERNEL_FILE) ../kernel-qemu
 
 build: kernel $(BIN_FILE)
