@@ -36,7 +36,7 @@ ifeq ($(MODE), release)
 	echo "release"
 endif
 	@cp src/linker-qemu.ld src/linker.ld
-	@RUSTFLAGS="-Clink-arg=-Tsrc/linker.ld" cargo build $(MODE_FLAG) --features "board_qemu"
+	@RUSTFLAGS="-Clink-arg=-Tsrc/linker.ld" cargo build $(MODE_FLAG) --features "board_qemu" --offline
 	@rm src/linker.ld
 	$(OBJCOPY) $(KERNEL_FILE) --strip-all -O binary $(BIN_FILE)
 
