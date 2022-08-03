@@ -1,27 +1,27 @@
+use crate::memory::addr::UserAddr;
 use crate::task::task::Task;
 use crate::task::signal::SigSet;
 use crate::task::signal::SigAction;
 use crate::runtime_err::RuntimeError;
-use crate::memory::addr::VirtAddr;
 
 impl Task {
-    pub fn sys_sigprocmask(&self, how: u32, set: VirtAddr, oldset: VirtAddr, _sigsetsize: usize) -> Result<(), RuntimeError> {
+    pub fn sys_sigprocmask(&self, how: u32, set:  UserAddr<SigSet>, oldset: UserAddr<SigSet>,
+            _sigsetsize: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
         debug!(
             "rt_sigprocmask: how={:#x}, set={:#?}, oldset={:#?}, sigsetsize={}, thread={}",
             how,
-            set,
-            oldset,
+            set.bits(),
+            oldset.bits(),
             _sigsetsize,
             self.tid
         );
         if oldset.is_valid() {
-            let sig = oldset.translate(process.pmm.clone()).tranfer::<SigSet>();
-            sig.copy_from(&process.signal.mask)
+            oldset.translate(process.pmm.clone()).copy_from(&process.signal.mask);
         }
         if set.is_valid() {
-            let sig = set.translate(process.pmm.clone()).tranfer::<SigSet>();
+            let sig = set.translate(process.pmm.clone());
             match how {
                 // block
                 0 => process.signal.mask.block(sig),
@@ -37,20 +37,20 @@ impl Task {
         Ok(())
     }
 
-    pub fn sys_sigaction(&self, _signum: usize, act: VirtAddr, oldact: VirtAddr, _sigsetsize: usize) -> Result<(), RuntimeError> {
+    pub fn sys_sigaction(&self, _signum: usize, act: UserAddr<SigAction>, oldact: UserAddr<SigAction>, 
+            _sigsetsize: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
         if oldact.is_valid() {
-            let act = oldact.translate(process.pmm.clone()).tranfer::<SigAction>();
-            act.copy_from(&process.signal);
+            oldact.translate(process.pmm.clone()).copy_from(&process.signal);
         }
         if act.is_valid() {
-            let act = act.translate(process.pmm.clone()).tranfer::<SigAction>();
+            let act = act.translate(process.pmm.clone());
             debug!(
                 "rt_sigaction: signal={:?}, act={:?}, oldact={:?}, sigsetsize={}, thread={}",
                 _signum,
                 act,
-                oldact,
+                oldact.bits(),
                 _sigsetsize,
                 self.tid
             );

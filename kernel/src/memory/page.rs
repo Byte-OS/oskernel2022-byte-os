@@ -1,5 +1,7 @@
 use core::{mem::size_of, slice::from_raw_parts_mut};
 
+use alloc::borrow::Cow;
+use alloc::string::{String, ToString};
 use alloc::{vec::Vec, rc::Rc};
 
 use crate::sync::mutex::Mutex;
@@ -137,7 +139,35 @@ pub fn init() {
 }
 
 impl<T> UserAddr<T> {
+    // 
     pub fn translate(&self, pmm: Rc<PageMappingManager>) -> &'static mut T{
         VirtAddr::from(self.0 as usize).translate(pmm).tranfer::<T>()
+    }
+
+    // 读取一定长度的内存
+    pub fn translate_vec(&self, pmm: Rc<PageMappingManager>, count: usize) -> &'static mut [T] {
+        let addr = VirtAddr::from(self.0 as usize).translate(pmm).0;
+        unsafe { core::slice::from_raw_parts_mut(addr as *mut T, count) }
+    }
+
+    // 读取内存直到发生结束条件
+    pub fn translate_until(&self, pmm: Rc<PageMappingManager>, until: fn(&T) -> bool) -> &'static mut [T] {
+        let addr = VirtAddr::from(self.0 as usize).translate(pmm).0;
+        let mut end_addr = addr;
+        let count = loop {
+            let target_ref = unsafe {(end_addr as *const T).as_ref()}.unwrap();
+            if until(target_ref) {
+                break (end_addr - addr) / size_of::<T>();
+            }
+            end_addr += size_of::<T>();
+        };
+        unsafe { core::slice::from_raw_parts_mut(addr as *mut T, count) }
+    }
+}
+
+impl UserAddr<u8> {
+    // 读取字符串
+    pub fn read_string(&self, pmm: Rc<PageMappingManager>) -> String {
+        String::from_utf8_lossy(self.translate_until(pmm, |c| *c == 0)).to_string()
     }
 }

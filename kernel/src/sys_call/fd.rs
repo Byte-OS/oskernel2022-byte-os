@@ -1,36 +1,29 @@
-use core::slice;
-
 use alloc::rc::Rc;
-
 use crate::fs::StatFS;
 use crate::fs::file::FileOP;
 use crate::fs::file::FileType;
 use crate::fs::stdio::StdNull;
 use crate::fs::stdio::StdZero;
+use crate::memory::addr::UserAddr;
 use crate::task::fd_table::IoVec;
 use crate::task::pipe::PipeWriter;
 use crate::task::task::Task;
 use crate::task::fd_table::FD_NULL;
 use crate::task::pipe::new_pipe;
-use crate::memory::addr::VirtAddr;
 use crate::fs::file::Kstat;
 use crate::fs::filetree::INode;
-
 use crate::runtime_err::RuntimeError;
 use crate::memory::addr::get_buf_from_phys_addr;
 
-use super::get_string_from_raw;
 use super::OpenFlags;
 
 impl Task {
     // 获取当前路径
-    pub fn get_cwd(&self, buf: usize, size: usize) -> Result<(), RuntimeError> {
+    pub fn get_cwd(&self, buf: UserAddr<u8>, size: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
         // 获取参数
-        let mut buf = process.pmm.get_phys_addr(VirtAddr::from(buf)).unwrap();
-        // 设置缓冲区地址
-        let buf = unsafe { slice::from_raw_parts_mut(buf.as_mut_ptr(), size) };
+        let buf = buf.translate_vec(process.pmm.clone(), size);
         // 获取路径
         let pwd = process.workspace.get_pwd();
         let pwd_buf = pwd.as_bytes();
@@ -40,6 +33,7 @@ impl Task {
         inner.context.x[10] = buf.as_ptr() as usize;
         Ok(())
     }
+
     // 复制文件描述符
     pub fn sys_dup(&self, fd: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
@@ -58,18 +52,15 @@ impl Task {
         // 判断是否存在文件描述符
         let fd_v = process.fd_table.get(fd)?;
         process.fd_table.set(new_fd, fd_v);
-        warn!("? fd: {:#x}", fd);
         drop(process);
         inner.context.x[10] = new_fd;
         Ok(())
     }
     // 创建文件
-    pub fn sys_mkdirat(&self, dir_fd: usize, filename: usize, flags: usize) -> Result<(), RuntimeError> {
+    pub fn sys_mkdirat(&self, dir_fd: usize, filename: UserAddr<u8>, flags: usize) -> Result<(), RuntimeError> {
+        let filename = filename.read_string(self.get_pmm());
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
-
-        let filename = process.pmm.get_phys_addr(VirtAddr::from(filename)).unwrap();
-        let filename = get_string_from_raw(filename);
 
         // 判断文件描述符是否存在
         let current = if dir_fd == FD_NULL {
@@ -86,14 +77,10 @@ impl Task {
         Ok(())
     }
     // 取消链接文件
-    pub fn sys_unlinkat(&self, fd: usize, filename: usize, _flags: usize) -> Result<(), RuntimeError> {
+    pub fn sys_unlinkat(&self, fd: usize, filename: UserAddr<u8>, _flags: usize) -> Result<(), RuntimeError> {
+        let filename = filename.read_string(self.get_pmm());
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
-
-        // 获取参数
-        let filename = process.pmm.get_phys_addr(VirtAddr::from(filename)).unwrap();
-        let filename = get_string_from_raw(filename);
-
 
         // 判断文件描述符是否存在
         let current = if fd == FD_NULL {
@@ -109,12 +96,10 @@ impl Task {
         Ok(())
     }
     // 更改工作目录
-    pub fn sys_chdir(&self, filename: usize) -> Result<(), RuntimeError> {
+    pub fn sys_chdir(&self, filename: UserAddr<u8>) -> Result<(), RuntimeError> {
+        let filename = filename.read_string(self.get_pmm());
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
-
-        let filename = process.pmm.get_phys_addr(VirtAddr::from(filename)).unwrap();
-        let filename = get_string_from_raw(filename);
 
         process.workspace = INode::get(Some(process.workspace.clone()), &filename, false)?;
 
@@ -123,13 +108,12 @@ impl Task {
         Ok(())
     }
     // 打开文件
-    pub fn sys_openat(&self, fd: usize, filename: usize, flags: usize, _open_mod: usize) -> Result<(), RuntimeError> {
+    pub fn sys_openat(&self, fd: usize, filename: UserAddr<u8>, flags: usize, _open_mod: usize) -> Result<(), RuntimeError> {
+        let filename = filename.read_string(self.get_pmm());
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
 
         // 获取文件信息
-        let filename = process.pmm.get_phys_addr(VirtAddr::from(filename)).unwrap();
-        let filename = get_string_from_raw(filename);
         let flags = OpenFlags::from_bits_truncate(flags as u32);
 
         if filename == "/dev/zero" {
@@ -178,21 +162,16 @@ impl Task {
         Ok(())
     }
     // 管道符
-    pub fn sys_pipe2(&self, req_ptr: usize) -> Result<(), RuntimeError> {
+    pub fn sys_pipe2(&self, req_ptr: UserAddr<u32>) -> Result<(), RuntimeError> {
+        let pipe_arr = req_ptr.translate_vec(self.get_pmm(), 2);
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
-        // 匹配文件参数
-        let req_ptr = usize::from(process.pmm.get_phys_addr(req_ptr.into()).unwrap()) as *mut u32;
         // 创建pipe
         let (read_pipe, write_pipe) = new_pipe();
         // 写入数据
-        let read_fd = process.fd_table.push(read_pipe);
-        let write_fd = process.fd_table.push(write_pipe);
-        // 写入文件数据
-        unsafe {
-            req_ptr.write(read_fd as u32);
-            req_ptr.add(1).write(write_fd as u32);
-        };
+        pipe_arr[0] = process.fd_table.push(read_pipe) as u32;
+        pipe_arr[1] = process.fd_table.push(write_pipe) as u32;
+                
         drop(process);
         // 创建成功
         inner.context.x[10] = 0;
@@ -203,12 +182,9 @@ impl Task {
         todo!("getdents")
     }
 
-    pub fn sys_statfs(&self, _fd: usize, buf_ptr: VirtAddr) -> Result<(), RuntimeError> {
-        let mut inner = self.inner.borrow_mut();
-        let process = inner.process.borrow_mut();
-
-        let buf_ptr = buf_ptr.translate(process.pmm.clone());
-        let buf = buf_ptr.tranfer::<StatFS>();
+    pub fn sys_statfs(&self, _fd: usize, buf_ptr: UserAddr<StatFS>) -> Result<(), RuntimeError> {
+        let buf = buf_ptr.translate(self.get_pmm());
+        
         buf.f_type = 32;
         buf.f_bsize = 512;
         buf.f_blocks = 80;
@@ -218,21 +194,17 @@ impl Task {
         buf.f_ffree = 0;
         buf.f_fsid = 32;
         buf.f_namelen = 20;
-        drop(process);
+
+        let mut inner = self.inner.borrow_mut();
         inner.context.x[10] = 0;
         Ok(())
     }
 
     // 读取
-    pub fn sys_read(&self, fd: usize, buf_ptr: usize, count: usize) -> Result<(), RuntimeError> {
+    pub fn sys_read(&self, fd: usize, buf_ptr: UserAddr<u8>, count: usize) -> Result<(), RuntimeError> {
+        let buf = buf_ptr.translate_vec(self.get_pmm(), count);
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
-
-        // 获取参数
-        let buf = process.pmm.get_phys_addr(buf_ptr.into()).unwrap();
-        let buf = get_buf_from_phys_addr(buf, count);
-
-        warn!("读取 fd: {} open size: {}", fd, count);
 
         // 判断文件描述符是否存在
         let reader = process.fd_table.get(fd)?;
@@ -245,15 +217,12 @@ impl Task {
         inner.context.x[10] = value;
         Ok(())
     }
+
     // 写入
-    pub fn sys_write(&self, fd: usize, buf_ptr: usize, count: usize) -> Result<(), RuntimeError> {
+    pub fn sys_write(&self, fd: usize, buf_ptr: UserAddr<u8>, count: usize) -> Result<(), RuntimeError> {
+        let buf = buf_ptr.translate_vec(self.get_pmm(), count);
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
-        
-        // 获取参数
-        let buf = process.pmm.get_phys_addr(buf_ptr.into()).unwrap();
-        // 寻找物理地址
-        let buf = get_buf_from_phys_addr(buf, count);
         
         // 判断文件描述符是否存在
         let writer = process.fd_table.get(fd)?;
@@ -274,12 +243,13 @@ impl Task {
         Ok(())
     }
     // 写入
-    pub fn sys_writev(&self, fd: usize, iov: VirtAddr, iovcnt: usize) -> Result<(), RuntimeError> {
+    pub fn sys_writev(&self, fd: usize, iov: UserAddr<IoVec>, iovcnt: usize) -> Result<(), RuntimeError> {
+        let iov_vec = iov.translate_vec(self.get_pmm(), iovcnt);
+        
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
         
         let fd = process.fd_table.get(fd)?;
-        let iov_vec = iov.translate(process.pmm.clone()).transfer_vec_count::<IoVec>(iovcnt);
         let mut cnt = 0;
         for i in iov_vec {
             let buf = get_buf_from_phys_addr(i.iov_base.translate(process.pmm.clone()), 
@@ -291,12 +261,13 @@ impl Task {
         Ok(())
     }
 
-    pub fn sys_readv(&self, fd: usize, iov: VirtAddr, iovcnt: usize) -> Result<(), RuntimeError> {
+    pub fn sys_readv(&self, fd: usize, iov: UserAddr<IoVec>, iovcnt: usize) -> Result<(), RuntimeError> {
+        let iov_vec = iov.translate_vec(self.get_pmm(), iovcnt);
+
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
         
         let fd = process.fd_table.get(fd)?;
-        let iov_vec = iov.translate(process.pmm.clone()).transfer_vec_count::<IoVec>(iovcnt);
         let mut cnt = 0;
         for i in iov_vec {
             let buf = get_buf_from_phys_addr(i.iov_base.translate(process.pmm.clone()), 
@@ -308,52 +279,44 @@ impl Task {
         Ok(())
     }
 
-    pub fn sys_fstat(&self, fd: usize, buf_ptr: usize) -> Result<(), RuntimeError> {
+    pub fn sys_fstat(&self, fd: usize, buf_ptr: UserAddr<Kstat>) -> Result<(), RuntimeError> {
+        let kstat = buf_ptr.translate(self.get_pmm());
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
 
-        // 获取参数
-        let kstat_ptr = unsafe {
-            (usize::from(process.pmm.get_phys_addr(buf_ptr.into()).unwrap()) as *mut Kstat).as_mut().unwrap()
-        };
         // 判断文件描述符是否存在
         let inode = process.fd_table.get_file(fd)?;
         let inode = inode.get_inode();
         let inode = inode.0.borrow_mut();
-        kstat_ptr.st_dev = 1;
-        kstat_ptr.st_ino = 1;
-        kstat_ptr.st_mode = 0;
-        kstat_ptr.st_nlink = inode.nlinkes as u32;
-        kstat_ptr.st_uid = 0;
-        kstat_ptr.st_gid = 0;
-        kstat_ptr.st_rdev = 0;
-        kstat_ptr.__pad = 0;
-        kstat_ptr.st_size = inode.size as u64;
-        kstat_ptr.st_blksize = 512;
-        kstat_ptr.st_blocks = ((inode.size - 1 + 512) / 512) as u64;
-        kstat_ptr.st_atime_sec = inode.st_atime_sec;
-        kstat_ptr.st_atime_nsec = inode.st_atime_nsec;
-        kstat_ptr.st_mtime_sec = inode.st_mtime_sec;
-        kstat_ptr.st_mtime_nsec = inode.st_mtime_nsec;
-        kstat_ptr.st_ctime_sec = inode.st_ctime_sec;
-        kstat_ptr.st_ctime_nsec = inode.st_ctime_nsec;
+        kstat.st_dev = 1;
+        kstat.st_ino = 1;
+        kstat.st_mode = 0;
+        kstat.st_nlink = inode.nlinkes as u32;
+        kstat.st_uid = 0;
+        kstat.st_gid = 0;
+        kstat.st_rdev = 0;
+        kstat.__pad = 0;
+        kstat.st_size = inode.size as u64;
+        kstat.st_blksize = 512;
+        kstat.st_blocks = ((inode.size - 1 + 512) / 512) as u64;
+        kstat.st_atime_sec = inode.st_atime_sec;
+        kstat.st_atime_nsec = inode.st_atime_nsec;
+        kstat.st_mtime_sec = inode.st_mtime_sec;
+        kstat.st_mtime_nsec = inode.st_mtime_nsec;
+        kstat.st_ctime_sec = inode.st_ctime_sec;
+        kstat.st_ctime_nsec = inode.st_ctime_nsec;
         drop(process);
         inner.context.x[10] = 0;
         Ok(())
     }
 
     // 获取文件信息
-    pub fn sys_fstatat(&self, dir_fd: usize, filename: VirtAddr, stat_ptr: usize, _flags: usize) -> Result<(), RuntimeError> {
+    pub fn sys_fstatat(&self, dir_fd: usize, filename: UserAddr<u8>, stat_ptr: UserAddr<Kstat>, _flags: usize) -> Result<(), RuntimeError> {
+        let filename = filename.read_string(self.get_pmm());
+        let kstat = stat_ptr.translate(self.get_pmm());
+
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
-
-        // 获取参数
-        let kstat_ptr = unsafe {
-            (usize::from(process.pmm.get_phys_addr(stat_ptr.into()).unwrap()) as *mut Kstat).as_mut().unwrap()
-        };
-        // 判断文件描述符是否存在
-        let filename = process.pmm.get_phys_addr(filename).unwrap();
-        let filename = get_string_from_raw(filename);
 
         if filename != "/dev/null" {
             // 判断文件描述符是否存在
@@ -366,33 +329,33 @@ impl Task {
             
             let inode = INode::get(file, &filename, false)?;
             let inode = inode.0.borrow_mut();
-            kstat_ptr.st_dev = 1;
-            kstat_ptr.st_ino = 1;
+            kstat.st_dev = 1;
+            kstat.st_ino = 1;
             // kstat_ptr.st_mode = 0;
             if inode.file_type == FileType::Directory {
-                kstat_ptr.st_mode = 0o40000;
+                kstat.st_mode = 0o40000;
             } else {
-                kstat_ptr.st_mode = 0;
+                kstat.st_mode = 0;
             }
-            kstat_ptr.st_nlink = inode.nlinkes as u32;
-            kstat_ptr.st_uid = 0;
-            kstat_ptr.st_gid = 0;
-            kstat_ptr.st_rdev = 0;
-            kstat_ptr.__pad = 0;
-            kstat_ptr.st_size = inode.size as u64;
-            kstat_ptr.st_blksize = 512;
-            kstat_ptr.st_blocks = ((inode.size - 1 + 512) / 512) as u64;
-            kstat_ptr.st_atime_sec = inode.st_atime_sec;
-            kstat_ptr.st_atime_nsec = inode.st_atime_nsec;
-            kstat_ptr.st_mtime_sec = inode.st_mtime_sec;
-            kstat_ptr.st_mtime_nsec = inode.st_mtime_nsec;
-            kstat_ptr.st_ctime_sec = inode.st_ctime_sec;
-            kstat_ptr.st_ctime_nsec = inode.st_ctime_nsec;
+            kstat.st_nlink = inode.nlinkes as u32;
+            kstat.st_uid = 0;
+            kstat.st_gid = 0;
+            kstat.st_rdev = 0;
+            kstat.__pad = 0;
+            kstat.st_size = inode.size as u64;
+            kstat.st_blksize = 512;
+            kstat.st_blocks = ((inode.size - 1 + 512) / 512) as u64;
+            kstat.st_atime_sec = inode.st_atime_sec;
+            kstat.st_atime_nsec = inode.st_atime_nsec;
+            kstat.st_mtime_sec = inode.st_mtime_sec;
+            kstat.st_mtime_nsec = inode.st_mtime_nsec;
+            kstat.st_ctime_sec = inode.st_ctime_sec;
+            kstat.st_ctime_nsec = inode.st_ctime_nsec;
             drop(process);
             inner.context.x[10] = 0;
             Ok(())
         } else {
-            kstat_ptr.st_mode = 0o20000;
+            kstat.st_mode = 0o20000;
             drop(process);
             inner.context.x[10] = 0;
             Ok(())
@@ -410,10 +373,11 @@ impl Task {
         Ok(())
     }
 
-    pub fn sys_pread(&self, fd: usize, ptr: VirtAddr, len: usize, offset: usize) -> Result<(), RuntimeError> {
+    // 原子读
+    pub fn sys_pread(&self, fd: usize, ptr: UserAddr<u8>, len: usize, offset: usize) -> Result<(), RuntimeError> {
+        let buf = ptr.translate_vec(self.get_pmm(), len);
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
-        let buf = get_buf_from_phys_addr(ptr.translate(process.pmm.clone()), len);
         let file = process.fd_table.get_file(fd)?;
         let ret = file.read_at(offset, buf);
         drop(process);

@@ -102,20 +102,9 @@ pub fn get_new_pid() -> usize {
 
 pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path: &'a str, args: Vec<&'a str>) 
         -> Result<Rc<Task>, RuntimeError> {
-    debug!("读取path: {}", path);
-
     // 如果存在write
     let file = INode::open(None, path, false)?;
-    // let program = INode::get(None, path, false)?;
-    
-    // // 申请页表存储程序
-    // let elf_pages = get_pages_num(program.get_file_size());
-    
-    // // 申请暂时内存
-    // let temp_buf = MemMap::new_kernel_buf(elf_pages)?;
-    // // 获取缓冲区地址并读取
-    // let buf = get_buf_from_phys_page(temp_buf.ppn, temp_buf.page_num);
-    // program.read_to(buf);
+
     let file_inner = file.0.borrow_mut();
     // 读取elf信息
     let elf = xmas_elf::ElfFile::new(&file_inner.buf).unwrap();

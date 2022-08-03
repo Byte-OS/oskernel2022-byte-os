@@ -64,8 +64,8 @@ fn kernel_callback(context: &mut Context, scause: Scause, stval: usize) -> usize
     match scause.cause(){
         // 中断异常
         Trap::Exception(Exception::Breakpoint) => breakpoint(context),
-        // 时钟中断
-        Trap::Interrupt(Interrupt::SupervisorTimer) => timer::timer_handler(),
+        // 时钟中断 eg: 不再内核处理时间中断 just in user
+        Trap::Interrupt(Interrupt::SupervisorTimer) => {},
         // 缺页异常
         Trap::Exception(Exception::StorePageFault) => handle_page_fault(context, stval),
         // 加载页面错误

@@ -14,14 +14,13 @@ use crate::task::fd_table::FD_RANDOM;
 impl Task {
     pub fn sys_brk(&self, _top_pos: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
-
         inner.context.x[10] = SYS_CALL_ERR;
         warn!("brk");
         Ok(())
     }
 
     pub fn sys_mmap(&self, start: usize, len: usize, _prot: usize, 
-        flags: usize, fd: usize, offset: usize) -> Result<(), RuntimeError> {
+            flags: usize, fd: usize, offset: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
         let start = if start == 0 {

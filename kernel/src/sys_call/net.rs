@@ -5,6 +5,7 @@ use alloc::collections::VecDeque;
 use alloc::rc::Rc;
 use core::cell::RefCell;
 use crate::fs::file::FileOP;
+use crate::memory::addr::UserAddr;
 use crate::memory::addr::{get_buf_from_phys_addr, VirtAddr};
 
 use crate::runtime_err::RuntimeError;
@@ -15,12 +16,12 @@ use crate::task::task::Task;
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 struct SaFamily(u32);
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-struct SocketAddr {
+pub struct SocketAddr {
     sa_family: SaFamily,
     sa_data: [u8; 14],
 }
 
-struct SocketFile(RefCell<VecDeque<u8>>);
+pub struct SocketFile(RefCell<VecDeque<u8>>);
 
 impl SocketFile {
     fn new() -> Rc<Self> {
@@ -129,10 +130,10 @@ impl Task {
     }
 
     pub fn sys_sendto(&self, fd: usize, buf: VirtAddr, len: usize, _flags: usize,
-                            sa: VirtAddr, _sa_size: usize) -> Result<(), RuntimeError> {
+                            sa: UserAddr<SocketAddr>, _sa_size: usize) -> Result<(), RuntimeError> {
+        let sa = sa.translate(self.get_pmm());
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
-        let sa = sa.translate(process.pmm.clone()).tranfer::<SocketAddr>();
         let buf = get_buf_from_phys_addr(buf.translate(
             process.pmm.clone()), len);
 
@@ -147,15 +148,15 @@ impl Task {
     }
 
     pub fn sys_recvfrom(&self, _fd: usize, buf: VirtAddr, len: usize, _flags: usize,
-        sa: VirtAddr, _addr_len: usize) -> Result<(), RuntimeError> {
+        sa: UserAddr<SocketAddr>, _addr_len: usize) -> Result<(), RuntimeError> {
 
+        let sa = sa.translate(self.get_pmm());
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
-        let addr = sa.translate(process.pmm.clone()).tranfer::<SocketAddr>();
         let buf = get_buf_from_phys_addr(buf.translate(
             process.pmm.clone()), len);
 
-        let file = SOCKET_BUF.lock().socket_buf.get(addr).unwrap().clone();
+        let file = SOCKET_BUF.lock().socket_buf.get(sa).unwrap().clone();
 
         let read_len = file.read(buf);
         drop(process);

@@ -3,8 +3,7 @@ use crate::task::task::Task;
 use crate::task::fd_table::FD_CWD;
 use crate::interrupt::timer::{get_time_us, TimeSpec};
 use crate::interrupt::timer::TMS;
-use crate::memory::addr::{VirtAddr, UserAddr};
-use crate::sys_call::get_string_from_raw;
+use crate::memory::addr::{VirtAddr, UserAddr, get_string_from_raw};
 use crate::fs::filetree::INode;
 use crate::interrupt::timer::get_ticks;
 
@@ -95,7 +94,7 @@ impl Task {
             let filename = process.pmm.get_phys_addr(filename).unwrap();
             let filename = get_string_from_raw(filename);
 
-            if filename == "/dev/null/invalid" {
+            if &filename == "/dev/null/invalid" {
                 drop(process);
                 inner.context.x[10] = 0;
                 return Ok(());

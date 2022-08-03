@@ -5,6 +5,7 @@ use core::ops::Add;
 use core::slice;
 use core::mem::size_of;
 
+use alloc::string::String;
 use alloc::{rc::Rc, vec::Vec};
 
 use super::page_table::PageMappingManager;
@@ -310,10 +311,40 @@ impl<T> UserAddr<T> {
     pub fn is_valid(&self) -> bool {
         self.0 as usize != 0
     }
+
+    pub fn bits(&self) -> usize {
+        self.0 as _
+    }
 }
 
 impl<T> From<usize> for UserAddr<T> {
     fn from(addr: usize) -> Self {
         Self(addr as _)
     }
+}
+
+
+// 从内存中获取字符串 目前仅支持ascii码
+pub fn get_string_from_raw(addr: PhysAddr) -> String {
+    let mut ptr = addr.as_ptr();
+    let mut str: String = String::new();
+    loop {
+        let ch = unsafe { ptr.read() };
+        if ch == 0 {
+            break;
+        }
+        str.push(ch as char);
+        unsafe { ptr = ptr.add(1) };
+    }
+    str
+}
+
+// 将字符串写入内存 目前仅支持ascii码
+pub fn write_string_to_raw(target: &mut [u8], str: &str) {
+    let mut index = 0;
+    for c in str.chars() {
+        target[index] = c as u8;
+        index = index + 1;
+    }
+    target[index] = 0;
 }

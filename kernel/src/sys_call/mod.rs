@@ -1,7 +1,5 @@
 use core::slice;
 
-use alloc::string::String;
-use alloc::vec::Vec;
 use alloc::rc::Rc;
 use riscv::register::scause;
 use riscv::register::scause::Trap;
@@ -12,7 +10,6 @@ use riscv::register::sstatus;
 
 use crate::memory::page_table::PageMappingManager;
 use crate::memory::addr::VirtAddr;
-use crate::memory::addr::PhysAddr;
 use crate::interrupt::timer;
 use crate::fs::filetree::INode;
 use crate::task::task_scheduler::kill_task;
@@ -185,52 +182,13 @@ pub fn sys_write_wrap(pmm: Rc<PageMappingManager>, fd: Rc<INode>, buf: usize, co
     count
 }
 
-// 从内存中获取字符串 目前仅支持ascii码
-pub fn get_string_from_raw(addr: PhysAddr) -> String {
-
-    let mut ptr = addr.as_ptr();
-    let mut str: String = String::new();
-    loop {
-        let ch = unsafe { ptr.read() };
-        if ch == 0 {
-            break;
-        }
-        str.push(ch as char);
-        unsafe { ptr = ptr.add(1) };
-    }
-    str
-}
-
-// 从内存中获取数字直到0
-pub fn get_usize_vec_from_raw(addr: PhysAddr) -> Vec<usize> {
-    let mut usize_vec = vec![];
-    let mut usize_vec_ptr = addr.0 as *const usize;
-    loop {
-        let value = unsafe { usize_vec_ptr.read() };
-        if value == 0 {break;}
-        usize_vec.push(value);
-        usize_vec_ptr = unsafe { usize_vec_ptr.add(1) };
-    }
-    usize_vec
-}
-
-// 将字符串写入内存 目前仅支持ascii码
-pub fn write_string_to_raw(target: &mut [u8], str: &str) {
-    let mut index = 0;
-    for c in str.chars() {
-        target[index] = c as u8;
-        index = index + 1;
-    }
-    target[index] = 0;
-}
-
 impl Task {
     // 系统调用
     pub fn sys_call(&self, call_type: usize, args: [usize; 7]) -> Result<(), RuntimeError> {
         // 匹配系统调用 a7(x17) 作为调用号
         match call_type {
             // 获取文件路径
-            SYS_GETCWD => self.get_cwd(args[0], args[1]),
+            SYS_GETCWD => self.get_cwd(args[0].into(), args[1]),
             // 复制文件描述符
             SYS_DUP => self.sys_dup(args[0]),
             // 复制文件描述符
@@ -238,9 +196,9 @@ impl Task {
             // 控制资源
             SYS_FCNTL => self.sys_fcntl(args[0], args[1], args[2]),
             // 创建文件夹
-            SYS_MKDIRAT => self.sys_mkdirat(args[0], args[1], args[2]),
+            SYS_MKDIRAT => self.sys_mkdirat(args[0], args[1].into(), args[2]),
             // 取消link
-            SYS_UNLINKAT => self.sys_unlinkat(args[0], args[1], args[2]),
+            SYS_UNLINKAT => self.sys_unlinkat(args[0], args[1].into(), args[2]),
             // umount设备
             SYS_UMOUNT2 => Ok(()),
             // mount设备
@@ -248,21 +206,21 @@ impl Task {
             // 获取文件系统信息
             SYS_STATFS => self.sys_statfs(args[0], args[1].into()),
             // 改变文件信息
-            SYS_CHDIR => self.sys_chdir(args[0]),
+            SYS_CHDIR => self.sys_chdir(args[0].into()),
             // 打开文件地址
-            SYS_OPENAT => self.sys_openat(args[0], args[1], args[2], args[3]),
+            SYS_OPENAT => self.sys_openat(args[0], args[1].into(), args[2], args[3]),
             // 关闭文件描述符
             SYS_CLOSE => self.sys_close(args[0]),
             // 进行PIPE
-            SYS_PIPE2 => self.sys_pipe2(args[0]),
+            SYS_PIPE2 => self.sys_pipe2(args[0].into()),
             // 获取文件节点
             SYS_GETDENTS => self.sys_getdents(args[0], args[1], args[2]),
             // 移动读取位置
             SYS_LSEEK => self.sys_lseek(args[0], args[1], args[2]),
             // 读取文件描述符
-            SYS_READ => self.sys_read(args[0], args[1], args[2]),
+            SYS_READ => self.sys_read(args[0], args[1].into(), args[2]),
             // 写入文件数据
-            SYS_WRITE => self.sys_write(args[0], args[1], args[2]),
+            SYS_WRITE => self.sys_write(args[0], args[1].into(), args[2]),
             // 读取数据
             SYS_READV => self.sys_readv(args[0], args[1].into(), args[2]),
             // 写入数据
@@ -270,9 +228,9 @@ impl Task {
             // 读取数据
             SYS_PREAD => self.sys_pread(args[0], args[1].into(), args[2], args[3]),
             // 获取文件数据信息
-            SYS_FSTATAT => self.sys_fstatat(args[0], args[1].into(), args[2], args[3]),
+            SYS_FSTATAT => self.sys_fstatat(args[0], args[1].into(), args[2].into(), args[3]),
             // 获取文件数据信息
-            SYS_FSTAT => self.sys_fstat(args[0], args[1]),
+            SYS_FSTAT => self.sys_fstat(args[0], args[1].into()),
             // 改变文件时间
             SYS_UTIMEAT => self.sys_utimeat(args[0], args[1].into(), args[2].into(), args[3]),
             // 退出文件信息
@@ -308,7 +266,7 @@ impl Task {
             // 获取文件时间
             SYS_TIMES => self.sys_times(args[0]),
             // 获取系统信息
-            SYS_UNAME => self.sys_uname(args[0]),
+            SYS_UNAME => self.sys_uname(args[0].into()),
             // 获取时间信息
             SYS_GETTIMEOFDAY => self.sys_gettimeofday(args[0]),
             // 获取进程信息

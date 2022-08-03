@@ -11,16 +11,13 @@ use crate::task::pid::get_next_pid;
 use crate::task::task::Task;
 use crate::task::{exec_with_process, UserHeap};
 use crate::runtime_err::RuntimeError;
-use crate::memory::addr::{PhysAddr, UserAddr};
-use crate::memory::addr::VirtAddr;
+use crate::memory::addr::{UserAddr, write_string_to_raw};
+
 use crate::sync::mutex::Mutex;
 use crate::task::task::TaskStatus;
 
 use super::UTSname;
-use super::write_string_to_raw;
 use super::SYS_CALL_ERR;
-use super::get_string_from_raw;
-use super::get_usize_vec_from_raw;
 
 bitflags! {
     struct FutexFlags: u32 {
@@ -35,6 +32,7 @@ bitflags! {
 }
 
 impl Task {
+    /// 退出当前任务 
     pub fn sys_exit(&self, exit_code: usize) -> Result<(), RuntimeError> {
         let inner = self.inner.borrow();
         if self.tid == 0 {
@@ -50,6 +48,7 @@ impl Task {
         Err(RuntimeError::KillCurrentTask)
     }
     
+    // 退出当前进程？ eg: 功能也许有待完善
     pub fn sys_exit_group(&self, exit_code: usize) -> Result<(), RuntimeError> {
         let inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
@@ -58,6 +57,7 @@ impl Task {
         Err(RuntimeError::ChangeTask)
     }
     
+    // 设置 tid addr
     pub fn sys_set_tid_address(&self, tid_ptr: UserAddr<u32>) -> Result<(), RuntimeError> {
         let tid_ptr = tid_ptr.translate(self.get_pmm());
         let mut inner = self.inner.borrow_mut();
@@ -80,13 +80,12 @@ impl Task {
         Err(RuntimeError::ChangeTask)
     }
     
-    pub fn sys_uname(&self, ptr: usize) -> Result<(), RuntimeError> {
+    // 获取系统信息
+    pub fn sys_uname(&self, ptr: UserAddr<UTSname>) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
-        let process = inner.process.borrow_mut();
     
         // 获取参数
-        let sys_info = usize::from(process.pmm.get_phys_addr(ptr.into()).unwrap()) as *mut UTSname;
-        let sys_info = unsafe { sys_info.as_mut().unwrap() };
+        let sys_info = ptr.translate(self.get_pmm());
         // 写入系统信息
         write_string_to_raw(&mut sys_info.sysname, "ByteOS");
         write_string_to_raw(&mut sys_info.nodename, "ByteOS");
@@ -94,17 +93,18 @@ impl Task {
         write_string_to_raw(&mut sys_info.version, "alpha 1.1");
         write_string_to_raw(&mut sys_info.machine, "riscv k210");
         write_string_to_raw(&mut sys_info.domainname, "alexbd.cn");
-        drop(process);
         inner.context.x[10] = 0;
         Ok(())
     }
     
+    // 获取pid
     pub fn sys_getpid(&self) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         inner.context.x[10] = self.pid;
         Ok(())
     }
     
+    // 获取父id
     pub fn sys_getppid(&self) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.clone();
@@ -122,12 +122,14 @@ impl Task {
         Ok(())
     }
     
+    // 获取线程id
     pub fn sys_gettid(&self) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         inner.context.x[10] = self.tid;
         Ok(())
     }
     
+    // fork process
     pub fn sys_fork(&self) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.clone();
@@ -154,12 +156,11 @@ impl Task {
         drop(process);
         drop(child_process);
         drop(inner);
-        // switch_next();
-        // suspend_and_run_next();
         Err(RuntimeError::ChangeTask)
     }
     
-    pub fn sys_clone(&self, flags: usize, new_sp: usize, ptid: VirtAddr, tls: usize, ctid_ptr: UserAddr<u32>) -> Result<(), RuntimeError> {
+    // clone task
+    pub fn sys_clone(&self, flags: usize, new_sp: usize, ptid: UserAddr<u32>, tls: usize, ctid_ptr: UserAddr<u32>) -> Result<(), RuntimeError> {
         if flags == 0x4111 || flags == 0x11 {
             // VFORK | VM | SIGCHILD
             warn!("sys_clone is calling sys_fork instead, ignoring other args");
@@ -168,17 +169,15 @@ impl Task {
 
         debug!(
             "clone: flags={:?}, newsp={:#x}, parent_tid={:#x}, child_tid={:#x}, newtls={:#x}",
-            flags, new_sp, ptid.0, ctid_ptr.0 as usize, tls
+            flags, new_sp, ptid.bits(), ctid_ptr.0 as usize, tls
         );
 
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.clone();
         let process = process.borrow();
-
-        let ptid_ref = ptid.translate(process.pmm.clone()).tranfer::<u32>();
+        let ptid_ref = ptid.translate(process.pmm.clone());
         
         let ctid = process.tasks.len();
-        debug!("ctid : {}", ctid);
         drop(process);
 
         let new_task = Task::new(ctid, inner.process.clone());
@@ -201,39 +200,32 @@ impl Task {
         // just finish clone, not change task
         Ok(())
     }
-    
-    pub fn sys_execve(&self, filename: VirtAddr, argv: VirtAddr, envp: VirtAddr) -> Result<(), RuntimeError> {
+
+    // 执行文件
+    pub fn sys_execve(&self, filename: UserAddr<u8>, argv: UserAddr<UserAddr<u8>>, 
+            _envp: UserAddr<UserAddr<u8>>) -> Result<(), RuntimeError> {
         let inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
-        let filename = process.pmm.get_phys_addr(filename).unwrap();
-        let filename = get_string_from_raw(filename);
-        // 获取argv
-        let argv_ptr = process.pmm.get_phys_addr(argv).unwrap();
-        let args = get_usize_vec_from_raw(argv_ptr);
-        let args: Vec<PhysAddr> = args.iter().map(
-            |x| process.pmm.get_phys_addr(VirtAddr::from(x.clone())).expect("can't transfer")
-        ).collect();
-        let args: Vec<String> = args.iter().map(|x| get_string_from_raw(x.clone())).collect();
-        let args: Vec<&str> = args.iter().map(AsRef::as_ref).collect();
+        let pmm = process.pmm.clone();
+        let filename = filename.read_string(pmm.clone());
+        let args = argv.translate_until(pmm.clone(), |x| !x.is_valid());
+        let args:Vec<String> = args.iter_mut().map(|x| x.read_string(pmm.clone())).collect();
+
+        // 读取envp
+        // let envp = argv.translate_until(pmm.clone(), |x| !x.is_valid());
+        // let envp:Vec<String> = envp.iter_mut().map(|x| x.read_string(pmm.clone())).collect();
+
         // 获取 envp
-        let envp_ptr = process.pmm.get_phys_addr(envp).unwrap();
-        let envp = get_usize_vec_from_raw(envp_ptr);
-        let envp: Vec<PhysAddr> = envp.iter().map(
-            |x| process.pmm.get_phys_addr(VirtAddr::from(x.clone())).expect("can't transfer")
-        ).collect();
-        let envp: Vec<String> = envp.iter().map(|x| get_string_from_raw(x.clone())).collect();
-        for i in envp {
-            debug!("envp: {}", i);
-        }
         let task = process.tasks[self.tid].clone().upgrade().unwrap();
         process.reset()?;
         drop(process);
         let process = inner.process.clone();
         drop(inner);
-        exec_with_process(process, task, &filename, args)?;
+        exec_with_process(process, task, &filename, args.iter().map(AsRef::as_ref).collect())?;
         Ok(())
     }
     
+    // wait task
     pub fn sys_wait4(&self, pid: usize, ptr: UserAddr<u16>, _options: usize) -> Result<(), RuntimeError> {
         let ptr = ptr.translate(self.get_pmm());
         let mut inner = self.inner.borrow_mut();
@@ -250,10 +242,10 @@ impl Task {
         inner.context.sepc -= 4;
         drop(process);
         drop(inner);
-        // switch_next();
         Err(RuntimeError::ChangeTask)
     }
     
+    // kill task
     pub fn sys_kill(&self, _pid: usize, _signum: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         debug!(
@@ -266,28 +258,28 @@ impl Task {
         Ok(())
     }
 
-    pub fn sys_futex(&self, uaddr: usize, op: u32, value: i32, value2: usize, value3: usize) -> Result<(), RuntimeError> {
-        debug!("sys_futex uaddr: {:#x} op: {:#x} value: {:#x}", uaddr, op, value);
+    // wait for futex
+    pub fn sys_futex(&self, uaddr: UserAddr<i32>, op: u32, value: i32, value2: usize, value3: usize) -> Result<(), RuntimeError> {
+        debug!("sys_futex uaddr: {:#x} op: {:#x} value: {:#x}", uaddr.bits(), op, value);
+        let uaddr_ref = uaddr.translate(self.get_pmm());
         let op = FutexFlags::from_bits_truncate(op);
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
-        let uaddr_value = VirtAddr::from(uaddr).translate(process.pmm.clone());
-        let uaddr_value = uaddr_value.tranfer::<i32>();
+
         let op = op - FutexFlags::PRIVATE;
-        debug!("futex called uaddr: {:#x}", uaddr_value);
         debug!(
             "Futex uaddr: {:#x}, op: {:?}, val: {:#x}, val2(timeout_addr): {:x}",
-            uaddr, op, value, value2,
+            uaddr.bits(), op, value, value2,
         );
         match op {
             FutexFlags::WAIT => {
-                if *uaddr_value == value {
+                if *uaddr_ref == value {
                     drop(process);
                     debug!("等待进程");
                     inner.context.x[10] = 0;
                     inner.status = TaskStatus::WAITING;
                     drop(inner);
-                    futex_wait(uaddr);
+                    futex_wait(uaddr.bits());
                     switch_next();
                 } else {
                     // *uaddr_value -= 1;
@@ -300,7 +292,7 @@ impl Task {
                 drop(process);
                 debug!("debug for ");
                 // 值为唤醒的线程数
-                let count = futex_wake(uaddr, value as usize);
+                let count = futex_wake(uaddr.bits(), value as usize);
                 inner.context.x[10] = count;
                 debug!("wake count : {}", count);
                 drop(inner);
@@ -315,11 +307,12 @@ impl Task {
         }
         if op.contains(FutexFlags::WAKE) {
             // *uaddr_value = 0;
-            futex_requeue(uaddr, value as u32, value2, value3 as u32);
+            futex_requeue(uaddr.bits(), value as u32, value2, value3 as u32);
         }
         Ok(())
     }
 
+    // kill task
     pub fn sys_tkill(&self, tid: usize, signum: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         inner.context.x[10] = 0;
