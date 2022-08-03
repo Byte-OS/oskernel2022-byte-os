@@ -23,6 +23,7 @@ use crate::interrupt::timer::set_last_ticks;
 use crate::runtime_err::RuntimeError;
 use crate::task::signal::SignalUserContext;
 use crate::task::task::Task;
+use crate::task::task_scheduler::switch_next;
 
 pub mod fd;
 pub mod task;
@@ -358,7 +359,7 @@ impl Task {
         debug!("catch");
         if let Err(err) = result {
             match err {
-                RuntimeError::KillSelfTask => {
+                RuntimeError::KillCurrentTask => {
                     kill_task(self.pid, self.tid);
                 }
                 RuntimeError::NoEnoughPage => {
@@ -379,6 +380,8 @@ impl Task {
                     warn!("文件未找到  EBADF");
                     inner.context.x[10] = EBADF;
                 }
+                // 统一处理任务切换
+                RuntimeError::ChangeTask => switch_next(),
                 _ => {
                     warn!("异常: {:?}", err);
                 }
@@ -446,7 +449,7 @@ impl Task {
         match scause.cause(){
             // 断点中断
             Trap::Exception(Exception::Breakpoint) => {
-                warn!("break中断产生 中断地址 {:#x}", sepc::read());
+                warn!("break中断产生 中断地址 {:#x}", context.sepc);
                 context.sepc = context.sepc + 2;
             },
             // 时钟中断
@@ -467,7 +470,7 @@ impl Task {
             // 用户请求
             Trap::Exception(Exception::UserEnvCall) => {
                 // 将 恢复地址 + 4 跳过调用地址
-                debug!("中断号: {} 调用地址: {:#x}", context.x[17], sepc::read());
+                debug!("中断号: {} 调用地址: {:#x}", context.x[17], context.sepc);
 
                 // 对sepc + 4
                 context.sepc += 4;
@@ -490,18 +493,18 @@ impl Task {
                 warn!("页面未对齐");
             }
             Trap::Exception(Exception::IllegalInstruction) => {
-                warn!("中断 {:#x} 地址 {:#x} stval: {:#x}", scause.bits(), sepc::read(), stval);
+                warn!("中断 {:#x} 地址 {:#x} stval: {:#x}", scause.bits(), context.sepc, stval);
                 // panic!("指令页错误");
 
             }
             Trap::Exception(Exception::InstructionPageFault) => {
-                warn!("中断 {:#x} 地址 {:#x} stval: {:#x}", scause.bits(), sepc::read(), stval);
+                warn!("中断 {:#x} 地址 {:#x} stval: {:#x}", scause.bits(), context.sepc, stval);
                 panic!("指令页错误");
             }
             // 其他情况，终止当前线程
             _ => {
-                warn!("未知 中断 {:#x} 地址 {:#x} stval: {:#x}", scause.bits(), sepc::read(), stval);
-                return Err(RuntimeError::KillSelfTask);
+                warn!("未知 中断 {:#x} 地址 {:#x} stval: {:#x}", scause.bits(), context.sepc, stval);
+                return Err(RuntimeError::KillCurrentTask);
             },
         }
     

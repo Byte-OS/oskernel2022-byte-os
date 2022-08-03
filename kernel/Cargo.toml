@@ -14,7 +14,7 @@ panic = "abort"
 [features]
 board_qemu = []
 board_k210 = []
-verbose = []
+not_debug = []
 
 [dependencies]
 riscv = { git = "https://github.com/rcore-os/riscv", features = ["inline-asm"] }

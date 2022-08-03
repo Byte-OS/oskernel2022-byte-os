@@ -13,7 +13,7 @@ impl Task {
             how,
             set,
             oldset,
-            sigsetsize,
+            _sigsetsize,
             self.tid
         );
         if oldset.is_valid() {
@@ -48,10 +48,10 @@ impl Task {
             let act = act.translate(process.pmm.clone()).tranfer::<SigAction>();
             debug!(
                 "rt_sigaction: signal={:?}, act={:?}, oldact={:?}, sigsetsize={}, thread={}",
-                signum,
+                _signum,
                 act,
                 oldact,
-                sigsetsize,
+                _sigsetsize,
                 self.tid
             );
             process.signal.copy_from(act);

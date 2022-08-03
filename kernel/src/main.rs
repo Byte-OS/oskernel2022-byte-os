@@ -35,7 +35,7 @@ use core::arch::global_asm;
 use alloc::rc::Rc;
 use riscv::register::sstatus;
 
-use crate::fs::{filetree::INode, cache::cache_file};
+use crate::{fs::{filetree::INode, cache::cache_file}, memory::page::get_free_page_num};
 
 
 mod virtio_impl;
@@ -111,8 +111,7 @@ pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
     // 输出剩余页表
     debug!("剩余页表: {}", get_free_page_num());
     // 调用rust api关机
-    // shutdown()
-    panic!("关机")
+    panic!("正常关机")
 }
 
 #[allow(unused)]

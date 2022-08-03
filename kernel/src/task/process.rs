@@ -46,8 +46,9 @@ impl Process {
         };
         // 创建默认任务
         let process = Rc::new(RefCell::new(process));
+        // 添加到子任务
         let task = Task::new(0, process.clone());
-        process.borrow_mut().tasks.push(Rc::downgrade(&task));
+        // process.borrow_mut().tasks.push(Rc::downgrade(&task));
         Ok((process, task))
     }
 

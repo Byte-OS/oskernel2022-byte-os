@@ -3,7 +3,7 @@ use alloc::string::String;
 use alloc::rc::{Rc, Weak};
 use hashbrown::HashMap;
 
-use crate::task::task_scheduler::{add_task_to_scheduler, get_task};
+use crate::task::task_scheduler::{add_task_to_scheduler, get_task, get_task_num};
 use crate::task::task_scheduler::switch_next;
 use crate::task::task_scheduler::get_current_task;
 use crate::task::process::Process;
@@ -37,7 +37,6 @@ bitflags! {
 impl Task {
     pub fn sys_exit(&self, exit_code: usize) -> Result<(), RuntimeError> {
         let inner = self.inner.borrow();
-        // if self.tid is zero, then kill the process
         if self.tid == 0 {
             inner.process.borrow_mut().exit(exit_code);
         } else {
@@ -48,17 +47,12 @@ impl Task {
         if clear_child_tid.is_valid() {
             *clear_child_tid.translate(self.get_pmm()) = 0;
         }
-        Err(RuntimeError::ChangeTask)
+        Err(RuntimeError::KillCurrentTask)
     }
     
     pub fn sys_exit_group(&self, exit_code: usize) -> Result<(), RuntimeError> {
         let inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
-        // let exit_code = if exit_code == usize::MAX {
-        //     0
-        // } else {
-        //     exit_code
-        // };
         process.exit(exit_code);
         debug!("exit_code: {:#x}", exit_code);
         Err(RuntimeError::ChangeTask)
@@ -160,7 +154,7 @@ impl Task {
         drop(process);
         drop(child_process);
         drop(inner);
-        switch_next();
+        // switch_next();
         // suspend_and_run_next();
         Err(RuntimeError::ChangeTask)
     }
@@ -184,6 +178,7 @@ impl Task {
         let ptid_ref = ptid.translate(process.pmm.clone()).tranfer::<u32>();
         
         let ctid = process.tasks.len();
+        debug!("ctid : {}", ctid);
         drop(process);
 
         let new_task = Task::new(ctid, inner.process.clone());
@@ -196,13 +191,15 @@ impl Task {
         // 添加到process
         inner.context.x[10] = ctid;
         
-        debug!("tasks: len {}", TASK_SCHEDULER.force_get().queue.len());
+        debug!("tasks: len {}", get_task_num());
 
         drop(new_task_inner);
         drop(inner);
         *ptid_ref = ctid as u32;
+        // 执行 set_tid_address
         new_task.set_tid_address(ctid_ptr);
-        Err(RuntimeError::ChangeTask)
+        // just finish clone, not change task
+        Ok(())
     }
     
     pub fn sys_execve(&self, filename: VirtAddr, argv: VirtAddr, envp: VirtAddr) -> Result<(), RuntimeError> {
@@ -225,8 +222,8 @@ impl Task {
             |x| process.pmm.get_phys_addr(VirtAddr::from(x.clone())).expect("can't transfer")
         ).collect();
         let envp: Vec<String> = envp.iter().map(|x| get_string_from_raw(x.clone())).collect();
-        for _ in envp {
-            debug!("envp: {}", _);
+        for i in envp {
+            debug!("envp: {}", i);
         }
         let task = process.tasks[self.tid].clone().upgrade().unwrap();
         process.reset()?;
@@ -253,7 +250,7 @@ impl Task {
         inner.context.sepc -= 4;
         drop(process);
         drop(inner);
-        switch_next();
+        // switch_next();
         Err(RuntimeError::ChangeTask)
     }
     
@@ -282,7 +279,6 @@ impl Task {
             "Futex uaddr: {:#x}, op: {:?}, val: {:#x}, val2(timeout_addr): {:x}",
             uaddr, op, value, value2,
         );
-        debug!("stasks {}", TASK_SCHEDULER.force_get().queue.len());
         match op {
             FutexFlags::WAIT => {
                 if *uaddr_value == value {

@@ -41,19 +41,19 @@ impl Context {
 
 // break中断
 fn breakpoint(context: &mut Context) {
-    warn!("break中断产生 中断地址 {:#x}", sepc::read());
+    warn!("break中断产生 中断地址 {:#x}", context.sepc);
     context.sepc = context.sepc + 2;
 }
 
 // 中断错误
 fn fault(_context: &mut Context, _scause: Scause, _stval: usize) {
-    debug!("中断 {:#x} 地址 {:#x} stval: {:#x}", _scause.bits(), sepc::read(), _stval);
+    debug!("中断 {:#x} 地址 {:#x} stval: {:#x}", _scause.bits(), _context.sepc, _stval);
     panic!("未知中断")
 }
 
 // 处理缺页异常
-fn handle_page_fault(_stval: usize) {
-    warn!("缺页中断触发 缺页地址: {:#x} 触发地址:{:#x} 已同步映射", _stval, sepc::read());
+fn handle_page_fault(_context: &mut Context, _stval: usize) {
+    warn!("缺页中断触发 缺页地址: {:#x} 触发地址:{:#x} 已同步映射", _stval, _context.sepc);
     panic!("end");
 }
 
@@ -67,12 +67,12 @@ fn kernel_callback(context: &mut Context, scause: Scause, stval: usize) -> usize
         // 时钟中断
         Trap::Interrupt(Interrupt::SupervisorTimer) => timer::timer_handler(),
         // 缺页异常
-        Trap::Exception(Exception::StorePageFault) => handle_page_fault(stval),
+        Trap::Exception(Exception::StorePageFault) => handle_page_fault(context, stval),
         // 加载页面错误
         Trap::Exception(Exception::LoadPageFault) => {
             panic!("加载权限异常 地址:{:#x}", stval)
         },
-        Trap::Exception(Exception::InstructionPageFault) => handle_page_fault(stval),
+        Trap::Exception(Exception::InstructionPageFault) => handle_page_fault(context, stval),
         // 页面未对齐异常
         Trap::Exception(Exception::StoreMisaligned) => {
             info!("页面未对齐");

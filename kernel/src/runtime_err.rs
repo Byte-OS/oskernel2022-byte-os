@@ -10,7 +10,9 @@ pub enum RuntimeError {
     // 没有对应的fd
     NoMatchedFileDesc,
     // 杀死当前任务
-    KillSelfTask,
+    KillCurrentTask,
+    // 杀死当前进程,
+    KillCurrentProc,
     // 触发EBADF
     EBADF,
     // 信号返回程序

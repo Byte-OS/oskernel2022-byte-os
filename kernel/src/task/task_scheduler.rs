@@ -32,13 +32,16 @@ impl TaskScheduler {
     }
 
     // 执行第一个任务
+    /// 进行调度更新
     pub fn start(&mut self) {
         loop {
+            // 没有任务时从任务队列取出任务
             if self.queue.len() == 0 {
                 if !load_next_task() {
                     break;
                 }
             }
+            // TODO: 判断是否存在等待中的任务 如果存在就切换任务
             debug!("tasks len: {}", self.queue.len());
             let task = self.queue[0].clone();
             self.is_run = true;
@@ -119,4 +122,11 @@ pub fn switch_to_task(pid: usize, tid: usize) {
             break;
         }
     }
+}
+
+// 获取当前的任务数量
+pub fn get_task_num() -> usize {
+    let mut task_scheduler = TASK_SCHEDULER.force_get();
+
+    task_scheduler.queue.len()
 }
