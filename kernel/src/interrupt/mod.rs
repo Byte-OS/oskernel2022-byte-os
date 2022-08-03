@@ -6,14 +6,8 @@ use riscv::register::scause::Trap;
 use riscv::register::scause::Exception;
 use riscv::register::scause::Interrupt;
 use riscv::register::scause::Scause;
-use riscv::register::sepc;
 
 pub use timer::TICKS;
-
-use crate::memory::addr::VirtAddr;
-use crate::memory::addr::PhysAddr;
-use crate::memory::page_table::PTEFlags;
-use crate::memory::page_table::KERNEL_PAGE_MAPPING;
 
 
 #[repr(C)]
@@ -52,20 +46,15 @@ fn breakpoint(context: &mut Context) {
 }
 
 // 中断错误
-fn fault(_context: &mut Context, scause: Scause, stval: usize) {
-    debug!("中断 {:#x} 地址 {:#x} stval: {:#x}", scause.bits(), sepc::read(), stval);
+fn fault(_context: &mut Context, _scause: Scause, _stval: usize) {
+    debug!("中断 {:#x} 地址 {:#x} stval: {:#x}", _scause.bits(), sepc::read(), _stval);
     panic!("未知中断")
 }
 
 // 处理缺页异常
-fn handle_page_fault(stval: usize) {
-    warn!("缺页中断触发 缺页地址: {:#x} 触发地址:{:#x} 已同步映射", stval, sepc::read());
+fn handle_page_fault(_stval: usize) {
+    warn!("缺页中断触发 缺页地址: {:#x} 触发地址:{:#x} 已同步映射", _stval, sepc::read());
     panic!("end");
-    KERNEL_PAGE_MAPPING.lock().add_mapping(PhysAddr::from(stval).into(), 
-        VirtAddr::from(stval).into(), PTEFlags::VRWX).expect("缺页处理异常");
-    unsafe{
-        asm!("sfence.vma {x}", x = in(reg) stval)
-    };
 }
 
 // 内核中断回调

@@ -3,7 +3,6 @@ use core::slice;
 use alloc::string::String;
 use alloc::vec::Vec;
 use alloc::rc::Rc;
-use riscv::register::sepc;
 use riscv::register::scause;
 use riscv::register::scause::Trap;
 use riscv::register::scause::Exception;
@@ -14,7 +13,7 @@ use riscv::register::sstatus;
 use crate::memory::page_table::PageMappingManager;
 use crate::memory::addr::VirtAddr;
 use crate::memory::addr::PhysAddr;
-use crate::interrupt::{Context, timer};
+use crate::interrupt::timer;
 use crate::fs::filetree::INode;
 use crate::task::task_scheduler::kill_task;
 use crate::sys_call::consts::EBADF;
@@ -158,6 +157,7 @@ pub struct UTSname  {
 
 // 文件Dirent结构
 #[repr(C)]
+#[allow(unused)]
 struct Dirent {
     d_ino: u64,	        // 索引结点号
     d_off: u64,	        // 到下一个dirent的偏移
@@ -390,18 +390,17 @@ impl Task {
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
         let handler = process.signal.handler;
-        debug!("signal handler: {:#x}  pid: {}  tid: {}", handler, self.pid, self.tid);
         // 保存上下文
         let mut temp_context = inner.context.clone();
         let pmm = process.pmm.clone();
-        let ucontext = process.heap.get_temp(pmm).tranfer::<SignalUserContext>();
+        // 获取临时页表 对数据进行处理
+        let ucontext = process.heap.get_temp(pmm)?.tranfer::<SignalUserContext>();
         // 中断正在处理中
         if ucontext.context.x[0] != 0 {
             return Ok(());
         }
         let restorer = process.signal.restorer;
-        let flags = SignalFlag::from_bits_truncate(process.signal.flags);
-        debug!("signal flags: {:?}", flags);
+        let _flags = SignalFlag::from_bits_truncate(process.signal.flags);
         
         drop(process);
         inner.context.sepc = handler;
@@ -411,28 +410,16 @@ impl Task {
         inner.context.x[12] = 0xe0000000;
         ucontext.context.clone_from(&temp_context);
         ucontext.context.x[0] = ucontext.context.sepc;
-        debug!("回调地址: {:#x}", ucontext.context.sepc);
         drop(inner);
 
         loop {
             self.run();
             if let Err(RuntimeError::SigReturn) = self.interrupt() {
                 break;
-                debug!("切换任务");
             }
         }
-        debug!("信号处理完毕");
         // 修改回调地址
-        debug!("恢复回调地址: {:#x}", ucontext.context.x[0]);
         temp_context.sepc = ucontext.context.x[0];
-        // panic!("signal exit");
-        // loop {
-        //     self.run();
-        //     let result = self.interrupt();
-        //     if let Err(RuntimeError::ChangeTask ) = result {
-        //         break;
-        //     }
-        // }
 
         // 恢复上下文 并 移除临时页
         let mut inner = self.inner.borrow_mut();

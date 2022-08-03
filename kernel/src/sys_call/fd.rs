@@ -200,83 +200,10 @@ impl Task {
     }
     // 获取文件信息
     pub fn sys_getdents(&self, _fd: usize, _ptr: usize, _len: usize) -> Result<(), RuntimeError> {
-        // let mut inner = self.inner.borrow_mut();
-        // let process = inner.process.borrow_mut();
-
-        // // 获取参数
-        // let start_ptr = usize::from(process.pmm.get_phys_addr(VirtAddr::from(ptr)).unwrap());
-        // let mut buf_ptr = start_ptr;
-        // let value = if let Some(file_tree_node) = process.fd_table.get(fd) {
-        //     match &mut file_tree_node.lock().target {
-        //         FileDescEnum::File(file_tree_node) => {
-        //             // 添加 . 和 ..
-        //             {
-        //                 let sub_node_name = ".";
-        //                 let dirent = unsafe { (buf_ptr as *mut Dirent).as_mut().unwrap() };
-        //                 // 计算大小保证内存对齐
-        //                 let node_size = ((18 + sub_node_name.len() as u16 + 1 + 15) / 16) * 16;
-        //                 dirent.d_ino = 0;
-        //                 dirent.d_off = 0;
-        //                 dirent.d_reclen = node_size;
-        //                 dirent.d_type = 0;
-        //                 let buf_str = unsafe {
-        //                     slice::from_raw_parts_mut(&mut dirent.d_name_start as *mut u8, (node_size - 18) as usize)
-        //                 };
-        //                 write_string_to_raw(buf_str, sub_node_name);
-        //                 buf_ptr = buf_ptr + dirent.d_reclen as usize;
-        //             }
-        //             {
-        //                 let sub_node_name = "..";
-        //                 let dirent = unsafe { (buf_ptr as *mut Dirent).as_mut().unwrap() };
-        //                 // 计算大小保证内存对齐
-        //                 let node_size = ((18 + sub_node_name.len() as u16 + 1 + 15) / 16) * 16;
-        //                 dirent.d_ino = 0;
-        //                 dirent.d_off = 0;
-        //                 dirent.d_reclen = node_size;
-        //                 dirent.d_type = 0;
-        //                 let buf_str = unsafe {
-        //                     slice::from_raw_parts_mut(&mut dirent.d_name_start as *mut u8, (node_size - 18) as usize)
-        //                 };
-        //                 write_string_to_raw(buf_str, sub_node_name);
-        //                 buf_ptr = buf_ptr + dirent.d_reclen as usize;
-        //             }
-        //             // 添加目录中的其他文件
-        //             let sub_nodes = file_tree_node.get_children();
-        //             for i in 0..sub_nodes.len() {
-        //                 let sub_node_name = sub_nodes[i].get_filename();
-        //                 let dirent = unsafe { (buf_ptr as *mut Dirent).as_mut().unwrap() };
-        //                 // 计算大小保证内存对齐
-        //                 let node_size = ((18 + sub_node_name.len() as u16 + 1 + 15) / 16) * 16;
-        //                 dirent.d_ino = (i+2) as u64;
-        //                 dirent.d_off = (i+2) as u64;
-        //                 dirent.d_reclen = node_size;
-        //                 dirent.d_type = 0;
-        //                 let buf_str = unsafe {
-        //                     slice::from_raw_parts_mut(&mut dirent.d_name_start as *mut u8, (node_size - 18) as usize)
-        //                 };
-        //                 write_string_to_raw(buf_str, &sub_node_name);
-        //                 buf_ptr = buf_ptr + dirent.d_reclen as usize;
-        //                 // 保证缓冲区不会溢出
-        //                 if buf_ptr - start_ptr >= len {
-        //                     break;
-        //                 }
-        //             }
-        //             buf_ptr - start_ptr
-        //         },
-        //         _ => {
-        //             SYS_CALL_ERR
-        //         }
-        //     }
-        // } else {
-        //     SYS_CALL_ERR
-        // };
-        // drop(process);
-        // inner.context.x[10] = value;
-        // Ok(())
-        todo!()
+        todo!("getdents")
     }
 
-    pub fn sys_statfs(&self, fd: usize, buf_ptr: VirtAddr) -> Result<(), RuntimeError> {
+    pub fn sys_statfs(&self, _fd: usize, buf_ptr: VirtAddr) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
 
@@ -416,7 +343,7 @@ impl Task {
     }
 
     // 获取文件信息
-    pub fn sys_fstatat(&self, dir_fd: usize, filename: VirtAddr, stat_ptr: usize, flags: usize) -> Result<(), RuntimeError> {
+    pub fn sys_fstatat(&self, dir_fd: usize, filename: VirtAddr, stat_ptr: usize, _flags: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
 
@@ -485,12 +412,9 @@ impl Task {
 
     pub fn sys_pread(&self, fd: usize, ptr: VirtAddr, len: usize, offset: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
-        let mut process = inner.process.borrow_mut();
+        let process = inner.process.borrow_mut();
         let buf = get_buf_from_phys_addr(ptr.translate(process.pmm.clone()), len);
         let file = process.fd_table.get_file(fd)?;
-        // let curr_offset = file.lseek(0, 1);
-        // let ret = file.read_at(offset, buf);
-        // file.lseek(curr_offset, 0);
         let ret = file.read_at(offset, buf);
         drop(process);
         inner.context.x[10] = ret;

@@ -8,6 +8,7 @@ use crate::memory::addr::PhysAddr;
 use crate::runtime_err::RuntimeError;
 
 use super::addr::PhysPageNum;
+use super::addr::UserAddr;
 use super::addr::VirtAddr;
 use super::page_table::PageMappingManager;
 
@@ -15,9 +16,6 @@ const USIZE_PER_PAGES: usize = PAGE_SIZE / size_of::<usize>();
 
 #[cfg(not(feature = "board_k210"))]
 const ADDR_END: usize = 0x81fe0000;
-
-#[cfg(feature = "board_k210")]
-const ADDR_END: usize = 0x80800000;
 
 // 内存页分配器
 pub struct MemoryPageAllocator {
@@ -42,7 +40,6 @@ impl MemoryPageAllocator {
     fn init(&mut self, start: usize, end: usize) {
         self.start = start;
         self.end = end;
-        info!("end: {:#x}", end);
         self.pages = vec![false;(end - start) / PAGE_SIZE];
         info!("初始化页式内存管理, 页表数: {}", self.pages.capacity());
     }
@@ -61,6 +58,7 @@ impl MemoryPageAllocator {
     }
 
     // 取消分配页
+    #[allow(unused)]
     pub fn dealloc(&mut self, page: PhysPageNum) {
         let index = usize::from(page) - (self.start >> 12); 
         if let Some(_) = self.pages.get(index) {
@@ -94,30 +92,6 @@ impl MemoryPageAllocator {
         // alloc_more_front(pages)
     }
 
-    // 从前方申请内存
-    pub fn alloc_more_front(&mut self, pages: usize) -> Result<PhysPageNum, RuntimeError> {
-        let mut i = 0;
-        let mut value = 0;
-        loop {
-            if !self.pages[i] {
-                value += 1;
-            } else {
-                value = 0;
-            }
-            // 进行下一个计算
-            i+=1;
-            if value >= pages {
-                let i = i - pages + 1;
-                self.pages[i..i+pages].fill(true);
-                let page = PhysPageNum::from((self.start >> 12) + i);
-                init_pages(page, pages);
-                return Ok(page);
-            }
-            if i > self.pages.len() { break; }
-        }
-        Err(RuntimeError::NoEnoughPage)
-    }
-
     // 释放多个页
     pub fn dealloc_more(&mut self, page: PhysPageNum, pages: usize) {
         let index = usize::from(page) - (self.start >> 12); 
@@ -137,20 +111,8 @@ pub fn init_pages(page: PhysPageNum, num: usize) {
     unsafe { from_raw_parts_mut(PhysAddr::from(page).0 as *mut usize, USIZE_PER_PAGES * num) }.fill(0);
 }
 
-pub fn alloc() -> Result<PhysPageNum, RuntimeError> {
-    PAGE_ALLOCATOR.lock().alloc()
-}
-
 pub fn alloc_more(pages: usize) -> Result<PhysPageNum, RuntimeError> {
     PAGE_ALLOCATOR.lock().alloc_more(pages)
-}
-
-pub fn alloc_more_front(pages: usize) -> Result<PhysPageNum, RuntimeError> {
-    PAGE_ALLOCATOR.lock().alloc_more_front(pages)
-}
-
-pub fn dealloc(page: PhysPageNum) {
-    PAGE_ALLOCATOR.lock().dealloc(page)
 }
 
 pub fn dealloc_more(page: PhysPageNum, pages: usize) {
@@ -166,22 +128,16 @@ pub fn get_free_page_num() -> usize {
     }
     last_pages
 }
-
-#[inline]
-pub fn get_mut_from_virt_addr<'a, T>(pmm: Rc<PageMappingManager>, addr: VirtAddr) -> Result<&'a mut T, RuntimeError>{
-    let result = pmm.get_phys_addr(addr)?.0 as *mut T;
-    Ok(unsafe {result.as_mut().unwrap()})
-}
-
-#[inline]
-pub fn get_ptr_from_virt_addr<'a, T>(pmm: Rc<PageMappingManager>, addr: VirtAddr) -> Result<*mut T, RuntimeError>{
-    Ok(pmm.get_phys_addr(addr)?.0 as *mut T)
-}
-
 pub fn init() {
     extern "C"{
         fn end();
     }
     // 初始化页表 Vector中每一个元素代表一个页表 通过这种方法来分配页表
     PAGE_ALLOCATOR.lock().init(end as usize, ADDR_END);
+}
+
+impl<T> UserAddr<T> {
+    pub fn translate(&self, pmm: Rc<PageMappingManager>) -> &'static mut T{
+        VirtAddr::from(self.0 as usize).translate(pmm).tranfer::<T>()
+    }
 }

@@ -53,7 +53,8 @@ impl Process {
 
     // 进程进行等待
     pub fn wait(&self) {
-        let task = self.get_task(0);
+        // TODO: 进程进入等待状态  等待目标进程结束
+        // let task = self.get_task(0);
         // task.inner.borrow_mut().status = TaskStatus::WAITING;
     }
 

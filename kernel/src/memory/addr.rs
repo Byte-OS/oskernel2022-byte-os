@@ -7,8 +7,6 @@ use core::mem::size_of;
 
 use alloc::{rc::Rc, vec::Vec};
 
-use crate::task::fd_table::IoVec;
-
 use super::page_table::PageMappingManager;
 
 pub const PAGE_SIZE: usize = 4096;
@@ -303,4 +301,19 @@ pub fn get_buf_from_phys_addr<'a>(phys_ptr: PhysAddr, size: usize) -> &'a mut[u8
 
 pub fn get_buf_from_phys_page<'a>(phys_page: PhysPageNum, pages: usize) -> &'a mut[u8] {
     get_buf_from_phys_addr(phys_page.into(), pages * PAGE_SIZE)
+}
+
+#[derive(Clone, Copy)]
+pub struct UserAddr<T>(pub *mut T);
+
+impl<T> UserAddr<T> {
+    pub fn is_valid(&self) -> bool {
+        self.0 as usize != 0
+    }
+}
+
+impl<T> From<usize> for UserAddr<T> {
+    fn from(addr: usize) -> Self {
+        Self(addr as _)
+    }
 }

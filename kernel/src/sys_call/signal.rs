@@ -5,7 +5,7 @@ use crate::runtime_err::RuntimeError;
 use crate::memory::addr::VirtAddr;
 
 impl Task {
-    pub fn sys_sigprocmask(&self, how: u32, set: VirtAddr, oldset: VirtAddr, sigsetsize: usize) -> Result<(), RuntimeError> {
+    pub fn sys_sigprocmask(&self, how: u32, set: VirtAddr, oldset: VirtAddr, _sigsetsize: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
         debug!(
@@ -37,7 +37,7 @@ impl Task {
         Ok(())
     }
 
-    pub fn sys_sigaction(&self, signum: usize, act: VirtAddr, oldact: VirtAddr, sigsetsize: usize) -> Result<(), RuntimeError> {
+    pub fn sys_sigaction(&self, _signum: usize, act: VirtAddr, oldact: VirtAddr, _sigsetsize: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
         if oldact.is_valid() {

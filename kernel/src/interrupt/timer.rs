@@ -1,13 +1,11 @@
 use crate::sync::mutex::Mutex;
 use crate::sbi::set_timer;
-use riscv::register::{sie, sstatus, time};
+use riscv::register::{sie, time};
 
 #[cfg(not(feature = "board_k210"))]
 const CLOCK_FREQ: usize = 12500000;
 
 
-#[cfg(feature = "board_k210")]
-const CLOCK_FREQ: usize = 403000000 / 62;
 const CHANGE_TASK_TICKS: usize = 10;
 
 const INTERVAL: usize = CLOCK_FREQ / 100;

@@ -181,8 +181,8 @@ impl Task {
         Ok(())
     }
 
-    pub fn sys_fcntl(&self, fd: usize, cmd: usize, arg: usize) -> Result<(), RuntimeError> {
-        debug!("val: fd {}  cmd {:#x} arg {:#x}", fd, cmd, arg);
+    pub fn sys_fcntl(&self, fd: usize, cmd: usize, _arg: usize) -> Result<(), RuntimeError> {
+        debug!("val: fd {}  cmd {:#x} arg {:#x}", fd, cmd, _arg);
         let mut inner = self.inner.borrow_mut();
         // let node = self.map.get_mut(&fd).ok_or(SysError::EBADF)?;
         if fd >= 50 {
@@ -194,8 +194,8 @@ impl Task {
                 3 => {
                     inner.context.x[10] = 0o4000;
                 },
-                n => {
-                    debug!("not imple {}", n);
+                _n => {
+                    debug!("not imple {}", _n);
                 },
             };
         }

@@ -1,7 +1,4 @@
-use alloc::string::String;
-
 use crate::console::puts;
-
 use super::file::FileOP;
 
 pub struct StdIn;
@@ -19,19 +16,19 @@ impl FileOP for StdIn {
         false
     }
 
-    fn read(&self, data: &mut [u8]) -> usize {
+    fn read(&self, _data: &mut [u8]) -> usize {
         todo!()
     }
 
-    fn write(&self, data: &[u8], count: usize) -> usize {
+    fn write(&self, _data: &[u8], _count: usize) -> usize {
         todo!()
     }
 
-    fn read_at(&self, pos: usize, data: &mut [u8]) -> usize {
+    fn read_at(&self, _pos: usize, _data: &mut [u8]) -> usize {
         todo!()
     }
 
-    fn write_at(&self, pos: usize, data: &[u8], count: usize) -> usize {
+    fn write_at(&self, _pos: usize, _data: &[u8], _count: usize) -> usize {
         todo!()
     }
 
@@ -49,20 +46,20 @@ impl FileOP for StdOut {
         true
     }
 
-    fn read(&self, data: &mut [u8]) -> usize {
+    fn read(&self, _data: &mut [u8]) -> usize {
         0
     }
 
-    fn write(&self, data: &[u8], count: usize) -> usize {
+    fn write(&self, data: &[u8], _count: usize) -> usize {
         puts(data);
         data.len()
     }
 
-    fn read_at(&self, pos: usize, data: &mut [u8]) -> usize {
+    fn read_at(&self, _pos: usize, _data: &mut [u8]) -> usize {
         0
     }
 
-    fn write_at(&self, pos: usize, data: &[u8], count: usize) -> usize {
+    fn write_at(&self, _pos: usize, data: &[u8], _count: usize) -> usize {
         puts(data);
         data.len()
     }
@@ -81,20 +78,20 @@ impl FileOP for StdErr {
         true
     }
 
-    fn read(&self, data: &mut [u8]) -> usize {
+    fn read(&self, _data: &mut [u8]) -> usize {
         todo!()
     }
 
-    fn write(&self, data: &[u8], count: usize) -> usize {
+    fn write(&self, _data: &[u8], count: usize) -> usize {
         error!("data: {}", unsafe { String::from_utf8_unchecked(data.to_vec()) });
         count
     }
 
-    fn read_at(&self, pos: usize, data: &mut [u8]) -> usize {
+    fn read_at(&self, _pos: usize, _data: &mut [u8]) -> usize {
         todo!()
     }
 
-    fn write_at(&self, pos: usize, data: &[u8], count: usize) -> usize {
+    fn write_at(&self, _pos: usize, _data: &[u8], _count: usize) -> usize {
         todo!()
     }
 
@@ -117,16 +114,16 @@ impl FileOP for StdZero {
         data.len()
     }
 
-    fn write(&self, data: &[u8], count: usize) -> usize {
+    fn write(&self, _data: &[u8], _count: usize) -> usize {
         todo!()
     }
 
-    fn read_at(&self, pos: usize, data: &mut [u8]) -> usize {
+    fn read_at(&self, _pos: usize, data: &mut [u8]) -> usize {
         data.fill(0);
         data.len()
     }
 
-    fn write_at(&self, pos: usize, data: &[u8], count: usize) -> usize {
+    fn write_at(&self, _pos: usize, _data: &[u8], _count: usize) -> usize {
         todo!()
     }
 
@@ -144,19 +141,19 @@ impl FileOP for StdNull {
         true
     }
 
-    fn read(&self, data: &mut [u8]) -> usize {
+    fn read(&self, _data: &mut [u8]) -> usize {
         0
     }
 
-    fn write(&self, data: &[u8], count: usize) -> usize {
+    fn write(&self, _data: &[u8], count: usize) -> usize {
         count
     }
 
-    fn read_at(&self, pos: usize, data: &mut [u8]) -> usize {
+    fn read_at(&self, _pos: usize, _data: &mut [u8]) -> usize {
         0
     }
 
-    fn write_at(&self, pos: usize, data: &[u8], count: usize) -> usize {
+    fn write_at(&self, _pos: usize, _data: &[u8], count: usize) -> usize {
         count
     }
 

@@ -11,8 +11,6 @@ static mut HEAP: [u8;HEAP_SIZE] = [0;HEAP_SIZE];
 #[global_allocator]
 static HEAP_ALLOCATOR: LockedHeap<64> = LockedHeap::empty();
 
-#[cfg(feature = "board_k210")]
-const PROGRAM_START:usize = 0x80020000;
 #[cfg(not(feature = "board_k210"))]
 const PROGRAM_START:usize = 0x80200000;
 

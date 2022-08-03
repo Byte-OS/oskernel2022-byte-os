@@ -72,9 +72,5 @@ pub fn init() {
     unsafe {
         BLK_CONTROL.add(VIRTIO0);
     }
-    #[cfg(feature = "board_k210")]
-    unsafe {
-        BLK_CONTROL.add_sdcard();
-    }
     info!("初始化设备");
 }

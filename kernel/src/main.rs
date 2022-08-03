@@ -35,7 +35,7 @@ use core::arch::global_asm;
 use alloc::rc::Rc;
 use riscv::register::sstatus;
 
-use crate::{fs::{filetree::INode, cache::cache_file}, memory::page::get_free_page_num};
+use crate::fs::{filetree::INode, cache::cache_file};
 
 
 mod virtio_impl;
@@ -63,11 +63,6 @@ fn clear_bss() {
 pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
     // // 保证仅有一个核心工作
     #[cfg(not(debug_assertions))]
-    if hart_id != 0 {
-        sbi::hart_suspend(0x00000000, support_hart_resume as usize, 0);
-    }
-
-    #[cfg(feature = "board_k210")]
     if hart_id != 0 {
         sbi::hart_suspend(0x00000000, support_hart_resume as usize, 0);
     }
@@ -120,7 +115,8 @@ pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
     panic!("关机")
 }
 
-
+#[allow(unused)]
+/// 暂时不使用  目前只使用单核
 extern "C" fn support_hart_resume(hart_id: usize, _param: usize) {
     info!("核心 {} 作为辅助核心进行等待", hart_id);
     loop {} // 进入循环
@@ -129,7 +125,6 @@ extern "C" fn support_hart_resume(hart_id: usize, _param: usize) {
 
 // 打印目录树
 pub fn print_file_tree(node: Rc<INode>) {
-    // info!("is root {:?}", node.is_root());
     info!("{}", node.get_pwd());
     print_file_tree_back(node, 0);
 }

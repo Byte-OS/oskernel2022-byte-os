@@ -7,7 +7,7 @@ use crate::interrupt::timer::TimeSpec;
 use crate::memory::mem_map::MemMap;
 use crate::runtime_err::RuntimeError;
 use crate::memory::addr::{get_buf_from_phys_page, get_pages_num, PAGE_SIZE, VirtAddr, PhysAddr};
-use crate::memory::page::{alloc_more, alloc_more_front};
+use crate::memory::page::alloc_more;
 use crate::memory::page_table::{PageMappingManager, PTEFlags};
 
 use super::filetree::INode;
@@ -147,28 +147,17 @@ impl File {
         buf[..len].clone_from_slice(&inner.buf[offset..offset + len]);
     }
 
-    pub fn mmap(&self, pmm: Rc<PageMappingManager>, virt_addr: VirtAddr) {
+    pub fn mmap(&self, pmm: Rc<PageMappingManager>, virt_addr: VirtAddr) -> Result<(), RuntimeError>{
         let inner = self.0.borrow_mut();
-        let mem_map = inner.mem_map.clone().expect("没有申请页面");
-        // for i in 0..mem_map.page_num {
-        //     let addr = pmm.get_phys_addr(virt_addr + VirtAddr::from(i * 0x1000)).unwrap();
-        //     // info!("获取addr: {:#x}", addr.0);
-        // }
-        pmm.add_mapping_range(mem_map.ppn.into(), virt_addr, mem_map.page_num * PAGE_SIZE, PTEFlags::UVRWX);
+        let mem_map = inner.mem_map.clone().ok_or(RuntimeError::NoMatchedFile)?;
+        pmm.add_mapping_range(mem_map.ppn.into(), virt_addr, mem_map.page_num * PAGE_SIZE, PTEFlags::UVRWX)
     }
 
     pub fn lseek(&self, offset: usize, whence: usize) -> usize {
-        let inode = self.get_inode();
         let mut inner = self.0.borrow_mut();
-        debug!("file is vaild: {}", inode.is_valid());
         if offset > 0x80000 {
             return offset;
         }
-        // 判断文件节点是否存在
-        // if !inode.is_valid() {
-        //     return offset;
-        // }
-        debug!("seek: {}, {}   file_size: {} offset: {}", offset, whence, inner.file_size, inner.offset);
         inner.offset = match whence {
             // SEEK_SET
             0 => { 
@@ -252,7 +241,7 @@ impl FileOP for File {
         len
     }
 
-    fn write_at(&self, pos: usize, data: &[u8], count: usize) -> usize {
+    fn write_at(&self, _pos: usize, _data: &[u8], _count: usize) -> usize {
         todo!()
     }
 

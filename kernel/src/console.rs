@@ -1,10 +1,9 @@
 
 
-use core::{fmt::{Write, Result, Arguments}};
+use core::fmt::{Write, Result, Arguments};
 
 use crate::sbi::*;
 
-// 定义宏
 #[macro_export]
 macro_rules! print {
     ($fmt: literal $(, $($arg: tt)+)?) => {
@@ -12,37 +11,34 @@ macro_rules! print {
     }
 }
 
-// #[macro_export]
-// macro_rules! info {
-//     ($fmt: literal $(, $($arg: tt)+)?) => {
-//         $crate::console::print(format_args!(concat!("\x1b[1;34m", "[INFO] ", $fmt, "\x1b[0m", "\n") $(, $($arg)+)?));
-//     }
-// }
 #[macro_export]
 macro_rules! info {
     ($fmt: literal $(, $($arg: tt)+)?) => {
-        $crate::console::print(format_args!(concat!("[INFO] ", $fmt, "\n") $(, $($arg)+)?));
+        $crate::console::print(format_args!(concat!("\x1b[1;34m", "[INFO] ", $fmt, "\x1b[0m", "\n") $(, $($arg)+)?));
     }
 }
 
 #[macro_export]
 macro_rules! warn {
     ($fmt: literal $(, $($arg: tt)+)?) => {
-        // $crate::console::print(format_args!(concat!("\x1b[1;33m", "[WARN] ", $fmt, "\x1b[0m", "\n") $(, $($arg)+)?));
+        #[cfg(feature = "verbose")]
+        $crate::console::print(format_args!(concat!("\x1b[1;33m", "[WARN] ", $fmt, "\x1b[0m", "\n") $(, $($arg)+)?));
     }
 }
 
 #[macro_export]
 macro_rules! debug {
     ($fmt: literal $(, $($arg: tt)+)?) => {
-        // $crate::console::print(format_args!(concat!("\x1b[1;31m", "[DEBUG] ", $fmt, "\x1b[0m", "\n") $(, $($arg)+)?));
+        #[cfg(feature = "verbose")]
+        $crate::console::print(format_args!(concat!("\x1b[1;31m", "[DEBUG] ", $fmt, "\x1b[0m", "\n") $(, $($arg)+)?));
     }
 }
 
 #[macro_export]
 macro_rules! error {
     ($fmt: literal $(, $($arg: tt)+)?) => {
-        // $crate::console::print(format_args!(concat!("\x1b[1;31m", "[ERROR] ", $fmt, "\x1b[0m", "\n") $(, $($arg)+)?));
+        #[cfg(feature = "verbose")]
+        $crate::console::print(format_args!(concat!("\x1b[1;31m", "[ERROR] ", $fmt, "\x1b[0m", "\n") $(, $($arg)+)?));
     }
 }
 

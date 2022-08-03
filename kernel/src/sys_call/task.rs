@@ -5,19 +5,15 @@ use hashbrown::HashMap;
 
 use crate::task::task_scheduler::{add_task_to_scheduler, get_task};
 use crate::task::task_scheduler::switch_next;
-use crate::task::task_scheduler::TASK_SCHEDULER;
-use crate::task::task_scheduler::kill_task;
 use crate::task::task_scheduler::get_current_task;
 use crate::task::process::Process;
 use crate::task::pid::get_next_pid;
 use crate::task::task::Task;
 use crate::task::{exec_with_process, UserHeap};
 use crate::runtime_err::RuntimeError;
-use crate::memory::addr::PhysAddr;
+use crate::memory::addr::{PhysAddr, UserAddr};
 use crate::memory::addr::VirtAddr;
-use crate::memory::page::get_ptr_from_virt_addr;
 use crate::sync::mutex::Mutex;
-use crate::sys_call::CloneFlags;
 use crate::task::task::TaskStatus;
 
 use super::UTSname;
@@ -41,18 +37,16 @@ bitflags! {
 impl Task {
     pub fn sys_exit(&self, exit_code: usize) -> Result<(), RuntimeError> {
         let inner = self.inner.borrow();
-        let mut process = inner.process.borrow_mut();
+        // if self.tid is zero, then kill the process
         if self.tid == 0 {
-            process.exit(exit_code);
+            inner.process.borrow_mut().exit(exit_code);
         } else {
-            debug!("退出任务: {}", self.tid);
             self.exit();
         }
-        let clear_child_tid_ptr = VirtAddr::from(self.clear_child_tid.borrow().clone());
-        if clear_child_tid_ptr.0 != 0 {
-            debug!("clear_child_tid ?= {}", clear_child_tid_ptr.0);
-            let uaddr = clear_child_tid_ptr.translate(process.pmm.clone()).tranfer::<u32>();
-            *uaddr = 0;
+
+        let clear_child_tid = self.clear_child_tid.borrow().clone();
+        if clear_child_tid.is_valid() {
+            *clear_child_tid.translate(self.get_pmm()) = 0;
         }
         Err(RuntimeError::ChangeTask)
     }
@@ -70,22 +64,17 @@ impl Task {
         Err(RuntimeError::ChangeTask)
     }
     
-    pub fn sys_set_tid_address(&self, tid_ptr: VirtAddr) -> Result<(), RuntimeError> {
+    pub fn sys_set_tid_address(&self, tid_ptr: UserAddr<u32>) -> Result<(), RuntimeError> {
+        let tid_ptr = tid_ptr.translate(self.get_pmm());
         let mut inner = self.inner.borrow_mut();
-        let process = inner.process.borrow_mut();
-
+        let pmm = inner.process.borrow().pmm.clone();
         let clear_child_tid = self.clear_child_tid.borrow().clone();
 
-        let ctid = if clear_child_tid != 0 {
-            VirtAddr::from(clear_child_tid).
-                translate(process.pmm.clone()).tranfer::<u32>().clone()
+        *tid_ptr = if clear_child_tid.is_valid() {
+            clear_child_tid.translate(pmm).clone()
         } else {
             0
         };
-
-        *tid_ptr.translate(process.pmm.clone()).tranfer::<u32>() = ctid;
-
-        drop(process);
 
         inner.context.x[10] = self.tid;
         Ok(())
@@ -176,18 +165,16 @@ impl Task {
         Err(RuntimeError::ChangeTask)
     }
     
-    pub fn sys_clone(&self, flags: usize, new_sp: usize, ptid: VirtAddr, tls: usize, ctid_ptr: VirtAddr) -> Result<(), RuntimeError> {
+    pub fn sys_clone(&self, flags: usize, new_sp: usize, ptid: VirtAddr, tls: usize, ctid_ptr: UserAddr<u32>) -> Result<(), RuntimeError> {
         if flags == 0x4111 || flags == 0x11 {
             // VFORK | VM | SIGCHILD
             warn!("sys_clone is calling sys_fork instead, ignoring other args");
             return self.sys_fork();
         }
 
-        let flags = CloneFlags::from_bits_truncate(flags);
-
         debug!(
             "clone: flags={:?}, newsp={:#x}, parent_tid={:#x}, child_tid={:#x}, newtls={:#x}",
-            flags, new_sp, ptid.0, ctid_ptr.0, tls
+            flags, new_sp, ptid.0, ctid_ptr.0 as usize, tls
         );
 
         let mut inner = self.inner.borrow_mut();
@@ -195,9 +182,7 @@ impl Task {
         let process = process.borrow();
 
         let ptid_ref = ptid.translate(process.pmm.clone()).tranfer::<u32>();
-        let ctid_ref = ctid_ptr.translate(process.pmm.clone()).tranfer::<u32>();
         
-        let ptid = self.tid;
         let ctid = process.tasks.len();
         drop(process);
 
@@ -215,15 +200,9 @@ impl Task {
 
         drop(new_task_inner);
         drop(inner);
-        // switch_next();
         *ptid_ref = ctid as u32;
-        // if flags.contains(CloneFlags::CLONE_CHILD_SETTID) {
-        //     *ctid_ref = ctid as u32;
-        // }
-        // *ctid_ref = ctid as u32;
-        new_task.set_tid_address(ctid_ptr.0);
+        new_task.set_tid_address(ctid_ptr);
         Err(RuntimeError::ChangeTask)
-        // Ok(())
     }
     
     pub fn sys_execve(&self, filename: VirtAddr, argv: VirtAddr, envp: VirtAddr) -> Result<(), RuntimeError> {
@@ -246,8 +225,8 @@ impl Task {
             |x| process.pmm.get_phys_addr(VirtAddr::from(x.clone())).expect("can't transfer")
         ).collect();
         let envp: Vec<String> = envp.iter().map(|x| get_string_from_raw(x.clone())).collect();
-        for i in envp {
-            debug!("envp: {}", i);
+        for _ in envp {
+            debug!("envp: {}", _);
         }
         let task = process.tasks[self.tid].clone().upgrade().unwrap();
         process.reset()?;
@@ -258,39 +237,33 @@ impl Task {
         Ok(())
     }
     
-    pub fn sys_wait4(&self, pid: usize, ptr: VirtAddr, options: usize) -> Result<(), RuntimeError> {
+    pub fn sys_wait4(&self, pid: usize, ptr: UserAddr<u16>, _options: usize) -> Result<(), RuntimeError> {
+        let ptr = ptr.translate(self.get_pmm());
         let mut inner = self.inner.borrow_mut();
-        let process = inner.process.borrow_mut();
-        let mut is_ok = false;
-        let target = process.children.iter().find(|&x| x.borrow().pid == pid);
-        if let Some(target) = target {
-            if let Some(exit_code) = target.borrow().exit_code {
-                let result = get_ptr_from_virt_addr::<u16>(process.pmm.clone(), ptr)?;
-                // unsafe { result.write(exit_code as u16) };
-                unsafe { result.write(exit_code as u16) };
-                // warn!("exit_code: {}", exit_code + 128);
-                is_ok = true;
-            }
-        }
-        drop(process);
-        if is_ok {
+        let process = inner.process.clone();
+        let process = process.borrow_mut();
+        let target = 
+            process.children.iter().find(|&x| x.borrow().pid == pid);
+        
+        if let Some(exit_code) = target.map_or(None, |x| x.borrow().exit_code) {
+            *ptr = exit_code as u16;
             inner.context.x[10] = pid;
             return Ok(())
-        } else {
-            inner.context.sepc -= 4;
-            drop(inner);
-            switch_next();
-            Err(RuntimeError::ChangeTask)
         }
+        inner.context.sepc -= 4;
+        drop(process);
+        drop(inner);
+        switch_next();
+        Err(RuntimeError::ChangeTask)
     }
     
-    pub fn sys_kill(&self, pid: usize, signum: usize) -> Result<(), RuntimeError> {
+    pub fn sys_kill(&self, _pid: usize, _signum: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         debug!(
             "kill: thread {} kill process {} with signal {:?}",
             0,
-            pid,
-            signum
+            _pid,
+            _signum
         );
         inner.context.x[10] = 1;
         Ok(())
@@ -358,16 +331,7 @@ impl Task {
         debug!("signum: {}", signum);
         if let Some(signal_task) = signal_task {
             drop(inner);
-            signal_task.signal(signum);
-            // let clear_child_tid_ptr = VirtAddr::from(signal_task.clear_child_tid.borrow().clone());
-            // let signal_task_inner = signal_task.inner.borrow_mut();
-            // let process = signal_task_inner.process.borrow_mut();
-            // if clear_child_tid_ptr.0 != 0 {
-            //     let uaddr = clear_child_tid_ptr.translate(process.pmm.clone()).tranfer::<u32>();
-            //     debug!("clear_child_tid ?= {:#x}    uaddr value: {}", clear_child_tid_ptr.0, *uaddr);
-            //     *uaddr = 0;
-            // }
-            // kill_task(self.pid, tid);
+            signal_task.signal(signum)?;
         }
         Ok(())
     }
@@ -377,10 +341,7 @@ lazy_static! {
     pub static ref WAIT_MAP: Mutex<HashMap<usize, FutexWait>> = Mutex::new(HashMap::new());
 }
 
-// TODO: 切换到任务处理信号 防止信号丢失
-
 pub struct FutexWait {
-    woken: bool,
     wait_queue: Vec<Weak<Task>>
 }
 
@@ -388,7 +349,6 @@ pub fn futex_wait(addr: usize) {
     let task = get_current_task().unwrap();
     let mut wait_map = WAIT_MAP.force_get();
     let futex_wait = wait_map.entry(addr).or_insert(FutexWait {
-        woken: false,
         wait_queue: vec![]
     });
     futex_wait.wait_queue.push(Rc::downgrade(&task));
@@ -411,7 +371,7 @@ pub fn futex_wake(addr: usize, count: usize) -> usize {
     }
 }
 
-pub fn futex_requeue(uaddr: usize, nr_wake: u32, uaddr2: usize, nr_limit: u32) -> isize {
+pub fn futex_requeue(_uaddr: usize, nr_wake: u32, _uaddr2: usize, _nr_limit: u32) -> isize {
 
 
     return nr_wake as isize;

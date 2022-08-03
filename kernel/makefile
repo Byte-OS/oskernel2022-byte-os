@@ -4,6 +4,7 @@ MODE_FLAG	:= --target=riscv64imac-unknown-none-elf
 KERNEL_FILE := target/$(TARGET)/$(MODE)/os
 BIN_FILE    := target/$(TARGET)/$(MODE)/kernel.bin
 DEBUG_FILE  ?= $(KERNEL_FILE)
+FEATURES	?= 
 
 OBJDUMP     := rust-objdump --arch-name=riscv64
 OBJCOPY     := rust-objcopy --binary-architecture=riscv64
@@ -23,6 +24,10 @@ ifeq ($(MODE), release)
 MODE_FLAG += --release
 endif
 
+ifeq ($(VERBOSE), 1)
+FEATURES += verbose
+endif
+
 .PHONY: doc kernel build clean qemu run k210 flash
 
 # all: build
@@ -39,7 +44,7 @@ ifeq ($(MODE), release)
 	echo "release"
 endif
 	@cp src/linker-qemu.ld src/linker.ld
-	@RUSTFLAGS="-Clink-arg=-Tsrc/linker.ld" cargo build $(MODE_FLAG) --features "board_qemu" --offline
+	@RUSTFLAGS="-Clink-arg=-Tsrc/linker.ld" cargo build $(MODE_FLAG) --features "board_qemu $(FEATURES)" --offline
 	@rm src/linker.ld
 	$(OBJCOPY) $(KERNEL_FILE) --strip-all -O binary $(BIN_FILE)
 
@@ -52,7 +57,7 @@ clean:
 
 k210: 
 	@cp src/linker-k210.ld src/linker.ld
-	RUSTFLAGS="-Clink-arg=-Tsrc/linker.ld" cargo build $(MODE_FLAG) --features "board_k210" --offline
+	RUSTFLAGS="-Clink-arg=-Tsrc/linker.ld" cargo build $(MODE_FLAG) --features "board_k210 $(FEATURES)" --offline
 	@rm src/linker.ld
 	$(OBJCOPY) $(KERNEL_FILE) --strip-all -O binary $(BIN_FILE)
 	@cp $(BOOTLOADER_K210) $(BOOTLOADER_K210).copy

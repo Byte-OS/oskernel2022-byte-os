@@ -4,7 +4,6 @@ use core::cell::RefCell;
 
 use alloc::collections::BTreeMap;
 use alloc::rc::Rc;
-use alloc::string::String;
 use alloc::vec::Vec;
 use xmas_elf::program::{Type, SegmentData};
 use crate::elf::{self, ElfExtra};
@@ -18,7 +17,6 @@ use crate::task::task_scheduler::start_tasks;
 use crate::memory::{page_table::PTEFlags, addr::{PAGE_SIZE, VirtAddr, PhysAddr, PhysPageNum}};
 use crate::memory::mem_set::MemSet;
 use crate::memory::page_table::PageMappingManager;
-use self::pipe::PipeBuf;
 use self::task::Task;
 use self::task_scheduler::NEXT_PID;
 
@@ -80,15 +78,15 @@ impl UserHeap {
     }
 
     // 获取临时页表
-    pub fn get_temp(&mut self, pmm: Rc<PageMappingManager>) -> PhysAddr {
+    pub fn get_temp(&mut self, pmm: Rc<PageMappingManager>) -> Result<PhysAddr, RuntimeError>{
         if self.temp == 0 {
             let mem_map = MemMap::new(0xe0000usize.into(), 1, PTEFlags::UVRWX).unwrap();
             self.temp = mem_map.ppn.into();
-            pmm.add_mapping(mem_map.ppn, mem_map.vpn, PTEFlags::UVRWX);
+            pmm.add_mapping(mem_map.ppn, mem_map.vpn, PTEFlags::UVRWX)?;
             // self.pmm.add_mapping_by_map(&mem_map).expect("临时页表申请内存不足");
             self.mem_set.0.push(mem_map);
         }
-        PhysPageNum::from(self.temp).into()
+        Ok(PhysPageNum::from(self.temp).into())
     }
 
     pub fn release_temp(&self) {
@@ -152,7 +150,7 @@ pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path
             relocated_arr = arr;
             base
         },
-        Err(value) => {
+        Err(_) => {
             0
         }
     };

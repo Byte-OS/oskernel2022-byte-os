@@ -1,9 +1,9 @@
 
 use core::{cell::RefCell, slice};
 
-use alloc::{string::{String, ToString}, vec::Vec, rc::{Rc, Weak}, alloc::dealloc};
+use alloc::{string::{String, ToString}, vec::Vec, rc::{Rc, Weak}};
 
-use crate::{sync::mutex::Mutex, device::BLK_CONTROL, memory::{addr::{PAGE_SIZE, PhysAddr}, page::{alloc_more, dealloc_more}, mem_map::MemMap}, runtime_err::RuntimeError, interrupt::timer::{get_time_ms, get_time_sec}};
+use crate::{sync::mutex::Mutex, device::BLK_CONTROL, memory::{addr::{PAGE_SIZE, PhysAddr}, mem_map::MemMap}, runtime_err::RuntimeError};
 
 use super::{file::{FileType, File, DEFAULT_VIRT_FILE_PAGE}, cache::get_cache_file};
 
@@ -144,7 +144,7 @@ impl INode {
 
     // 获取当前路径
     pub fn get_pwd(&self) -> String {
-        let mut tree_node = self.clone();
+        let tree_node = self.clone();
         let mut path = String::new();
         loop {
             path = path + "/" + &tree_node.get_filename();

@@ -3,6 +3,8 @@ use core::cell::RefCell;
 use alloc::rc::Rc;
 
 
+use crate::memory::addr::UserAddr;
+use crate::memory::page_table::PageMappingManager;
 use crate::{interrupt::Context, memory::page_table::PagingMode};
 use crate::task::task_scheduler::kill_task;
 
@@ -30,7 +32,7 @@ pub struct TaskInner {
 pub struct Task {
     pub tid: usize,
     pub pid: usize,
-    pub clear_child_tid: RefCell<usize>,
+    pub clear_child_tid: RefCell<UserAddr<u32>>,
     pub inner: Rc<RefCell<TaskInner>>
 }
 
@@ -42,7 +44,7 @@ impl Task {
         let task = Rc::new(Self {
             tid,
             pid,
-            clear_child_tid: RefCell::new(0),
+            clear_child_tid: RefCell::new(0.into()),
             inner: Rc::new(RefCell::new(TaskInner {
                 context: Context::new(), 
                 process: process.clone(), 
@@ -60,7 +62,7 @@ impl Task {
     }
 
     // 设置 tid ptr
-    pub fn set_tid_address(&self, tid_ptr: usize) {
+    pub fn set_tid_address(&self, tid_ptr: UserAddr<u32>) {
         *self.clear_child_tid.borrow_mut() = tid_ptr;
     }
 
@@ -83,5 +85,10 @@ impl Task {
         unsafe {
             change_task((PagingMode::Sv39 as usize) << 60 | pte_ppn, context_ptr)
         };
+    }
+
+    // 获取pmm
+    pub fn get_pmm(&self) -> Rc<PageMappingManager> {
+        self.inner.borrow().process.borrow().pmm.clone()
     }
 }
