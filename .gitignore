@@ -7,3 +7,5 @@ src/linker.ld
 write
 asm.S
 .idea/
+kernel-qemu
+sbi-qemu
