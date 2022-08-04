@@ -1,0 +1,9 @@
+[workspace]
+members = [
+    "kernel"
+]
+# default-members = ["kernel"]
+
+[profile.release]
+lto = true
+debug = true
