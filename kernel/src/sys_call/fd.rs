@@ -110,6 +110,7 @@ impl Task {
     // 打开文件
     pub fn sys_openat(&self, fd: usize, filename: UserAddr<u8>, flags: usize, _open_mod: usize) -> Result<(), RuntimeError> {
         let filename = filename.read_string(self.get_pmm());
+        debug!("open file: {}", filename);
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
 

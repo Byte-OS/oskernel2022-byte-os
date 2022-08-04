@@ -85,7 +85,7 @@ impl Task {
         let mut inner = self.inner.borrow_mut();
     
         // 获取参数
-        let sys_info = ptr.translate(self.get_pmm());
+        let sys_info = ptr.translate(inner.process.borrow().pmm.clone());
         // 写入系统信息
         write_string_to_raw(&mut sys_info.sysname, "ByteOS");
         write_string_to_raw(&mut sys_info.nodename, "ByteOS");

@@ -325,7 +325,7 @@ impl Task {
                 }
                 RuntimeError::NoMatchedFileDesc => {
                     let mut inner = self.inner.borrow_mut();
-                    warn!("文件未找到");
+                    warn!("未找到匹配的文件描述符");
                     inner.context.x[10] = SYS_CALL_ERR;
                 }
                 RuntimeError::FileNotFound => {
