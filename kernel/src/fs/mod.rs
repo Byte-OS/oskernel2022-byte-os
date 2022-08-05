@@ -1,4 +1,3 @@
-pub mod fat32;
 pub mod file;
 mod partition;
 pub mod filetree;
@@ -22,6 +21,7 @@ pub struct StatFS{
 
 // 初始化文件系统
 pub fn init() {
-    fat32::init();
+    /// TODO: 不再进行文件系统的初始化？ 等待处理 
+    /// 
     info!("初始化文件系统");
 }

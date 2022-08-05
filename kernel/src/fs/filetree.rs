@@ -206,7 +206,7 @@ impl INode {
     pub fn read(&self) -> Vec<u8> {
         let mut file_vec = vec![0u8; self.get_file_size()];
         unsafe {
-            BLK_CONTROL.get_partition(0).lock().read(self.get_cluster(), self.get_file_size(), &mut file_vec);
+            // BLK_CONTROL.get_partition(0).lock().read(self.get_cluster(), self.get_file_size(), &mut file_vec);
         }
         file_vec
     }
@@ -225,7 +225,8 @@ impl INode {
             }
             _=> {
                 unsafe {
-                    BLK_CONTROL.get_partition(0).lock().read(self.get_cluster(), self.get_file_size(), buf)
+                    // BLK_CONTROL.get_partition(0).lock().read(self.get_cluster(), self.get_file_size(), buf)
+                    0
                 }
             }
         }

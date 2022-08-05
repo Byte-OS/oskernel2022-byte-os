@@ -36,3 +36,5 @@ hashbrown = "0.12.0"
 k210-pac = { git = "https://github.com/wyfcyx/k210-pac" }
 k210-hal = { git = "https://github.com/wyfcyx/k210-hal" }
 k210-soc = { git = "https://github.com/wyfcyx/k210-soc" }
+
+fatfs = { path = "../fatfs" }

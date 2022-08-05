@@ -16,5 +16,8 @@ pub enum RuntimeError {
     // 触发EBADF
     EBADF,
     // 信号返回程序
-    SigReturn
+    SigReturn,
+    //
+    WriteZero,
+    UnexpectedEof
 }

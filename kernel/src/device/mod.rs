@@ -1,25 +1,46 @@
 pub mod block;
 pub mod sdcard;
 
+use alloc::borrow::ToOwned;
 use alloc::boxed::Box;
-use alloc::sync::Arc;
+use alloc::rc::Rc;
 use alloc::vec::Vec;
 pub use block::SECTOR_SIZE;
+use fatfs::{Dir as OtherDir, File as OtherFile, FileSystem as OtherFileSystem};
+use fatfs::LossyOemCpConverter;
+use fatfs::NullTimeProvider;
 use virtio_drivers::VirtIOBlk;
 use virtio_drivers::VirtIOHeader;
+use crate::sync::mutex::{Mutex, MutexGuard};
 
-use crate::fs::fat32::FAT32;
-use crate::sync::mutex::Mutex;
+use crate::runtime_err::RuntimeError;
 
 use self::block::VirtIOBlock;
 use self::sdcard::SDCardWrapper;
+
+pub type Dir = OtherDir<DiskCursor, NullTimeProvider, LossyOemCpConverter>;
+pub type DiskFile = OtherFile<DiskCursor, NullTimeProvider, LossyOemCpConverter>;
+pub type FileSystem = OtherFileSystem<DiskCursor, NullTimeProvider, LossyOemCpConverter>;
 
 #[cfg(not(feature = "board_k210"))]
 pub const VIRTIO0: usize = 0x10001000;
 
 // 存储设备控制器 用来存储读取设备
-pub static mut BLK_CONTROL: BlockDeviceContainer = BlockDeviceContainer(vec![]);
+pub static mut BLK_CONTROL: Vec<Box<dyn BlockDevice>> = vec![];
 
+lazy_static! {
+    pub static ref GLOBAL_FS: Mutex<Rc<FileSystem>> = {
+        let c = DiskCursor {
+            sector: 0,
+            offset: 0,
+            disk_index: 0
+        };
+        // TODO: 全局设置
+        Mutex::new(Rc::new(fatfs::FileSystem::new(c, fatfs::FsOptions::new()).expect("文件系统初始化失败")))
+    };
+}
+
+/// 定义trait
 pub trait BlockDevice {
     // 读取扇区
     fn read_block(&mut self, sector_offset: usize, buf: &mut [u8]);
@@ -29,39 +50,24 @@ pub trait BlockDevice {
     fn handle_irq(&mut self);
 }
 
-// 块储存设备容器
-pub struct BlockDeviceContainer (Vec<Arc<Mutex<FAT32>>>);
+pub fn add_virt_io(virtio: usize) {
+    // 创建存储设备
+    let device = Box::new(VirtIOBlock(
+        VirtIOBlk::new(unsafe {&mut *(virtio as *mut VirtIOHeader)}).expect("failed to create blk driver")
+    ));
+    // 加入设备表
+    unsafe {
+        BLK_CONTROL.push(device)
+    };
+}
 
-impl BlockDeviceContainer {
-    // 添加VIRTIO设备
-    pub fn add(&mut self, virtio: usize) {
-        // 创建存储设备
-        let device = VirtIOBlk::new(unsafe {&mut *(virtio as *mut VirtIOHeader)}).expect("failed to create blk driver");
-        let block_device:Arc<Mutex<Box<dyn BlockDevice>>> = Arc::new(Mutex::new(Box::new(VirtIOBlock(device))));
-        let disk_device = Arc::new(Mutex::new(FAT32::new(block_device)));
-        // 加入设备表
-        self.0.push(disk_device);
-    }
+pub fn add_sdcard() {
+    // 创建SD存储设备
+    let block_device = Box::new(SDCardWrapper::new());
 
-    #[allow(unused)]
-    // 添加sd卡存储设备
-    pub fn add_sdcard(&mut self) {
-        // 创建SD存储设备
-        let block_device:Arc<Mutex<Box<dyn BlockDevice>>> = Arc::new(Mutex::new(Box::new(SDCardWrapper::new())));
-        let disk_device = Arc::new(Mutex::new(FAT32::new(block_device)));
-
-        // 加入存储设备表
-        self.0.push(disk_device);
-    }
-
-    // 获取所有文件系统
-    pub fn get_partitions(&self) -> Vec<Arc<Mutex<FAT32>>> {
-        self.0.clone()
-    }
-
-    // 获取分区
-    pub fn get_partition(&self, device_id: usize) -> Arc<Mutex<FAT32>> {
-        self.0[device_id].clone()
+    // 加入存储设备表
+    unsafe {
+        BLK_CONTROL.push(block_device);
     }
 }
 
@@ -70,7 +76,143 @@ pub fn init() {
     info!("初始化设备");
     #[cfg(not(feature = "board_k210"))]
     unsafe {
-        BLK_CONTROL.add(VIRTIO0);
+        // qemu 时添加 储存设备
+        add_virt_io(VIRTIO0);
     }
-    info!("初始化设备");
+
+    // unsafe {
+    //     GLOBAL_FS = Some(fs);
+    // }
+
+    // let file = fs.root_dir().open_file(".").unwrap();
+
+    // let file = fs.root_dir().open_dir("var/tmp").unwrap();
+    // let parent_dir = file.open_dir("..").unwrap();
+    // debug!("par: {}", parent_dir.stream.na)
+
+    // get_fs();
+    // root_dir();
+}
+
+pub fn root_dir() -> Dir {
+    GLOBAL_FS.lock().to_owned().root_dir()
+}
+
+/// 硬盘数据读取器
+pub struct DiskCursor {
+    sector: u64,
+    offset: usize,
+    disk_index: usize
+}
+
+impl DiskCursor {
+    fn get_position(&self) -> usize {
+        (self.sector * 0x200) as usize + self.offset
+    }
+
+    fn set_position(&mut self, position: usize) {
+        self.sector = (position / 0x200) as u64;
+        self.offset = position % 0x200;
+    }
+
+    fn move_cursor(&mut self, amount: usize) {
+        self.set_position(self.get_position() + amount)
+    }
+}
+
+impl fatfs::IoError for RuntimeError {
+    fn is_interrupted(&self) -> bool {
+        false
+    }
+
+    fn new_unexpected_eof_error() -> Self {
+        Self::UnexpectedEof
+    }
+
+    fn new_write_zero_error() -> Self {
+        Self::WriteZero
+    }
+}
+
+impl fatfs::IoBase for DiskCursor {
+    type Error = RuntimeError;
+}
+
+impl fatfs::Read for DiskCursor {
+    fn read(&mut self, buf: &mut [u8]) -> Result<usize, RuntimeError> {
+        // 获取硬盘设备写入器（驱动？）
+        let block_device = unsafe { &mut BLK_CONTROL[self.disk_index] };
+
+        let mut i = 0;
+        let mut data = [0u8; 512];
+        while i < buf.len() {
+            block_device.read_block(self.sector as usize, &mut data);
+            let data = &data[self.offset..];
+            if data.len() == 0 { break; }
+            let end = (i + data.len()).min(buf.len());
+            let len = end - i;
+            buf[i..end].copy_from_slice(&data[..len]);
+            i += len;
+            self.move_cursor(len);
+        }
+        Ok(i)
+    }
+
+    fn read_exact(&mut self, buf: &mut [u8]) -> Result<(), RuntimeError> {
+        let n = self.read(buf)?;
+        assert!(n == buf.len(), "TODO: Error");
+        Ok(())
+    }
+}
+
+impl fatfs::Write for DiskCursor {
+    fn write(&mut self, buf: &[u8]) -> Result<usize, RuntimeError> {
+        // 获取硬盘设备写入器（驱动？）
+        let block_device = unsafe { &mut BLK_CONTROL[self.disk_index] };
+
+        let mut data = [0u8; 512];
+
+        if self.offset != 0 || buf.len() != 512 {
+            block_device.read_block(self.sector as usize, &mut data);
+        }
+
+        let (start, end) = if buf.len() == 512 {
+            (0, 512)
+        } else {
+            (self.offset, self.offset + buf.len())
+        };
+        data[start..end].copy_from_slice(&buf[..end - start]);
+        block_device.write_block(self.sector as usize, &mut data);
+        self.move_cursor(end - start);
+
+        Ok(buf.len())
+    }
+
+    fn write_all(&mut self, buf: &[u8]) -> Result<(), RuntimeError> {
+        self.write(buf)?;
+        Ok(())
+    }
+
+    fn flush(&mut self) -> Result<(), RuntimeError> {
+        Ok(())
+    }
+}
+
+impl fatfs::Seek for DiskCursor {
+    fn seek(&mut self, pos: fatfs::SeekFrom) -> Result<u64, RuntimeError> {
+        match pos {
+            fatfs::SeekFrom::Start(i) => {
+                self.set_position(i as usize);
+                Ok(i)
+            }
+            fatfs::SeekFrom::End(i) => {
+                todo!("Seek from end")
+            }
+            fatfs::SeekFrom::Current(i) => {
+                let new_pos = (self.get_position() as i64) + i;
+                self.set_position(new_pos as usize);
+                Ok(new_pos as u64)
+            }
+        }
+    }
 }
