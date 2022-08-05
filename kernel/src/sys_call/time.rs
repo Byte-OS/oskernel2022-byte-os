@@ -79,7 +79,8 @@ impl Task {
         let process = inner.process.borrow_mut();
 
         let mut inode = if dir_fd == FD_CWD {
-            process.workspace.clone()
+            // process.workspace.clone()
+            INode::get(None, &process.workspace, false)?
         } else {
             let file = process.fd_table.get_file(dir_fd).map_err(|_| (RuntimeError::EBADF))?;
             file.get_inode()

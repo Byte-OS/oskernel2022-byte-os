@@ -25,8 +25,9 @@ impl Task {
         // 获取参数
         let buf = buf.translate_vec(process.pmm.clone(), size);
         // 获取路径
-        let pwd = process.workspace.get_pwd();
-        let pwd_buf = pwd.as_bytes();
+        // let pwd = process.workspace;
+        // let pwd_buf = pwd.as_bytes();
+        let pwd_buf = process.workspace.as_bytes();
         // 将路径复制到缓冲区
         buf[..pwd_buf.len()].copy_from_slice(pwd_buf);
         drop(process);
@@ -101,7 +102,8 @@ impl Task {
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
 
-        process.workspace = INode::get(Some(process.workspace.clone()), &filename, false)?;
+        process.workspace = process.workspace.clone() + "/" + &filename;
+        // process.workspace = INode::get(Some(process.workspace.clone()), &filename, false)?;
 
         drop(process);
         inner.context.x[10] = 0;

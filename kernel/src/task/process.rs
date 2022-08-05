@@ -1,8 +1,9 @@
 use core::cell::RefCell;
 
 use alloc::{vec::Vec, rc::{Rc, Weak}};
+use alloc::string::String;
 
-use crate::{memory::{page_table::PageMappingManager, mem_set::MemSet, addr::VirtAddr}, runtime_err::RuntimeError, interrupt::timer::TMS, fs::filetree::INode};
+use crate::{memory::{page_table::PageMappingManager, mem_set::MemSet, addr::VirtAddr}, runtime_err::RuntimeError, interrupt::timer::TMS};
 
 use super::{task::{Task, TaskStatus}, stack::UserStack, UserHeap, fd_table::FDTable, task_scheduler::kill_process, signal::SigAction};
 
@@ -15,7 +16,7 @@ pub struct Process {
     pub entry: VirtAddr,                        // 入口地址
     pub stack: UserStack,                       // 用户栈
     pub heap: UserHeap,                         // 用户堆
-    pub workspace: Rc<INode>,                   // 工作目录
+    pub workspace: String,                      // 工作目录
     pub fd_table: FDTable,                      // 文件描述表
     pub tms: TMS,                               // 时间记录结构
     pub signal: SigAction,                      // 信号结构
@@ -37,7 +38,7 @@ impl Process {
             entry: 0usize.into(), 
             stack: UserStack::new(pmm.clone())?, 
             heap, 
-            workspace: INode::get(None, "/", false)?.clone(), 
+            workspace: String::new(),
             fd_table: FDTable::new(),
             children: vec![],
             signal: SigAction::new(),
