@@ -157,7 +157,7 @@ impl Task {
     pub fn sys_close(&self, fd: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
-        process.fd_table.dealloc(fd);
+        // process.fd_table.dealloc(fd);
         drop(process);
         inner.context.x[10] = 0;
         Ok(())

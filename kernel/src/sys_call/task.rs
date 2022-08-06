@@ -227,6 +227,7 @@ impl Task {
     
     // wait task
     pub fn sys_wait4(&self, pid: usize, ptr: UserAddr<u16>, _options: usize) -> Result<(), RuntimeError> {
+        debug!("wait for pid: {:#x}", pid);
         let ptr = ptr.translate(self.get_pmm());
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.clone();
