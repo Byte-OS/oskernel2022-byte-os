@@ -90,7 +90,7 @@ impl Task {
             let file = process.fd_table.get_file(fd)?;
             Some(file.get_inode())
         };
-        let cnode = INode::get(current, &filename, false)?;
+        let cnode = INode::get(current, &filename)?;
         cnode.del_self();
         drop(process);
         inner.context.x[10] = 0;
@@ -141,9 +141,9 @@ impl Task {
         };
         // 根据文件类型匹配
         let file = if flags.contains(OpenFlags::CREATE) {
-            INode::open(current, &filename, true)?
+            INode::open(current, &filename)?
         } else {
-            INode::open(current, &filename, false)?
+            INode::open(current, &filename)?
         };
         if flags.contains(OpenFlags::WRONLY) {
             file.lseek(0, 2);
@@ -285,30 +285,30 @@ impl Task {
     pub fn sys_fstat(&self, fd: usize, buf_ptr: UserAddr<Kstat>) -> Result<(), RuntimeError> {
         let kstat = buf_ptr.translate(self.get_pmm());
         let mut inner = self.inner.borrow_mut();
-        let process = inner.process.borrow_mut();
+        // let process = inner.process.borrow_mut();
 
-        // 判断文件描述符是否存在
-        let inode = process.fd_table.get_file(fd)?;
-        let inode = inode.get_inode();
-        let inode = inode.0.borrow_mut();
-        kstat.st_dev = 1;
-        kstat.st_ino = 1;
-        kstat.st_mode = 0;
-        kstat.st_nlink = inode.nlinkes as u32;
-        kstat.st_uid = 0;
-        kstat.st_gid = 0;
-        kstat.st_rdev = 0;
-        kstat.__pad = 0;
-        kstat.st_size = inode.size as u64;
-        kstat.st_blksize = 512;
-        kstat.st_blocks = ((inode.size - 1 + 512) / 512) as u64;
-        kstat.st_atime_sec = inode.st_atime_sec;
-        kstat.st_atime_nsec = inode.st_atime_nsec;
-        kstat.st_mtime_sec = inode.st_mtime_sec;
-        kstat.st_mtime_nsec = inode.st_mtime_nsec;
-        kstat.st_ctime_sec = inode.st_ctime_sec;
-        kstat.st_ctime_nsec = inode.st_ctime_nsec;
-        drop(process);
+        // // 判断文件描述符是否存在
+        // let inode = process.fd_table.get_file(fd)?;
+        // let inode = inode.get_inode();
+        // let inode = inode.0.borrow_mut();
+        // kstat.st_dev = 1;
+        // kstat.st_ino = 1;
+        // kstat.st_mode = 0;
+        // kstat.st_nlink = inode.nlinkes as u32;
+        // kstat.st_uid = 0;
+        // kstat.st_gid = 0;
+        // kstat.st_rdev = 0;
+        // kstat.__pad = 0;
+        // kstat.st_size = inode.size as u64;
+        // kstat.st_blksize = 512;
+        // kstat.st_blocks = ((inode.size - 1 + 512) / 512) as u64;
+        // kstat.st_atime_sec = inode.st_atime_sec;
+        // kstat.st_atime_nsec = inode.st_atime_nsec;
+        // kstat.st_mtime_sec = inode.st_mtime_sec;
+        // kstat.st_mtime_nsec = inode.st_mtime_nsec;
+        // kstat.st_ctime_sec = inode.st_ctime_sec;
+        // kstat.st_ctime_nsec = inode.st_ctime_nsec;
+        // drop(process);
         inner.context.x[10] = 0;
         Ok(())
     }
@@ -330,7 +330,7 @@ impl Task {
                 Some(file.get_inode())
             };
             
-            let inode = INode::get(file, &filename, false)?;
+            let inode = INode::get(file, &filename)?;
             let inode = inode.0.borrow_mut();
             kstat.st_dev = 1;
             kstat.st_ino = 1;
@@ -340,20 +340,20 @@ impl Task {
             } else {
                 kstat.st_mode = 0;
             }
-            kstat.st_nlink = inode.nlinkes as u32;
-            kstat.st_uid = 0;
-            kstat.st_gid = 0;
-            kstat.st_rdev = 0;
-            kstat.__pad = 0;
-            kstat.st_size = inode.size as u64;
-            kstat.st_blksize = 512;
-            kstat.st_blocks = ((inode.size - 1 + 512) / 512) as u64;
-            kstat.st_atime_sec = inode.st_atime_sec;
-            kstat.st_atime_nsec = inode.st_atime_nsec;
-            kstat.st_mtime_sec = inode.st_mtime_sec;
-            kstat.st_mtime_nsec = inode.st_mtime_nsec;
-            kstat.st_ctime_sec = inode.st_ctime_sec;
-            kstat.st_ctime_nsec = inode.st_ctime_nsec;
+            // kstat.st_nlink = inode.nlinkes as u32;
+            // kstat.st_uid = 0;
+            // kstat.st_gid = 0;
+            // kstat.st_rdev = 0;
+            // kstat.__pad = 0;
+            // kstat.st_size = inode.size as u64;
+            // kstat.st_blksize = 512;
+            // kstat.st_blocks = ((inode.size - 1 + 512) / 512) as u64;
+            // kstat.st_atime_sec = inode.st_atime_sec;
+            // kstat.st_atime_nsec = inode.st_atime_nsec;
+            // kstat.st_mtime_sec = inode.st_mtime_sec;
+            // kstat.st_mtime_nsec = inode.st_mtime_nsec;
+            // kstat.st_ctime_sec = inode.st_ctime_sec;
+            // kstat.st_ctime_nsec = inode.st_ctime_nsec;
             drop(process);
             inner.context.x[10] = 0;
             Ok(())

@@ -94,7 +94,7 @@ pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
     fs::init();
 
     // 输出文件树
-    print_file_tree(INode::get(None, "/", false).unwrap());
+    print_file_tree(INode::get(None, "/").unwrap());
 
     // cache_file("runtest.exe");
     // cache_file("entry-static.exe");
@@ -130,7 +130,7 @@ pub fn print_file_tree(node: Rc<INode>) {
 
 // 打印目录树 - 递归
 pub fn print_file_tree_back(node: Rc<INode>, space: usize) {
-    let iter = node.get_children();
+    let iter = node.clone_children();
     let mut iter = iter.iter().peekable();
     while let Some(sub_node) = iter.next() {
         if iter.peek().is_none() {

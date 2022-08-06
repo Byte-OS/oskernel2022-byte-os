@@ -1,62 +1,54 @@
 
-use core::{cell::RefCell, slice};
+use core::cell::RefCell;
 
 use alloc::{string::{String, ToString}, vec::Vec, rc::{Rc, Weak}};
+use fatfs::{Read, Write};
 
-use crate::{sync::mutex::Mutex, device::BLK_CONTROL, memory::{addr::{PAGE_SIZE, PhysAddr}, mem_map::MemMap}, runtime_err::RuntimeError};
+use crate::{device::{DiskFile, FileSystem, Dir}, runtime_err::RuntimeError};
 
-use super::{file::{FileType, File, DEFAULT_VIRT_FILE_PAGE}, cache::get_cache_file};
+use super::{file::{FileType, File}, cache::get_cache_file};
 
 
-lazy_static! {
-    // 文件树初始化
-    pub static ref FILE_TREE: Mutex<Rc<INode>> = Mutex::new(INode::new("", FileType::Directory, None, 2));
+pub static mut FILE_TREE: Option<Rc<INode>> = None;
+
+pub enum DiskFileEnum {
+    DiskFile(DiskFile),
+    DiskDir(Dir),
+    None
 }
 
 // 文件树原始树
 pub struct INodeInner {
     pub filename: String,               // 文件名
     pub file_type: FileType,            // 文件数类型
-    pub parent: Option<Weak<INode>>, // 父节点
-    pub cluster: usize,                 // 开始簇
-    pub size: usize,                    // 文件大小
-    pub nlinkes: u64,                   // 链接数量
-    pub st_atime_sec: u64,              // 最后访问秒
-	pub st_atime_nsec: u64,             // 最后访问微秒
-	pub st_mtime_sec: u64,              // 最后修改秒
-	pub st_mtime_nsec: u64,             // 最后修改微秒
-	pub st_ctime_sec: u64,              // 最后创建秒
-	pub st_ctime_nsec: u64,             // 最后创建微秒
-    pub mem_map: Option<Rc<MemMap>>,    // 暂存地址
+    pub parent: Option<Weak<INode>>,    // 父节点
     pub children: Vec<Rc<INode>>,       // 子节点
+    pub file: DiskFileEnum              // 硬盘文件
 }
 
 pub struct INode(pub RefCell<INodeInner>);
 
 impl INode {
-    // 创建文件
-    pub fn new(name: &str, file_type: FileType, parent: Option<Weak<INode>>, cluster: usize) -> Rc<Self> {
+    // 创建文件 创建文件时需要使用文件名
+    pub fn new(filename: String, file: DiskFileEnum, 
+            file_type: FileType, parent: Option<Weak<INode>>) -> Rc<Self> {
         Rc::new(Self(RefCell::new(INodeInner {
-            filename: name.to_string(), 
+            filename, 
             file_type, 
             parent, 
-            mem_map: None,
             children: vec![],
-            size: 0,
-            cluster,
-            nlinkes: 1,
-            st_atime_sec: 0,
-            st_atime_nsec: 0,
-            st_mtime_sec: 0,
-            st_mtime_nsec: 0,
-            st_ctime_sec: 0,
-            st_ctime_nsec: 0,
+            file
         })))
     }
 
     // 根目录节点
     pub fn root() -> Rc<INode> {
-        FILE_TREE.force_get().clone()
+        unsafe {
+            if let Some(data) = &FILE_TREE {
+                return data.clone();
+            };
+            todo!("无法在为初始化之前调用root")
+        }
     }
 
     // 添加节点到父节点
@@ -68,76 +60,60 @@ impl INode {
         inner.children.push(child);
     }
 
-    // 根据路径 获取文件节点
-    pub fn get(current: Option<Rc<INode>>, path: &str, create_sign: bool) -> Result<Rc<INode>, RuntimeError> {
-        let mut current = match current {
-            Some(tree) => tree.clone(),
-            None => Self::root()
-        };
-        if path.len() == 0 { return Ok(current); }
-
-        if path.chars().nth(0).unwrap() == '/' {
-            current = Self::root();
-        }
-        // 分割文件路径
-        let location: Vec<&str> = path.split("/").collect();
-
-        // 根据路径匹配文件
-        for locate in location {
-            current = match locate {
-                ".."=> {        // 如果是.. 则返回上一级
-                    let inner = current.0.borrow_mut();
-                    match &inner.parent {
-                        Some(parent) => {
-                            Ok(parent.upgrade().unwrap())
-                        }, 
-                        None => Ok(current.clone())
-                    }
-                },
-                "."=> Ok(current),        // 如果是. 则不做处理
-                ""=> Ok(current),         // 空，不做处理 出现多个// 复用的情况
-                _ => {          // 默认情况则搜索
-                    let mut sign = false;
-                    // 遍历名称
-                    for node in current.get_children() {
-                        if node.get_filename() == locate {
-                            // debug!("filename: {}", node.get_filename());
-                            // return Ok(node);
-                            current = node;
-                            sign = true;
-                            break;
+    pub fn get_children(self: Rc<Self>, filename: &str) -> Result<Rc<INode>, RuntimeError> {
+        match filename {
+            "."     => Ok(self.clone()),
+            ".."    => {
+                let inner = self.0.borrow_mut();
+                match inner.parent.clone() {
+                    Some(parent) => {
+                        match parent.upgrade() {
+                            Some(p) => Ok(p.clone()),
+                            None => Ok(self.clone())
                         }
-                    }
-                    if sign { continue; }
-                    if create_sign {
-                        let node = Self::new(locate, FileType::Directory,
-                            Some(Rc::downgrade(&current)), 0);
-                        Self::add(current, node.clone());
-                        Ok(node.clone())
-                    } else {
-                        Err(RuntimeError::FileNotFound)
+                    },
+                    None => {
+                        Ok(self.clone())
                     }
                 }
-            }?;
+            },
+            name => {
+                for child in self.clone_children() {
+                    if child.get_filename() == filename {
+                        return Ok(child.clone());
+                    }
+                }
+                Err(RuntimeError::FileNotFound)
+            }
         }
-        Ok(current)
+    }
+
+    pub fn find(self: Rc<Self>, path: &str) -> Result<Rc<INode>, RuntimeError> {
+        // traverse path
+        let (name, rest_opt) = split_path(path);
+        if let Some(rest) = rest_opt {
+            // 如果是文件夹
+            self.get_children(name)?.find(rest)
+        } else {
+            self.get_children(name)
+        }
     }
 
     // 根据路径 获取文件节点
-    pub fn open(current: Option<Rc<INode>>, path: &str, create_sign: bool) -> Result<Rc<File>, RuntimeError> {
-        let inode = Self::get(current, path, create_sign)?;
+    pub fn get(current: Option<Rc<INode>>, path: &str) -> Result<Rc<INode>, RuntimeError> {
+        // 如果有节点
+        if let Some(node) = current {
+            node.get_children(path)
+        } else {
+            Self::root().get_children(path)
+        }
+    }
+
+    // 根据路径 获取文件节点
+    pub fn open(current: Option<Rc<INode>>, path: &str) -> Result<Rc<File>, RuntimeError> {
+        let inode = Self::get(current, path)?;
         if let Some(file) = get_cache_file(&inode.get_filename()) {
             return Ok(file.clone());
-        }
-        if create_sign {
-            let mut inner = inode.0.borrow_mut();
-            if inner.cluster == 0 {
-                inner.file_type = FileType::VirtFile;
-                let page_map = MemMap::new_kernel_buf(DEFAULT_VIRT_FILE_PAGE)?;
-                // let page_index = alloc_more(DEFAULT_VIRT_FILE_PAGE)?;
-                inner.cluster = PhysAddr::from(page_map.ppn).0;
-                inner.mem_map = Some(Rc::new(page_map));
-            }
         }
         File::new(inode)
     }
@@ -173,7 +149,7 @@ impl INode {
     }
 
     // 获取子元素
-    pub fn get_children(&self) -> Vec<Rc<INode>> {
+    pub fn clone_children(&self) -> Vec<Rc<INode>> {
         self.0.borrow().children.clone()
     }
 
@@ -187,14 +163,12 @@ impl INode {
         self.0.borrow_mut().children.retain(|c| c.get_filename() != filename);
     }
 
-    // 获取簇位置
-    pub fn get_cluster(&self) -> usize {
-        self.0.borrow_mut().cluster
-    }
-
     // 获取文件大小
     pub fn get_file_size(&self) -> usize {
-        self.0.borrow_mut().size
+        match self.0.borrow_mut().file {
+            DiskFileEnum::DiskFile(f) => f.size().unwrap() as usize,
+            _ => 0
+        }
     }
 
     // 获取文件类型
@@ -205,55 +179,25 @@ impl INode {
     // 读取文件内容
     pub fn read(&self) -> Vec<u8> {
         let mut file_vec = vec![0u8; self.get_file_size()];
-        unsafe {
-            // BLK_CONTROL.get_partition(0).lock().read(self.get_cluster(), self.get_file_size(), &mut file_vec);
-        }
+        self.0.borrow_mut().file.read_exact(&mut file_vec);
         file_vec
     }
     
     // 读取文件内容
     pub fn read_to(&self, buf: &mut [u8]) -> usize  {
-        match self.get_file_type() {
-            // 虚拟文件处理
-            FileType::VirtFile => {
-                let len = if self.get_file_size() > buf.len() { buf.len() } else { self.get_file_size() };
-                let target = unsafe {
-                    slice::from_raw_parts_mut(self.get_cluster() as *mut u8, PAGE_SIZE)
-                };
-                buf[..len].copy_from_slice(&target[0..len]);
-                len
-            }
-            _=> {
-                unsafe {
-                    // BLK_CONTROL.get_partition(0).lock().read(self.get_cluster(), self.get_file_size(), buf)
-                    0
-                }
-            }
-        }
+        // 不再处理虚拟文件
+        self.0.borrow_mut().file.read_exact(buf);
+        buf.len()
     }
 
     // 写入设备
     pub fn write(&self, buf: &mut [u8]) -> usize {
-        match self.get_file_type() {
-            // 虚拟文件处理
-            FileType::VirtFile => {
-                let target = unsafe {
-                    slice::from_raw_parts_mut(self.get_cluster() as *mut u8, PAGE_SIZE)
-                };
-                target[0..buf.len()].copy_from_slice(buf);
-                self.0.borrow_mut().size = buf.len();
-                buf.len()
-            }
-            _=> {
-                error!("暂未支持写入的文件格式");
-                0
-            }
-        }
+        self.0.borrow_mut().file.write(buf).unwrap()
     }
 
     // 创建文件夹
     pub fn mkdir(current: Option<Rc<INode>>, path: &str, _flags: u16) -> Result<Rc<INode>, RuntimeError>{
-        Self::get(current, path, true)
+        Self::get(current, path)
     }
 
     // 删除自身
@@ -278,4 +222,28 @@ impl INode {
             false
         }
     }
+}
+
+fn split_path(path: &str) -> (&str, Option<&str>) {
+    let trimmed_path = path.trim_matches('/');
+    trimmed_path.find('/').map_or((trimmed_path, None), |n| {
+        (&trimmed_path[..n], Some(&trimmed_path[n + 1..]))
+    })
+}
+
+// pub fn mount(path: &str, root_dir: Dir) {
+//     for i in root_dir.iter() {
+//         let file = i.unwrap();
+//         if file.is_dir() {
+//             // 如果是文件夹的话进行 深度遍历
+//             mount(&(path.to_string() + &file.file_name() + "/"), file.to_dir());
+//         } else {
+//             // 如果是文件的话则进行挂载
+//             INode::new(filename, file, file_type, parent)
+//         }
+//     }
+// }
+
+pub fn init(path: &str, root_dir: Dir) {
+
 }

@@ -72,43 +72,24 @@ pub struct FileInner {
 
 impl File {
     pub fn new(inode: Rc<INode>) -> Result<Rc<Self>, RuntimeError>{
-        if inode.get_file_type() == FileType::VirtFile {
-            debug!("获取文件信息, 文件大小: {}",inode.get_file_size());
-            let inner = inode.0.borrow_mut();
-            let file_size = inner.size;
-            let mem_size = DEFAULT_VIRT_FILE_PAGE * PAGE_SIZE;
-            let buf = get_buf_from_phys_page(PhysAddr::from(inner.cluster).into(), mem_size);
-            drop(inner);
-            Ok(Rc::new(Self(RefCell::new(FileInner {
-                file: inode,
-                offset: 0,
-                file_size,
-                buf,
-                mem_size,
-                mem_map: None
-            }))))
-        } else {
-            // 申请页表存储程序
-            let elf_pages = get_pages_num(inode.get_file_size());
-            // 申请页表
-            let elf_phy_start = alloc_more(elf_pages)?;
-            let mem_map = MemMap::exists_page(elf_phy_start, elf_phy_start.0.into(),
-                elf_pages, PTEFlags::VRWX);
-            // 获取缓冲区地址并读取
-            let buf = get_buf_from_phys_page(elf_phy_start, elf_pages);
-            inode.read_to(buf);
-            let file_size = inode.get_file_size();
-            warn!("读取文件: {}", inode.get_filename());
-            Ok(Rc::new(Self(RefCell::new(FileInner {
-                file: inode,
-                offset: 0,
-                file_size,
-                buf,
-                mem_size: elf_pages * PAGE_SIZE,
-                mem_map: Some(Rc::new(mem_map))
-            }))))
-        }
-        
+        // 申请页表存储程序
+        let elf_pages = get_pages_num(inode.get_file_size());
+        // 申请页表
+        let elf_phy_start = alloc_more(elf_pages)?;
+        let mem_map = MemMap::exists_page(elf_phy_start, elf_phy_start.0.into(),
+            elf_pages, PTEFlags::VRWX);
+        // 获取缓冲区地址并读取
+        let buf = get_buf_from_phys_page(elf_phy_start, elf_pages);
+        inode.read_to(buf);
+        let file_size = inode.get_file_size();
+        Ok(Rc::new(Self(RefCell::new(FileInner {
+            file: inode,
+            offset: 0,
+            file_size,
+            buf,
+            mem_size: elf_pages * PAGE_SIZE,
+            mem_map: Some(Rc::new(mem_map))
+        }))))
     }
 
     pub fn cache(inode: Rc<INode>) -> Result<Rc<Self>, RuntimeError>{
@@ -217,18 +198,6 @@ impl FileOP for File {
             inner.file_size = inner.offset;
             let file_size = inner.file_size;
             let mut inode = inner.file.0.borrow_mut();
-            inode.size = file_size;
-
-            // 更新时间
-            let time = TimeSpec::now();
-
-            inode.st_atime_sec = time.tv_sec;
-            inode.st_ctime_sec = time.tv_sec;
-            inode.st_mtime_sec = time.tv_sec;
-
-            inode.st_atime_nsec = time.tv_nsec as u64;
-            inode.st_ctime_nsec = time.tv_nsec as u64;
-            inode.st_mtime_nsec = time.tv_nsec as u64;
         }
         count
     }

@@ -80,7 +80,7 @@ impl Task {
 
         let mut inode = if dir_fd == FD_CWD {
             // process.workspace.clone()
-            INode::get(None, &process.workspace, false)?
+            INode::get(None, &process.workspace)?
         } else {
             let file = process.fd_table.get_file(dir_fd).map_err(|_| (RuntimeError::EBADF))?;
             file.get_inode()
@@ -101,7 +101,7 @@ impl Task {
                 return Ok(());
             }
 
-            inode = INode::get(inode.into(), &filename, false).map_err(|_| (RuntimeError::EBADF))?;
+            inode = INode::get(inode.into(), &filename).map_err(|_| (RuntimeError::EBADF))?;
         }
 
         const UTIME_NOW: usize = 0x3fffffff;
@@ -116,8 +116,8 @@ impl Task {
                 times[0]
             };
 
-            inode_inner.st_atime_sec = time.tv_sec;
-            inode_inner.st_atime_nsec = time.tv_nsec as u64;
+            // inode_inner.st_atime_sec = time.tv_sec;
+            // inode_inner.st_atime_nsec = time.tv_nsec as u64;
         };
 
         if times[1].tv_nsec as usize != UTIME_OMIT {
@@ -127,8 +127,8 @@ impl Task {
                 times[1]
             };
 
-            inode_inner.st_mtime_sec = time.tv_sec;
-            inode_inner.st_mtime_nsec = time.tv_nsec as u64;
+            // inode_inner.st_mtime_sec = time.tv_sec;
+            // inode_inner.st_mtime_nsec = time.tv_nsec as u64;
         }
 
         drop(process);

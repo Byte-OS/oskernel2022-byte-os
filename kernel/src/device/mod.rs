@@ -11,7 +11,7 @@ use fatfs::LossyOemCpConverter;
 use fatfs::NullTimeProvider;
 use virtio_drivers::VirtIOBlk;
 use virtio_drivers::VirtIOHeader;
-use crate::sync::mutex::{Mutex, MutexGuard};
+use crate::sync::mutex::Mutex;
 
 use crate::runtime_err::RuntimeError;
 
@@ -35,7 +35,6 @@ lazy_static! {
             offset: 0,
             disk_index: 0
         };
-        // TODO: 全局设置
         Mutex::new(Rc::new(fatfs::FileSystem::new(c, fatfs::FsOptions::new()).expect("文件系统初始化失败")))
     };
 }

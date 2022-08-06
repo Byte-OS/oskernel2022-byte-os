@@ -103,7 +103,7 @@ pub fn get_new_pid() -> usize {
 pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path: &'a str, args: Vec<&'a str>) 
         -> Result<Rc<Task>, RuntimeError> {
     // 如果存在write
-    let file = INode::open(None, path, false)?;
+    let file = INode::open(None, path)?;
 
     let file_inner = file.0.borrow_mut();
     // 读取elf信息
