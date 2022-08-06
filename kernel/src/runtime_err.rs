@@ -19,5 +19,6 @@ pub enum RuntimeError {
     SigReturn,
     //
     WriteZero,
-    UnexpectedEof
+    UnexpectedEof,
+    NotRWFile
 }

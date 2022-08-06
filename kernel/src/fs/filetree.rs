@@ -165,7 +165,7 @@ impl INode {
 
     // 获取文件大小
     pub fn get_file_size(&self) -> usize {
-        match self.0.borrow_mut().file {
+        match &self.0.borrow_mut().file {
             DiskFileEnum::DiskFile(f) => f.size().unwrap() as usize,
             _ => 0
         }
@@ -177,22 +177,28 @@ impl INode {
     }
 
     // 读取文件内容
-    pub fn read(&self) -> Vec<u8> {
+    pub fn read(&self) -> Result<Vec<u8>, RuntimeError>{
         let mut file_vec = vec![0u8; self.get_file_size()];
-        self.0.borrow_mut().file.read_exact(&mut file_vec);
-        file_vec
+        self.to_file()?.read_exact(&mut file_vec);
+        Ok(file_vec)
+    }
+
+    pub fn to_file(&self) -> Result<DiskFile, RuntimeError>{
+        self.to_file()
     }
     
     // 读取文件内容
-    pub fn read_to(&self, buf: &mut [u8]) -> usize  {
+    pub fn read_to(&self, buf: &mut [u8]) -> Result<usize, RuntimeError>  {
         // 不再处理虚拟文件
-        self.0.borrow_mut().file.read_exact(buf);
-        buf.len()
+        // self.0.borrow_mut().file.read_exact(buf);
+        self.to_file()?.read_exact(buf);
+        Ok(buf.len())
     }
 
     // 写入设备
-    pub fn write(&self, buf: &mut [u8]) -> usize {
-        self.0.borrow_mut().file.write(buf).unwrap()
+    pub fn write(&self, buf: &mut [u8]) -> Result<usize, RuntimeError> {
+        // self.0.borrow_mut().file.write(buf).unwrap()
+        self.to_file()?.write(buf).map_err(|_| RuntimeError::NotRWFile)
     }
 
     // 创建文件夹
