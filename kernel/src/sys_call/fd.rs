@@ -153,6 +153,23 @@ impl Task {
         inner.context.x[10] = fd;
         Ok(())
     }
+
+    pub fn sys_sendfile(&self, out_fd: usize, in_fd: usize, offset_ptr: usize, count: usize) -> Result<(), RuntimeError> {
+        debug!("out_fd: {}  in_fd: {}  offset_ptr: {:#x}   count: {}", out_fd, in_fd, offset_ptr, count);
+        let mut inner = self.inner.borrow_mut();
+        let mut process = inner.process.borrow_mut();
+        let in_file = process.fd_table.get(in_fd)?;
+        let out_file = process.fd_table.get(out_fd)?;
+        let size = in_file.get_size();
+        let mut buf = vec![0u8; size];
+        in_file.read(&mut buf);
+        out_file.write(&buf, buf.len());
+
+        drop(process);
+        inner.context.x[10] = 0;
+        Ok(())
+    }
+
     // 关闭文件
     pub fn sys_close(&self, fd: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
@@ -315,6 +332,8 @@ impl Task {
     pub fn sys_fstatat(&self, dir_fd: usize, filename: UserAddr<u8>, stat_ptr: UserAddr<Kstat>, _flags: usize) -> Result<(), RuntimeError> {
         let filename = filename.read_string(self.get_pmm());
         let kstat = stat_ptr.translate(self.get_pmm());
+
+        debug!("fstat: {}", filename);
 
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();

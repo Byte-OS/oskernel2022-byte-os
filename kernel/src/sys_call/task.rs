@@ -226,19 +226,35 @@ impl Task {
     }
     
     // wait task
-    pub fn sys_wait4(&self, pid: usize, ptr: UserAddr<u16>, _options: usize) -> Result<(), RuntimeError> {
-        debug!("wait for pid: {:#x}", pid);
+    pub fn sys_wait4(&self, pid: usize, ptr: UserAddr<i32>, _options: usize) -> Result<(), RuntimeError> {
+        debug!("wait for pid: {:#x} options: {:#x}", pid, _options);
         let ptr = ptr.translate(self.get_pmm());
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.clone();
-        let process = process.borrow_mut();
-        let target = 
+        let mut process = process.borrow_mut();
+        if pid != SYS_CALL_ERR {
+            let target = 
             process.children.iter().find(|&x| x.borrow().pid == pid);
         
-        if let Some(exit_code) = target.map_or(None, |x| x.borrow().exit_code) {
-            *ptr = exit_code as u16;
-            inner.context.x[10] = pid;
-            return Ok(())
+            if let Some(exit_code) = target.map_or(None, |x| x.borrow().exit_code) {
+                *ptr = exit_code as i32;
+                inner.context.x[10] = pid;
+                return Ok(())
+            }
+        } else {
+            let cprocess = process.children.iter().find(|&x| x.borrow().exit_code.is_some());
+            if let Some(proc) = cprocess.map_or(None, |x| Some(x.borrow())) {
+                let cpid = proc.pid;
+                let exit_code = proc.exit_code.unwrap();
+                drop(proc);
+                drop(cprocess);
+                process.children.drain_filter(|x| x.borrow().pid == pid);
+                *ptr = exit_code as i32;
+                // inner.context.x[10] = pid;
+                inner.context.x[10] = cpid;
+                debug!("kill pid: {} exit_code: {}", cpid, exit_code);
+                return Ok(())
+            }
         }
         inner.context.sepc -= 4;
         drop(process);

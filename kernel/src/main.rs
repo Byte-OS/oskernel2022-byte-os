@@ -6,6 +6,7 @@
 #![allow(unaligned_references)]
 #![feature(derive_default_enum)]
 #![feature(const_btree_new)]
+#![feature(drain_filter)]
 
 
 // 使用定义的命令行宏   
@@ -35,7 +36,7 @@ use core::arch::global_asm;
 use alloc::rc::Rc;
 use riscv::register::sstatus;
 
-use crate::{fs::{filetree::INode, cache::cache_file}, memory::page::get_free_page_num};
+use crate::{fs::filetree::INode, memory::page::get_free_page_num};
 
 
 mod virtio_impl;
