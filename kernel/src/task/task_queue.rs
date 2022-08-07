@@ -7,10 +7,22 @@ use super::exec;
 
 lazy_static! {
     pub static ref TASK_QUEUE: Mutex<VecDeque<&'static str>> = Mutex::new(VecDeque::from(vec![
-        "busybox sh busybox_testcode.sh"
+        // "busybox sh busybox_testcode.sh"
         // "busybox sh echo.sh"
         // "busybox cat ./busybox_cmd.txt"
-
+        // "lua date.lua",
+        // "lua file_io.lua",
+        // "lua max_min.lua",
+        // "lua random.lua",
+        // "lua remove.lua",
+        // "lua round_num.lua",
+        // "lua sin30.lua",
+        // "lua sort.lua",
+        // "lua strings.lua",
+        // "busybox echo latency measurements",
+        // "lmbench_all lat_syscall -P 1 null",
+        "lmbench_all",
+        "lmbench_all lat_proc",
     ]));
 }
 

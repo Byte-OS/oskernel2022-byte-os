@@ -248,7 +248,7 @@ impl Task {
                 let exit_code = proc.exit_code.unwrap();
                 drop(proc);
                 drop(cprocess);
-                process.children.drain_filter(|x| x.borrow().pid == pid);
+                // process.children.drain_filter(|x| x.borrow().pid == pid);
                 *ptr = exit_code as i32;
                 // inner.context.x[10] = pid;
                 inner.context.x[10] = cpid;
