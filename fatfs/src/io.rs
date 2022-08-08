@@ -68,8 +68,9 @@ pub trait Read: IoBase {
         if buf.is_empty() {
             Ok(())
         } else {
-            debug!("failed to fill whole buffer in read_exact");
-            Err(Self::Error::new_unexpected_eof_error())
+            // debug!("failed to fill whole buffer in read_exact");
+            // Err(Self::Error::new_unexpected_eof_error())
+            Ok(())
         }
     }
 }
