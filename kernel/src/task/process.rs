@@ -19,7 +19,7 @@ pub struct Process {
     pub workspace: String,                      // 工作目录
     pub fd_table: FDTable,                      // 文件描述表
     pub tms: TMS,                               // 时间记录结构
-    pub signal: SigAction,                      // 信号结构
+    pub sig_actions: [SigAction; 64],           // 信号结构
     pub children: Vec<Rc<RefCell<Process>>>,    // 子结构
     pub exit_code: Option<usize>                // 退出代码
 }
@@ -41,7 +41,7 @@ impl Process {
             workspace: String::new(),
             fd_table: FDTable::new(),
             children: vec![],
-            signal: SigAction::new(),
+            sig_actions: [SigAction::empty(); 64],
             tms: TMS::new(),
             exit_code: None
         };

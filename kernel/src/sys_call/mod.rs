@@ -350,7 +350,10 @@ impl Task {
     pub fn signal(&self, signal: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
-        let handler = process.signal.handler;
+        
+        let sig_action = process.sig_actions[signal];
+
+        let handler = sig_action.handler;
         // 保存上下文
         let mut temp_context = inner.context.clone();
         let pmm = process.pmm.clone();
@@ -360,8 +363,8 @@ impl Task {
         if ucontext.context.x[0] != 0 {
             return Ok(());
         }
-        let restorer = process.signal.restorer;
-        let _flags = SignalFlag::from_bits_truncate(process.signal.flags);
+        let restorer = sig_action.restorer;
+        let _flags = SignalFlag::from_bits_truncate(sig_action.flags);
         
         drop(process);
         inner.context.sepc = handler;

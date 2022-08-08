@@ -9,6 +9,7 @@ use crate::{interrupt::Context, memory::page_table::PagingMode};
 use crate::task::task_scheduler::kill_task;
 
 use super::process::Process;
+use super::signal::SigSet;
 
 #[derive(Clone, Copy, PartialEq)]
 // 任务状态
@@ -26,6 +27,7 @@ pub struct TaskInner {
     pub process: Rc<RefCell<Process>>,
     pub status: TaskStatus,
     pub wake_time: usize,
+    pub sig_mask: SigSet
 }
 
 #[derive(Clone)]
@@ -49,7 +51,8 @@ impl Task {
                 context: Context::new(), 
                 process: process.clone(), 
                 status: TaskStatus::READY,
-                wake_time: 0
+                wake_time: 0,
+                sig_mask: SigSet::new(0)
             }))
         });
         process_mut.tasks.push(Rc::downgrade(&task));
