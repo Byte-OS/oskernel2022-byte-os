@@ -16,8 +16,8 @@ lazy_static! {
         // "busybox sh test.sh sin30.lua",
         // "busybox sh test.sh sort.lua",
         // "busybox sh test.sh strings.lua",
-        "busybox sh busybox_testcode.sh"
-
+        // "busybox sh busybox_testcode.sh"
+        "sh echo_busybox.sh"
         // "cat busybox_cmd.txt"
 
         // 减少内存消耗 所以暂时不用下方的
@@ -61,3 +61,4 @@ pub fn load_next_task() -> bool {
         false
     }
 }
+
