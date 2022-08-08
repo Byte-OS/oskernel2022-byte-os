@@ -16,7 +16,9 @@ lazy_static! {
         // "busybox sh test.sh sin30.lua",
         // "busybox sh test.sh sort.lua",
         // "busybox sh test.sh strings.lua",
-        "busybox sh busybox_testcode.sh"
+        // "busybox sh busybox_testcode.sh"
+
+        "cat busybox_cmd.txt"
 
         // 减少内存消耗 所以暂时不用下方的
         // "busybox sh lua_testcode.sh"
