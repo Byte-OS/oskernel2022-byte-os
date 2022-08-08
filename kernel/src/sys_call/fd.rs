@@ -1,5 +1,6 @@
 use alloc::rc::Rc;
 use crate::fs::StatFS;
+use crate::fs::file::File;
 use crate::fs::file::FileOP;
 use crate::fs::file::FileType;
 use crate::fs::stdio::StdNull;
@@ -165,6 +166,25 @@ impl Task {
         inner.context.x[10] = 0;
         Ok(())
     }
+
+    pub fn sys_sendfile(&self, out_fd: usize, in_fd: usize, offset_ptr: usize, count: usize) -> Result<(), RuntimeError> {
+        debug!("out_fd: {}  in_fd: {}  offset_ptr: {:#x}   count: {}", out_fd, in_fd, offset_ptr, count);
+        let mut inner = self.inner.borrow_mut();
+        let process = inner.process.borrow_mut();
+        let in_file = process.fd_table.get(in_fd)?;
+        let out_file = process.fd_table.get(out_fd)?;
+        let size = in_file.get_size();
+        let mut buf = vec![0u8; size];
+        in_file.read(&mut buf);
+        out_file.write(&buf, buf.len());
+        let file = out_file.downcast::<File>().map_err(|_| RuntimeError::NotRWFile)?;
+        file.lseek(0, 0);
+
+        drop(process);
+        inner.context.x[10] = 0;
+        Ok(())
+    }
+
     // 管道符
     pub fn sys_pipe2(&self, req_ptr: UserAddr<u32>) -> Result<(), RuntimeError> {
         let pipe_arr = req_ptr.translate_vec(self.get_pmm(), 2);
@@ -206,6 +226,7 @@ impl Task {
 
     // 读取
     pub fn sys_read(&self, fd: usize, buf_ptr: UserAddr<u8>, count: usize) -> Result<(), RuntimeError> {
+        debug!("sys_read, fd: {}, buf_ptr: {:#x}, count: {}", fd, buf_ptr.bits(), count);
         let buf = buf_ptr.translate_vec(self.get_pmm(), count);
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
@@ -218,6 +239,7 @@ impl Task {
             usize::MAX
         };
         drop(process);
+        debug!("read_size = {}", value);
         inner.context.x[10] = value;
         Ok(())
     }
