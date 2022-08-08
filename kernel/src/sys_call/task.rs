@@ -244,7 +244,7 @@ impl Task {
         let ptr = ptr.translate(self.get_pmm());
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.clone();
-        let process = process.borrow_mut();
+        let mut process = process.borrow_mut();
         // let target = 
         //     process.children.iter().find(|&x| x.borrow().pid == pid);
         
@@ -264,18 +264,21 @@ impl Task {
                 return Ok(())
             }
         } else {
-            let cprocess = process.children.iter().find(|&x| x.borrow().exit_code.is_some());
-            if let Some(proc) = cprocess.map_or(None, |x| Some(x.borrow())) {
-                let cpid = proc.pid;
-                let exit_code = proc.exit_code.unwrap();
-                drop(proc);
-                drop(cprocess);
-                // process.children.drain_filter(|x| x.borrow().pid == pid);
-                *ptr = exit_code as i32;
-                // inner.context.x[10] = pid;
-                inner.context.x[10] = cpid;
-                debug!("kill pid: {} exit_code: {}", cpid, exit_code);
-                return Ok(())
+            if process.children.len() == 0 {
+                inner.context.x[10] = -10 as isize as usize;
+                return Ok(());
+            }
+
+            let cprocess_vec = 
+                process.children.drain_filter(|x| x.borrow().exit_code.is_some()).collect::<Vec<_>>();
+
+            debug!("cpro len: {}", cprocess_vec.len());
+
+            if cprocess_vec.len() != 0 {
+                let cprocess = cprocess_vec[0].borrow();
+                *ptr = cprocess.exit_code.unwrap() as i32;
+                inner.context.x[10] = cprocess.pid;
+                return Ok(());
             }
         }
         inner.context.sepc -= 4;
