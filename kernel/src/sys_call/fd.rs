@@ -175,13 +175,17 @@ impl Task {
         let out_file = process.fd_table.get(out_fd)?;
         let size = in_file.get_size();
         let mut buf = vec![0u8; size];
-        in_file.read(&mut buf);
+        let read_size = in_file.read(&mut buf);
         out_file.write(&buf, buf.len());
-        let file = out_file.downcast::<File>().map_err(|_| RuntimeError::NotRWFile)?;
-        file.lseek(0, 0);
+        // let file = out_file.downcast::<File>();
+        // file.lseek(0, 0);
+        if let Ok(file) = out_file.downcast::<File>() {
+            file.lseek(0, 0);
+        }
 
         drop(process);
-        inner.context.x[10] = 0;
+        debug!("write size: {}", size);
+        inner.context.x[10] = read_size;
         Ok(())
     }
 
