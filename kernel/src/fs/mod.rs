@@ -6,6 +6,8 @@ pub mod cache;
 
 pub use partition::Partition;
 
+use crate::device::root_dir;
+
 #[repr(C)]
 pub struct StatFS{
     pub f_type: u64,        //文件系统的类型
@@ -24,5 +26,6 @@ pub fn init() {
     /// TODO: 不再进行文件系统的初始化？ 等待处理 
     /// 
     /// 
+    filetree::init("/", root_dir());
     info!("初始化文件系统");
 }

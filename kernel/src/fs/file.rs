@@ -3,7 +3,7 @@ use core::any::{Any, TypeId};
 use alloc::rc::Rc;
 use core::cell::RefCell;
 
-use crate::interrupt::timer::TimeSpec;
+
 use crate::memory::mem_map::MemMap;
 use crate::runtime_err::RuntimeError;
 use crate::memory::addr::{get_buf_from_phys_page, get_pages_num, PAGE_SIZE, VirtAddr, PhysAddr};
@@ -80,7 +80,7 @@ impl File {
             elf_pages, PTEFlags::VRWX);
         // 获取缓冲区地址并读取
         let buf = get_buf_from_phys_page(elf_phy_start, elf_pages);
-        inode.read_to(buf);
+        inode.read_to(buf)?;
         let file_size = inode.get_file_size();
         Ok(Rc::new(Self(RefCell::new(FileInner {
             file: inode,

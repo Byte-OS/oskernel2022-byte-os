@@ -94,7 +94,7 @@ pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
     fs::init();
 
     // 输出文件树
-    print_file_tree(INode::get(None, "/").unwrap());
+    print_file_tree(INode::root());
 
     // cache_file("runtest.exe");
     // cache_file("entry-static.exe");

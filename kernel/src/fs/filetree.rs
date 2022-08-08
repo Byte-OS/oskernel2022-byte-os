@@ -1,10 +1,10 @@
 
 use core::cell::RefCell;
 
-use alloc::{string::{String, ToString}, vec::Vec, rc::{Rc, Weak}};
+use alloc::{string::String, vec::Vec, rc::{Rc, Weak}};
 use fatfs::{Read, Write};
 
-use crate::{device::{DiskFile, FileSystem, Dir}, runtime_err::RuntimeError};
+use crate::{device::{DiskFile, Dir}, runtime_err::RuntimeError};
 
 use super::{file::{FileType, File}, cache::get_cache_file};
 
@@ -184,7 +184,11 @@ impl INode {
     }
 
     pub fn to_file(&self) -> Result<DiskFile, RuntimeError>{
-        self.to_file()
+        if let DiskFileEnum::DiskFile(f) = &self.0.borrow().file {
+            Ok(f.clone())
+        } else {
+            Err(RuntimeError::NotRWFile)
+        }
     }
     
     // 读取文件内容
@@ -250,6 +254,37 @@ fn split_path(path: &str) -> (&str, Option<&str>) {
 //     }
 // }
 
-pub fn init(path: &str, root_dir: Dir) {
+pub fn add_files_to_dir(dir: Dir, node: Rc<INode>) {
+    for file_entry in dir.iter() {
+        let file_entry = file_entry.expect("文件节点异常");
+        let filename = file_entry.file_name();
+        if filename == "." || filename == ".." {
+            continue;
+        }
+        if file_entry.is_dir() {
+            let child_dir = file_entry.to_dir();
+            let parent_node = Some(Rc::downgrade(&node));
+            let dir_node = INode::new(filename, 
+                DiskFileEnum::DiskDir(child_dir.clone()), FileType::Directory, parent_node);
+            node.clone().add(dir_node.clone());
+            add_files_to_dir(child_dir, dir_node);
+        } else if file_entry.is_file() {
+            let parent_node = Some(Rc::downgrade(&node));
+            let dir_node = INode::new(filename, 
+        DiskFileEnum::DiskFile(file_entry.to_file()), FileType::File, parent_node);
+                node.clone().add(dir_node.clone());
+        } else {
+            error!("不支持的文件类型");
+        }
+    }
+}
 
+pub fn init(path: &str, root_dir: Dir) {
+    if path == "/" {
+        let inode = INode::new(String::from(""), DiskFileEnum::DiskDir(root_dir.clone()), 
+            FileType::Directory, None);
+        // 添加到文件树子节点
+        unsafe { FILE_TREE = Some(inode.clone()); }
+        add_files_to_dir(root_dir, inode);
+    }
 }
