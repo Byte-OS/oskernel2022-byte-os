@@ -126,7 +126,5 @@ pub fn switch_to_task(pid: usize, tid: usize) {
 
 // 获取当前的任务数量
 pub fn get_task_num() -> usize {
-    let mut task_scheduler = TASK_SCHEDULER.force_get();
-
-    task_scheduler.queue.len()
+    TASK_SCHEDULER.force_get().queue.len()
 }

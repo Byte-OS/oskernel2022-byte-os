@@ -23,9 +23,7 @@ pub struct StatFS{
 
 // 初始化文件系统
 pub fn init() {
-    /// TODO: 不再进行文件系统的初始化？ 等待处理 
-    /// 
-    /// 
+    // 不再进行文件系统的初始化？ 等待处理 
     filetree::init("/", root_dir());
     info!("初始化文件系统");
 }

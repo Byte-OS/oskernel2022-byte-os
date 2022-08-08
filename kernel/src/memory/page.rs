@@ -1,6 +1,4 @@
 use core::{mem::size_of, slice::from_raw_parts_mut};
-
-use alloc::borrow::Cow;
 use alloc::string::{String, ToString};
 use alloc::{vec::Vec, rc::Rc};
 

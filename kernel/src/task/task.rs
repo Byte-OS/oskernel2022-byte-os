@@ -1,4 +1,4 @@
-use core::cell::{RefCell, RefMut};
+use core::cell::RefCell;
 
 use alloc::rc::Rc;
 

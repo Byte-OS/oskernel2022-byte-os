@@ -6,13 +6,11 @@ use core::cell::RefCell;
 
 use crate::memory::mem_map::MemMap;
 use crate::runtime_err::RuntimeError;
-use crate::memory::addr::{get_buf_from_phys_page, get_pages_num, PAGE_SIZE, VirtAddr, PhysAddr};
+use crate::memory::addr::{get_buf_from_phys_page, get_pages_num, PAGE_SIZE, VirtAddr};
 use crate::memory::page::alloc_more;
 use crate::memory::page_table::{PageMappingManager, PTEFlags};
 
 use super::filetree::INode;
-
-pub const DEFAULT_VIRT_FILE_PAGE: usize = 2;
 
 // 文件类型
 #[allow(dead_code)]
@@ -102,7 +100,7 @@ impl File {
             elf_pages, PTEFlags::VRWX);
         // 获取缓冲区地址并读取
         let buf = get_buf_from_phys_page(elf_phy_start, elf_pages);
-        inode.read_to(buf);
+        inode.read_to(buf)?;
         let file_size = inode.get_file_size();
         warn!("读取文件: {}", inode.get_filename());
         Ok(Rc::new(Self(RefCell::new(FileInner {
@@ -197,8 +195,8 @@ impl FileOP for File {
         // 需要更新文件数据
         if inner.offset >= inner.file_size {
             inner.file_size = inner.offset;
-            let file_size = inner.file_size;
-            let mut inode = inner.file.0.borrow_mut();
+            let _file_size = inner.file_size;
+            let _inode = inner.file.0.borrow_mut();
         }
         count
     }

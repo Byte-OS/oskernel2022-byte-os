@@ -1,21 +1,12 @@
-use core::slice;
-
-use alloc::rc::Rc;
 use riscv::register::scause;
 use riscv::register::scause::Trap;
 use riscv::register::scause::Exception;
 use riscv::register::scause::Interrupt;
 use riscv::register::stval;
 use riscv::register::sstatus;
-
-use crate::memory::page_table::PageMappingManager;
-use crate::memory::addr::VirtAddr;
 use crate::interrupt::timer;
-use crate::fs::filetree::INode;
 use crate::task::task_scheduler::kill_task;
 use crate::sys_call::consts::EBADF;
-
-use crate::fs::file::FileType;
 use crate::interrupt::timer::set_last_ticks;
 use crate::runtime_err::RuntimeError;
 use crate::task::signal::SignalUserContext;
@@ -162,24 +153,6 @@ struct Dirent {
     d_reclen: u16,	    // 当前dirent的长度
     d_type: u8,	        // 文件类型
     d_name_start: u8	//文件名
-}
-
-// sys_write调用
-pub fn sys_write_wrap(pmm: Rc<PageMappingManager>, fd: Rc<INode>, buf: usize, count: usize) -> usize {
-    // 根据satp中的地址构建PageMapping 获取当前的映射方式
-    let buf = pmm.get_phys_addr(VirtAddr::from(buf)).unwrap();
-
-    // 寻找物理地址
-    let buf = unsafe {slice::from_raw_parts_mut(usize::from(buf) as *mut u8, count)};
-    
-    // 匹配文件类型
-    match fd.get_file_type() {
-        FileType::VirtFile => {
-            fd.write(buf);
-        }
-        _ => {warn!("SYS_WRITE暂未找到设备");}
-    }
-    count
 }
 
 impl Task {

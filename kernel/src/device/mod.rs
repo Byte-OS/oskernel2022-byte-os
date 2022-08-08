@@ -5,7 +5,6 @@ use alloc::borrow::ToOwned;
 use alloc::boxed::Box;
 use alloc::rc::Rc;
 use alloc::vec::Vec;
-pub use block::SECTOR_SIZE;
 use fatfs::{Dir as OtherDir, File as OtherFile, FileSystem as OtherFileSystem};
 use fatfs::LossyOemCpConverter;
 use fatfs::NullTimeProvider;
@@ -74,23 +73,8 @@ pub fn add_sdcard() {
 pub fn init() {
     info!("初始化设备");
     #[cfg(not(feature = "board_k210"))]
-    unsafe {
-        // qemu 时添加 储存设备
-        add_virt_io(VIRTIO0);
-    }
-
-    // unsafe {
-    //     GLOBAL_FS = Some(fs);
-    // }
-
-    // let file = fs.root_dir().open_file(".").unwrap();
-
-    // let file = fs.root_dir().open_dir("var/tmp").unwrap();
-    // let parent_dir = file.open_dir("..").unwrap();
-    // debug!("par: {}", parent_dir.stream.na)
-
-    // get_fs();
-    // root_dir();
+    // qemu 时添加 储存设备
+    add_virt_io(VIRTIO0);
 }
 
 pub fn root_dir() -> Dir {
@@ -204,7 +188,7 @@ impl fatfs::Seek for DiskCursor {
                 self.set_position(i as usize);
                 Ok(i)
             }
-            fatfs::SeekFrom::End(i) => {
+            fatfs::SeekFrom::End(_) => {
                 todo!("Seek from end")
             }
             fatfs::SeekFrom::Current(i) => {

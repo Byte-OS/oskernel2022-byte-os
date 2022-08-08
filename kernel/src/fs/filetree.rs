@@ -78,7 +78,7 @@ impl INode {
                     }
                 }
             },
-            name => {
+            _ => {
                 for child in self.clone_children() {
                     if child.get_filename() == filename {
                         return Ok(child.clone());
@@ -197,6 +197,8 @@ impl INode {
     pub fn read_to(&self, buf: &mut [u8]) -> Result<usize, RuntimeError>  {
         // 不再处理虚拟文件
         // self.0.borrow_mut().file.read_exact(buf);
+        // 读取错误 但是会抛出异常 UnexpectedEOF
+        // self.to_file()?.read_exact(buf).expect("读取错误");
         self.to_file()?.read_exact(buf);
         Ok(buf.len())
     }

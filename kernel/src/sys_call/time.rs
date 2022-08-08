@@ -107,10 +107,10 @@ impl Task {
         const UTIME_NOW: usize = 0x3fffffff;
         const UTIME_OMIT: usize = 0x3ffffffe;
 
-        let mut inode_inner = inode.0.borrow_mut();
+        let _inode_inner = inode.0.borrow_mut();
 
         if times[0].tv_nsec as usize != UTIME_OMIT {
-            let time = if times[0].tv_nsec as usize == UTIME_NOW {
+            let _time = if times[0].tv_nsec as usize == UTIME_NOW {
                 TimeSpec::now()
             } else {
                 times[0]
@@ -121,7 +121,7 @@ impl Task {
         };
 
         if times[1].tv_nsec as usize != UTIME_OMIT {
-            let time = if times[1].tv_nsec as usize == UTIME_NOW {
+            let _time = if times[1].tv_nsec as usize == UTIME_NOW {
                 TimeSpec::now()
             } else {
                 times[1]

@@ -282,8 +282,8 @@ impl Task {
         Ok(())
     }
 
-    pub fn sys_fstat(&self, fd: usize, buf_ptr: UserAddr<Kstat>) -> Result<(), RuntimeError> {
-        let kstat = buf_ptr.translate(self.get_pmm());
+    pub fn sys_fstat(&self, _fd: usize, buf_ptr: UserAddr<Kstat>) -> Result<(), RuntimeError> {
+        let _kstat = buf_ptr.translate(self.get_pmm());
         let mut inner = self.inner.borrow_mut();
         // let process = inner.process.borrow_mut();
 
