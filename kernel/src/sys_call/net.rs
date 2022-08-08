@@ -4,8 +4,8 @@ use alloc::collections::VecDeque;
 
 use alloc::rc::Rc;
 use core::cell::RefCell;
-use crate::fs::file::FcntlCmd;
 use crate::fs::file::FileOP;
+use crate::fs::file::fcntl_cmd;
 use crate::memory::addr::UserAddr;
 use crate::memory::addr::{get_buf_from_phys_addr, VirtAddr};
 
@@ -203,7 +203,7 @@ impl Task {
             // };
         } else {
             match cmd {
-                FcntlCmd::DUPFD_CLOEXEC => {
+                fcntl_cmd::DUPFD_CLOEXEC => {
                     debug!("copy value");
                     self.sys_dup(fd)?;
                 }

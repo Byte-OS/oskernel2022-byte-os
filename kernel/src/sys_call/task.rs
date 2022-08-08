@@ -53,6 +53,17 @@ impl Task {
         let inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
         process.exit(exit_code);
+        match &process.parent {
+            Some(parent) => {
+                let parent = parent.upgrade().unwrap();
+                let parent = parent.borrow();
+                let task = parent.tasks[0].clone().upgrade().unwrap();
+                drop(parent);
+                // 处理signal 17 SIGCHLD
+                task.signal(17);
+            }
+            None => {}
+        }
         debug!("exit_code: {:#x}", exit_code);
         Err(RuntimeError::ChangeTask)
     }
@@ -208,7 +219,7 @@ impl Task {
         let mut process = inner.process.borrow_mut();
         let pmm = process.pmm.clone();
         let filename = filename.read_string(pmm.clone());
-        
+
         debug!("run {}", filename);
         let args = argv.translate_until(pmm.clone(), |x| !x.is_valid());
         let args:Vec<String> = args.iter_mut().map(|x| x.read_string(pmm.clone())).collect();
@@ -229,6 +240,7 @@ impl Task {
     
     // wait task
     pub fn sys_wait4(&self, pid: usize, ptr: UserAddr<u16>, _options: usize) -> Result<(), RuntimeError> {
+        debug!("pid: {:#x}, ptr: {:#x}, _options: {}", pid, ptr.bits(), _options);
         let ptr = ptr.translate(self.get_pmm());
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.clone();

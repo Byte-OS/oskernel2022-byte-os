@@ -12,7 +12,8 @@ use crate::memory::page_table::{PageMappingManager, PTEFlags};
 
 use super::filetree::INode;
 
-pub mod FcntlCmd {
+#[allow(unused)]
+pub mod fcntl_cmd {
     /// dup
     pub const DUPFD: usize = 0;
     /// get close_on_exec

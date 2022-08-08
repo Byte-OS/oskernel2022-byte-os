@@ -349,6 +349,7 @@ impl Task {
         ucontext.context.x[0] = ucontext.context.sepc;
         drop(inner);
 
+        debug!("handle signal: {}  handler: {:#x}", signal, handler);
         loop {
             self.run();
             if let Err(RuntimeError::SigReturn) = self.interrupt() {
