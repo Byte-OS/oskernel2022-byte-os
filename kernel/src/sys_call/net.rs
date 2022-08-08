@@ -4,6 +4,7 @@ use alloc::collections::VecDeque;
 
 use alloc::rc::Rc;
 use core::cell::RefCell;
+use crate::fs::file::FcntlCmd;
 use crate::fs::file::FileOP;
 use crate::memory::addr::UserAddr;
 use crate::memory::addr::{get_buf_from_phys_addr, VirtAddr};
@@ -184,21 +185,30 @@ impl Task {
 
     pub fn sys_fcntl(&self, fd: usize, cmd: usize, _arg: usize) -> Result<(), RuntimeError> {
         debug!("val: fd {}  cmd {:#x} arg {:#x}", fd, cmd, _arg);
-        let mut inner = self.inner.borrow_mut();
+        // let mut inner = self.inner.borrow_mut();
         // let node = self.map.get_mut(&fd).ok_or(SysError::EBADF)?;
         if fd >= 50 {
+            // 暂时注释掉 后面使用socket
+            // match cmd {
+            //     // 复制文件描述符
+            //     1 => {
+            //         inner.context.x[10] = 1;
+            //     }
+            //     3 => {
+            //         inner.context.x[10] = 0o4000;
+            //     },
+            //     _n => {
+            //         debug!("not imple {}", _n);
+            //     },
+            // };
+        } else {
             match cmd {
-                // 复制文件描述符
-                1 => {
-                    inner.context.x[10] = 1;
+                FcntlCmd::DUPFD_CLOEXEC => {
+                    debug!("copy value");
+                    self.sys_dup(fd)?;
                 }
-                3 => {
-                    inner.context.x[10] = 0o4000;
-                },
-                _n => {
-                    debug!("not imple {}", _n);
-                },
-            };
+                _ => {}
+            }
         }
         Ok(())
     }

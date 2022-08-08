@@ -157,6 +157,7 @@ impl Task {
     }
     // 关闭文件
     pub fn sys_close(&self, fd: usize) -> Result<(), RuntimeError> {
+        debug!("close fd: {}", fd);
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
         process.fd_table.dealloc(fd);

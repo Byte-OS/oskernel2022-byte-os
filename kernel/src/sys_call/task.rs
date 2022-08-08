@@ -208,6 +208,8 @@ impl Task {
         let mut process = inner.process.borrow_mut();
         let pmm = process.pmm.clone();
         let filename = filename.read_string(pmm.clone());
+        
+        debug!("run {}", filename);
         let args = argv.translate_until(pmm.clone(), |x| !x.is_valid());
         let args:Vec<String> = args.iter_mut().map(|x| x.read_string(pmm.clone())).collect();
 

@@ -12,6 +12,27 @@ use crate::memory::page_table::{PageMappingManager, PTEFlags};
 
 use super::filetree::INode;
 
+pub mod FcntlCmd {
+    /// dup
+    pub const DUPFD: usize = 0;
+    /// get close_on_exec
+    pub const GETFD: usize = 1;
+    /// set/clear close_on_exec
+    pub const SETFD: usize = 2;
+    /// get file->f_flags
+    pub const GETFL: usize = 3;
+    /// set file->f_flags
+    pub const SETFL: usize = 4;
+    /// Get record locking info.
+    pub const GETLK: usize = 5;
+    /// Set record locking info (non-blocking).
+    pub const SETLK: usize = 6;
+    /// Set record locking info (blocking).
+    pub const SETLKW: usize = 7;
+    /// like F_DUPFD, but additionally set the close-on-exec flag
+    pub const DUPFD_CLOEXEC: usize = 0x406;
+}
+
 // 文件类型
 #[allow(dead_code)]
 #[derive(Default, Clone, Copy, PartialEq)]
