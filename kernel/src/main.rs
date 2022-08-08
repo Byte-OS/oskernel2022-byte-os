@@ -93,17 +93,16 @@ pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
     // 初始化文件系统
     fs::init();
 
+    let busybox_node = INode::get(None, "busybox").expect("can't find busybox");
+
+    // 创建busybox 指令副本
+    busybox_node.linkat("sh");
+    busybox_node.linkat("echo");
+    busybox_node.linkat("cat");
+    busybox_node.linkat("cp");
+
     // 输出文件树
     print_file_tree(INode::root());
-
-    // cache_file("runtest.exe");
-    // cache_file("entry-static.exe");
-    // cache_file("entry-dynamic.exe");
-    // cache_file("libc.so");
-    // cache_file("dlopen_dso.so");
-    // cache_file("tls_align_dso.so");
-    // cache_file("tls_get_new-dtv_dso.so");
-    // cache_file("tls_init_dso.so");
 
     // 初始化多任务
     task::init();

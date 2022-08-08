@@ -1,7 +1,7 @@
 
 use core::cell::RefCell;
 
-use alloc::{string::String, vec::Vec, rc::{Rc, Weak}};
+use alloc::{string::{String, ToString}, vec::Vec, rc::{Rc, Weak}};
 use fatfs::{Read, Write};
 
 use crate::{device::{DiskFile, Dir}, runtime_err::RuntimeError};
@@ -11,6 +11,7 @@ use super::{file::{FileType, File}, cache::get_cache_file};
 
 pub static mut FILE_TREE: Option<Rc<INode>> = None;
 
+#[derive(Clone)]
 pub enum DiskFileEnum {
     DiskFile(DiskFile),
     DiskDir(Dir),
@@ -233,6 +234,18 @@ impl INode {
             false
         }
     }
+
+    // link at
+    pub fn linkat(&self, filename: &str) {
+        let inner = self.0.borrow_mut();
+        let new_node = Self::new(filename.to_string(), inner.file.clone(),
+            inner.file_type, inner.parent.clone());
+        if let Some(node) = inner.parent.as_ref().map_or(None, |x| x.upgrade()) {
+            node.add(new_node);
+        }
+        // let parent_node = self.0.
+    }
+
 }
 
 fn split_path(path: &str) -> (&str, Option<&str>) {

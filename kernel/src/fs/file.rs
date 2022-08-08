@@ -136,6 +136,7 @@ impl File {
 
     pub fn lseek(&self, offset: usize, whence: usize) -> usize {
         let mut inner = self.0.borrow_mut();
+
         if offset > 0x80000 {
             return offset;
         }

@@ -1,7 +1,7 @@
 use alloc::rc::Rc;
 use hashbrown::HashMap;
 
-use crate::{sync::mutex::Mutex, fs::file::File};
+use crate::{sync::mutex::Mutex, fs::file::File, device::root_dir};
 
 use super::filetree::INode;
 
@@ -24,4 +24,8 @@ pub fn get_cache_file(filename: &str) -> Option<Rc<File>> {
         },
         None => None
     }
+}
+
+pub fn linkat(filename: &str, node: Rc<INode>) {
+    node.linkat(filename);
 }
