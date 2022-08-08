@@ -179,7 +179,8 @@ impl INode {
     // 读取文件内容
     pub fn read(&self) -> Result<Vec<u8>, RuntimeError>{
         let mut file_vec = vec![0u8; self.get_file_size()];
-        self.to_file()?.read_exact(&mut file_vec);
+        // self.to_file()?.read_exact(&mut file_vec);
+        self.read_to(&mut file_vec)?;
         Ok(file_vec)
     }
 
