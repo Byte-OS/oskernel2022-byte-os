@@ -61,7 +61,7 @@ impl Task {
                 let task = parent.tasks[0].clone().upgrade().unwrap();
                 drop(parent);
                 // 处理signal 17 SIGCHLD
-                task.signal(17);
+                // task.signal(17);
             }
             None => {}
         }

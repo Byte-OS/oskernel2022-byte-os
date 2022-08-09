@@ -1,10 +1,12 @@
 use alloc::rc::Rc;
+use crate::console::puts;
 use crate::fs::StatFS;
 use crate::fs::file::File;
 use crate::fs::file::FileOP;
 use crate::fs::file::FileType;
 use crate::fs::stdio::StdNull;
 use crate::fs::stdio::StdZero;
+use crate::interrupt::timer::TimeSpec;
 use crate::memory::addr::UserAddr;
 use crate::task::fd_table::IoVec;
 use crate::task::pipe::PipeWriter;
@@ -49,10 +51,14 @@ impl Task {
     }
     // 复制文件描述符
     pub fn sys_dup3(&self, fd: usize, new_fd: usize) -> Result<(), RuntimeError> {
+        debug!("dup fd: {} to fd: {}", fd, new_fd);
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
         // 判断是否存在文件描述符
         let fd_v = process.fd_table.get(fd)?;
+        if let Ok(file) = fd_v.clone().downcast::<File>() {
+            file.lseek(0, 0);
+        }
         process.fd_table.set(new_fd, fd_v);
         drop(process);
         inner.context.x[10] = new_fd;
@@ -179,12 +185,12 @@ impl Task {
         out_file.write(&buf, buf.len());
         // let file = out_file.downcast::<File>();
         // file.lseek(0, 0);
-        if let Ok(file) = out_file.downcast::<File>() {
-            file.lseek(0, 0);
-        }
+        // if let Ok(file) = out_file.downcast::<File>() {
+        //     file.lseek(0, 0);
+        // }
 
         drop(process);
-        debug!("write size: {}", size);
+        debug!("write size: {}", read_size);
         inner.context.x[10] = read_size;
         Ok(())
     }
@@ -344,6 +350,7 @@ impl Task {
     pub fn sys_fstatat(&self, dir_fd: usize, filename: UserAddr<u8>, stat_ptr: UserAddr<Kstat>, _flags: usize) -> Result<(), RuntimeError> {
         let filename = filename.read_string(self.get_pmm());
         let kstat = stat_ptr.translate(self.get_pmm());
+        debug!("sys_fstat: dir_fd {:#x}, filename: {}", dir_fd,filename);
 
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
@@ -415,4 +422,21 @@ impl Task {
         Ok(())
     }
 
+    pub fn sys_ppoll(&self, fds: UserAddr<PollFD>, nfds: usize, timeout: UserAddr<TimeSpec>) -> Result<(), RuntimeError> {
+        let fds = fds.translate_vec(self.get_pmm(), nfds);
+        debug!("wait for fds: {}", fds.len());
+        for i in fds {
+            debug!("wait fd: {}", i.fd);
+        }
+        
+        Ok(())
+    }
+
+}
+
+#[repr(C)]
+pub struct PollFD {
+    pub fd: u32,
+    pub envents: u16,
+    pub revents: u16
 }
