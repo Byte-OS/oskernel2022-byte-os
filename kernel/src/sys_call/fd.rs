@@ -12,6 +12,7 @@ use crate::fs::stdio::StdNull;
 use crate::fs::stdio::StdZero;
 use crate::interrupt::timer::TimeSpec;
 use crate::memory::addr::UserAddr;
+use crate::sys_call::Dirent;
 use crate::task::fd_table::IoVec;
 use crate::task::pipe::PipeWriter;
 use crate::task::task::Task;
@@ -240,31 +241,34 @@ impl Task {
     // 获取文件信息
     pub fn sys_getdents(&self, fd: usize, ptr: UserAddr<u8>, len: usize) -> Result<(), RuntimeError> {
         // todo!("getdents")
+        let mut inner = self.inner.borrow_mut();
+        let process = inner.process.borrow_mut();
         debug!("get dents: fd: {} ptr: {:#x} len: {:#x}", fd, ptr.bits(), len);
-        let buf = ptr.translate_vec(self.get_pmm(), len);
-        // let fd = context.x[10];
-        // let mut buf_ptr = usize::from(pmm.get_phys_addr(VirtAddr::from(context.x[11])).unwrap());
-        // if let Some(file_tree_node) = current_task.fd_table[fd].clone() {
-        //     let sub_nodes = file_tree_node.get_children();
-        //     for i in 0..sub_nodes.len() {
-        //         let sub_node_name = sub_nodes[i].get_filename();
-        //         let dirent = unsafe { (buf_ptr as *mut Dirent).as_mut().unwrap() };
-        //         let node_size = ((18 + sub_node_name.len() as u16 + 1 + 15) / 16) * 16;
-        //         dirent.d_ino = i as u64;
-        //         dirent.d_off = i as u64;
-        //         dirent.d_reclen = node_size;
-        //         dirent.d_type = 0;
-        //         let buf_str = unsafe {
-        //             slice::from_raw_parts_mut(&mut dirent.d_name_start as *mut u8, (node_size - 18) as usize)
-        //         };
-        //         write_string_to_raw(buf_str, &sub_node_name);
-        //         buf_ptr = buf_ptr + dirent.d_reclen as usize;
-        //     }
-        //     context.x[10] = 0;
-        // } else {
-        //     let result_code: isize = -1;
-        //     context.x[10] = result_code as usize;
-        // }
+        let buf = ptr.translate_vec(process.pmm.clone(), len);
+        let dir_node = process.fd_table.get_file(fd)?.get_inode();
+        
+        let sub_nodes = dir_node.clone_children();
+        let mut pos = 0;
+        for i in 0..sub_nodes.len() {
+            let sub_node_name = sub_nodes[i].get_filename();
+            debug!("子节点: {}", sub_node_name);
+            let sub_node_name = sub_node_name.as_bytes();
+            let node_size = ((18 + sub_node_name.len() as u16 + 1 + 15) / 16) * 16;
+            buf[pos..pos+8].clone_from_slice(&(i as u64).to_ne_bytes());
+            pos += 8;
+            buf[pos..pos+8].clone_from_slice(&(i as u64).to_ne_bytes());
+            pos += 8;
+            buf[pos..pos+2].clone_from_slice(&node_size.to_ne_bytes());
+            pos += 2;
+            buf[pos] = 0;   // 写入type
+            pos += 1;
+            buf[pos..pos + sub_node_name.len()].clone_from_slice(sub_node_name);
+            // pos += node_size as usize;
+            pos += sub_node_name.len();
+        }
+        drop(process);
+        inner.context.x[10] = 0;
+        
         Ok(())
     }
 

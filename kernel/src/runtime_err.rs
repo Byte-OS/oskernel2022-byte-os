@@ -20,5 +20,6 @@ pub enum RuntimeError {
     //
     WriteZero,
     UnexpectedEof,
-    NotRWFile
+    NotRWFile,
+    NotDir
 }

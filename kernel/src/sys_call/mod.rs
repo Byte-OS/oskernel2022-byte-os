@@ -154,7 +154,7 @@ struct Dirent {
     d_off: u64,	        // 到下一个dirent的偏移
     d_reclen: u16,	    // 当前dirent的长度
     d_type: u8,	        // 文件类型
-    d_name_start: u8	//文件名
+    // d_name_start: u8	//文件名 文件名 自行处理？
 }
 
 impl Task {
@@ -189,7 +189,7 @@ impl Task {
             // 进行PIPE
             SYS_PIPE2 => self.sys_pipe2(args[0].into()),
             // 获取文件节点
-            SYS_GETDENTS => self.sys_getdents(args[0], args[1], args[2]),
+            SYS_GETDENTS => self.sys_getdents(args[0], args[1].into(), args[2]),
             // 移动读取位置
             SYS_LSEEK => self.sys_lseek(args[0], args[1], args[2]),
             // 读取文件描述符
