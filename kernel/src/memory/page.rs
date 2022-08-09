@@ -17,6 +17,9 @@ const USIZE_PER_PAGES: usize = PAGE_SIZE / size_of::<usize>();
 #[cfg(not(feature = "board_k210"))]
 const ADDR_END: usize = 0x81fe0000;
 
+#[cfg(feature = "board_k210")]
+const ADDR_END: usize = 0x80800000;
+
 // 内存页分配器
 pub struct MemoryPageAllocator {
     pub start: usize,
@@ -69,25 +72,26 @@ impl MemoryPageAllocator {
     // 申请多个页
     pub fn alloc_more(&mut self, pages: usize) -> Result<PhysPageNum, RuntimeError> {
         let mut i = self.pages.len() - 1;
-            let mut value = 0;
-            loop {
-                if !self.pages[i] {
-                    value += 1;
-                } else {
-                    value = 0;
-                }
-
-                if value >= pages {
-                    self.pages[i..i+pages].fill(true);
-                    let page = PhysPageNum::from((self.start >> 12) + i);
-                    init_pages(page, pages);
-                    return Ok(page);
-                }
-                if i == 0 { break; }
-
-                // 进行下一个计算
-                i-=1;
+        let mut value = 0;
+        loop {
+            if !self.pages[i] {
+                value += 1;
+            } else {
+                value = 0;
             }
+
+            if value >= pages {
+                self.pages[i..i+pages].fill(true);
+                let page = PhysPageNum::from((self.start >> 12) + i);
+                init_pages(page, pages);
+                debug!("申请地址: {:#x}  page_num: {}", page.0, pages);
+                return Ok(page);
+            }
+            if i == 0 { break; }
+
+            // 进行下一个计算
+            i-=1;
+        }
         Err(RuntimeError::NoEnoughPage)
         // alloc_more_front(pages)
     }

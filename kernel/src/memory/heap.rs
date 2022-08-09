@@ -14,6 +14,9 @@ static HEAP_ALLOCATOR: LockedHeap<64> = LockedHeap::empty();
 #[cfg(not(feature = "board_k210"))]
 const PROGRAM_START:usize = 0x80200000;
 
+#[cfg(feature = "board_k210")]
+const PROGRAM_START:usize = 0x80020000;
+
 // 初始化堆内存分配器
 pub fn init() {
     extern "C" {

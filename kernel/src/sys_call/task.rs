@@ -2,6 +2,7 @@ use alloc::vec::Vec;
 use alloc::string::String;
 use alloc::rc::{Rc, Weak};
 use hashbrown::HashMap;
+use crate::get_free_page_num;
 
 use crate::task::task_scheduler::{add_task_to_scheduler, get_task, get_task_num};
 use crate::task::task_scheduler::switch_next;
@@ -64,6 +65,7 @@ impl Task {
             }
             None => {}
         }
+        debug!("剩余页表: {}", get_free_page_num());
         debug!("exit_code: {:#x}", exit_code);
         Err(RuntimeError::ChangeTask)
     }

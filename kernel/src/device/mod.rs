@@ -73,8 +73,15 @@ pub fn add_sdcard() {
 pub fn init() {
     info!("初始化设备");
     #[cfg(not(feature = "board_k210"))]
-    // qemu 时添加 储存设备
-    add_virt_io(VIRTIO0);
+    {
+        // qemu 时添加 储存设备
+        add_virt_io(VIRTIO0);
+    }
+    #[cfg(feature = "board_k210")]
+    {
+        // 添加 k210 存储设备
+        add_sdcard();
+    }
 }
 
 pub fn root_dir() -> Dir {
