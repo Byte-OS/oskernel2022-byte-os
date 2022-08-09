@@ -4,6 +4,10 @@ use crate::fs::StatFS;
 use crate::fs::file::File;
 use crate::fs::file::FileOP;
 use crate::fs::file::FileType;
+use crate::fs::specials::dev_rtc::DevRtc;
+use crate::fs::specials::etc_adjtime::EtcAdjtime;
+use crate::fs::specials::proc_meminfo::ProcMeminfo;
+use crate::fs::specials::proc_mounts::ProcMounts;
 use crate::fs::stdio::StdNull;
 use crate::fs::stdio::StdZero;
 use crate::interrupt::timer::TimeSpec;
@@ -23,16 +27,18 @@ use super::OpenFlags;
 impl Task {
     // 获取当前路径
     pub fn get_cwd(&self, buf: UserAddr<u8>, size: usize) -> Result<(), RuntimeError> {
+        debug!("get_cwd size: {}", size);
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
+
         // 获取参数
         let buf = buf.translate_vec(process.pmm.clone(), size);
         // 获取路径
-        // let pwd = process.workspace;
-        // let pwd_buf = pwd.as_bytes();
-        let pwd_buf = process.workspace.as_bytes();
+        let pwd = process.workspace.clone();
+        let pwd_buf = pwd.get_pwd();
+        // let pwd_buf = process.workspace.as_bytes();
         // 将路径复制到缓冲区
-        buf[..pwd_buf.len()].copy_from_slice(pwd_buf);
+        buf[..pwd_buf.len()].copy_from_slice(pwd_buf.as_bytes());
         drop(process);
         inner.context.x[10] = buf.as_ptr() as usize;
         Ok(())
@@ -109,8 +115,8 @@ impl Task {
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
 
-        process.workspace = process.workspace.clone() + "/" + &filename;
-        // process.workspace = INode::get(Some(process.workspace.clone()), &filename, false)?;
+        // process.workspace = process.workspace.clone() + "/" + &filename;
+        process.workspace = INode::get(Some(process.workspace.clone()), &filename)?;
 
         drop(process);
         inner.context.x[10] = 0;
@@ -119,7 +125,7 @@ impl Task {
     // 打开文件
     pub fn sys_openat(&self, fd: usize, filename: UserAddr<u8>, flags: usize, _open_mod: usize) -> Result<(), RuntimeError> {
         let filename = filename.read_string(self.get_pmm());
-        debug!("open file: {}", filename);
+        debug!("open file: {}  flags: {:#x}", filename, flags);
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
 
@@ -133,6 +139,26 @@ impl Task {
             return Ok(())
         } else if filename == "/dev/null" {
             let fd = process.fd_table.push(Rc::new(StdNull));
+            drop(process);
+            inner.context.x[10] = fd;
+            return Ok(())
+        } else if filename == "/proc/mounts" {
+            let fd = process.fd_table.push(Rc::new(ProcMounts::new()));
+            drop(process);
+            inner.context.x[10] = fd;
+            return Ok(())
+        } else if filename == "/proc/meminfo" {
+            let fd = process.fd_table.push(Rc::new(ProcMeminfo::new()));
+            drop(process);
+            inner.context.x[10] = fd;
+            return Ok(())
+        } else if filename == "/etc/adjtime" {
+            let fd = process.fd_table.push(Rc::new(EtcAdjtime::new()));
+            drop(process);
+            inner.context.x[10] = fd;
+            return Ok(())
+        } else if filename == "/dev/rtc" {
+            let fd = process.fd_table.push(Rc::new(DevRtc::new()));
             drop(process);
             inner.context.x[10] = fd;
             return Ok(())
@@ -316,6 +342,7 @@ impl Task {
     }
 
     pub fn sys_fstat(&self, _fd: usize, buf_ptr: UserAddr<Kstat>) -> Result<(), RuntimeError> {
+        debug!("sys_fstat: {}", _fd);
         let _kstat = buf_ptr.translate(self.get_pmm());
         let mut inner = self.inner.borrow_mut();
         // let process = inner.process.borrow_mut();
@@ -392,6 +419,7 @@ impl Task {
             inner.context.x[10] = 0;
             Ok(())
         } else {
+            // kstat.
             kstat.st_mode = 0o20000;
             drop(process);
             inner.context.x[10] = 0;

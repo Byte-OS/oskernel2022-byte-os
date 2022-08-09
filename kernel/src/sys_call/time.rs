@@ -80,7 +80,8 @@ impl Task {
 
         let mut inode = if dir_fd == FD_CWD {
             // process.workspace.clone()
-            INode::get(None, &process.workspace)?
+            // INode::get(None, &process.workspace)?
+            process.workspace.clone()
         } else {
             let file = process.fd_table.get_file(dir_fd).map_err(|_| (RuntimeError::EBADF))?;
             file.get_inode()

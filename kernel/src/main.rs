@@ -101,6 +101,8 @@ pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
     busybox_node.linkat("echo");
     busybox_node.linkat("cat");
     busybox_node.linkat("cp");
+    busybox_node.linkat("ls");
+    busybox_node.linkat("pwd");
 
     // 输出文件树
     print_file_tree(INode::root());
