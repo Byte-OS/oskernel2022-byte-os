@@ -424,11 +424,12 @@ impl Task {
 
     pub fn sys_ppoll(&self, fds: UserAddr<PollFD>, nfds: usize, timeout: UserAddr<TimeSpec>) -> Result<(), RuntimeError> {
         let fds = fds.translate_vec(self.get_pmm(), nfds);
+        let mut inner = self.inner.borrow_mut();
         debug!("wait for fds: {}", fds.len());
         for i in fds {
             debug!("wait fd: {}", i.fd);
         }
-        
+        inner.context.x[10] = 1;
         Ok(())
     }
 
