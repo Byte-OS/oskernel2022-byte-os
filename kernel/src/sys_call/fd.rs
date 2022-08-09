@@ -253,20 +253,24 @@ impl Task {
             let sub_node_name = sub_nodes[i].get_filename();
             debug!("子节点: {}", sub_node_name);
             let sub_node_name = sub_node_name.as_bytes();
-            let node_size = ((18 + sub_node_name.len() as u16 + 1 + 15) / 16) * 16;
-            buf[pos..pos+8].clone_from_slice(&(i as u64).to_ne_bytes());
+            let node_size = ((18 + sub_node_name.len() as u16 + 1 + 7) / 8) * 8;
+            buf[pos..pos+8].clone_from_slice(&((i + 1) as u64).to_ne_bytes());
             pos += 8;
-            buf[pos..pos+8].clone_from_slice(&(i as u64).to_ne_bytes());
+            buf[pos..pos+8].clone_from_slice(&(0 as u64).to_ne_bytes());
             pos += 8;
             buf[pos..pos+2].clone_from_slice(&node_size.to_ne_bytes());
             pos += 2;
-            buf[pos] = 0;   // 写入type
+            buf[pos] = 8;   // 写入type 
             pos += 1;
             buf[pos..pos + sub_node_name.len()].clone_from_slice(sub_node_name);
             // pos += node_size as usize;
             pos += sub_node_name.len();
+            buf[pos] = 0;
+            pos += 1;
         }
         drop(process);
+        debug!("written size: {}", pos);
+        // inner.context.x[10] = pos;
         inner.context.x[10] = 0;
         
         Ok(())
