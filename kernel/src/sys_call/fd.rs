@@ -238,8 +238,34 @@ impl Task {
         Ok(())
     }
     // 获取文件信息
-    pub fn sys_getdents(&self, _fd: usize, _ptr: usize, _len: usize) -> Result<(), RuntimeError> {
-        todo!("getdents")
+    pub fn sys_getdents(&self, fd: usize, ptr: UserAddr<u8>, len: usize) -> Result<(), RuntimeError> {
+        // todo!("getdents")
+        debug!("get dents: fd: {} ptr: {:#x} len: {:#x}", fd, ptr.bits(), len);
+        let buf = ptr.translate_vec(self.get_pmm(), len);
+        // let fd = context.x[10];
+        // let mut buf_ptr = usize::from(pmm.get_phys_addr(VirtAddr::from(context.x[11])).unwrap());
+        // if let Some(file_tree_node) = current_task.fd_table[fd].clone() {
+        //     let sub_nodes = file_tree_node.get_children();
+        //     for i in 0..sub_nodes.len() {
+        //         let sub_node_name = sub_nodes[i].get_filename();
+        //         let dirent = unsafe { (buf_ptr as *mut Dirent).as_mut().unwrap() };
+        //         let node_size = ((18 + sub_node_name.len() as u16 + 1 + 15) / 16) * 16;
+        //         dirent.d_ino = i as u64;
+        //         dirent.d_off = i as u64;
+        //         dirent.d_reclen = node_size;
+        //         dirent.d_type = 0;
+        //         let buf_str = unsafe {
+        //             slice::from_raw_parts_mut(&mut dirent.d_name_start as *mut u8, (node_size - 18) as usize)
+        //         };
+        //         write_string_to_raw(buf_str, &sub_node_name);
+        //         buf_ptr = buf_ptr + dirent.d_reclen as usize;
+        //     }
+        //     context.x[10] = 0;
+        // } else {
+        //     let result_code: isize = -1;
+        //     context.x[10] = result_code as usize;
+        // }
+        Ok(())
     }
 
     pub fn sys_statfs(&self, _fd: usize, buf_ptr: UserAddr<StatFS>) -> Result<(), RuntimeError> {
