@@ -36,7 +36,7 @@ pub mod fcntl_cmd {
 
 // 文件类型
 #[allow(dead_code)]
-#[derive(Default, Clone, Copy, PartialEq)]
+#[derive(Default, Clone, Copy, PartialEq, Debug)]
 pub enum FileType {
     File,           // 文件
     VirtFile,       // 虚拟文件
