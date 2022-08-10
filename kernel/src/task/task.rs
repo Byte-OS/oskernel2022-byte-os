@@ -90,11 +90,6 @@ impl Task {
         };
     }
 
-    // 获取pmm
-    pub fn get_pmm(&self) -> Rc<PageMappingManager> {
-        self.inner.borrow().process.borrow().pmm.clone()
-    }
-
     // 获取process
     pub fn get_process(&self) -> Rc<RefCell<Process>> {
         self.inner.borrow_mut().process.clone()

@@ -7,7 +7,7 @@ use crate::runtime_err::RuntimeError;
 impl Task {
     pub fn sys_sigprocmask(&self, how: u32, set:  UserAddr<SigSet>, oldset: UserAddr<SigSet>,
             _sigsetsize: usize) -> Result<(), RuntimeError> {
-        let pmm = self.get_pmm();
+        // let pmm = self.get_pmm();
         let mut inner = self.inner.borrow_mut();
         debug!(
             "rt_sigprocmask: how={:#x}, set={:#?}, oldset={:#?}, sigsetsize={}, thread={}",
