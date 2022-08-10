@@ -15,7 +15,7 @@ impl Task {
     pub fn sys_brk(&self, _top_pos: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         inner.context.x[10] = SYS_CALL_ERR;
-        warn!("brk");
+        warn!("brk  top_pos: {}", _top_pos);
         Ok(())
     }
 

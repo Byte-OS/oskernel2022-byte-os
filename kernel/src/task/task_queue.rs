@@ -17,8 +17,8 @@ lazy_static! {
         // "sh test.sh sort.lua",
         // "sh test.sh strings.lua",
         // "sh busybox_testcode.sh",
-        // "ls"
-        "busybox du"
+        "ls"
+        // "busybox du"
 
         // "sh echo_busybox.sh"
         // "cat busybox_cmd.txt"
