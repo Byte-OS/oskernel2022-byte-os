@@ -85,7 +85,9 @@ impl FileOP for StdErr {
     }
 
     fn write(&self, _data: &[u8], count: usize) -> usize {
-        error!("data: {}", unsafe { String::from_utf8_unchecked(_data.to_vec()) });
+        // error!("data: {}", unsafe { String::from_utf8_unchecked(_data.to_vec()) });
+        puts("error: ".as_bytes());
+        puts(_data);
         count
     }
 

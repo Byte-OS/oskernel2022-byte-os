@@ -35,11 +35,15 @@ pub const STDIN: usize = 0;
 pub const STDOUT: usize = 1;
 pub const STDERR: usize = 2;
 
+pub const DEFAULT_HEAP_BOTTOM: usize = 0xe0000000;
+pub const DEFAULT_HEAP_PAGE_NUM: usize = 5;
+
 #[allow(dead_code)]
 // 用户heap
 pub struct UserHeap {
-    start: PhysPageNum, 
+    start: usize, 
     pointer: usize,
+    end: usize,
     size: usize,
     temp: usize,
     pmm: Rc<PageMappingManager>,
@@ -50,14 +54,19 @@ impl UserHeap {
     // 创建heap
     pub fn new(pmm: Rc<PageMappingManager>) -> Result<Self, RuntimeError> {
         // let phy_start = alloc()?;
+        let mut mem_set = MemSet::new();
+        let mem_map = MemMap::new((DEFAULT_HEAP_BOTTOM / PAGE_SIZE).into(), DEFAULT_HEAP_PAGE_NUM, PTEFlags::VRWX | PTEFlags::U)?;
+        pmm.add_mapping_by_map(&mem_map)?;
+        mem_set.0.push(mem_map);
         // 申请页表作为heap
         Ok(UserHeap {
-            start: 0usize.into(),
-            pointer: 0,
+            start: DEFAULT_HEAP_BOTTOM,
+            pointer: DEFAULT_HEAP_BOTTOM,
+            end: DEFAULT_HEAP_BOTTOM + DEFAULT_HEAP_PAGE_NUM * PAGE_SIZE,
             size: PAGE_SIZE,
             temp: 0,
             pmm,
-            mem_set: MemSet::new()
+            mem_set
         })
     }
 
@@ -67,14 +76,24 @@ impl UserHeap {
     }
 
     pub fn get_heap_size(&self) -> usize {
+        self.end - self.start
+    }
+
+    pub fn get_heap_top(&self) -> usize {
         self.pointer
     }
 
     pub fn set_heap_top(&mut self, top: usize) -> usize {
-        warn!("set top: {}", top);
+        debug!("set top: {:#x}", top);
         let origin_top = self.pointer;
         self.pointer = top;
-        origin_top
+        // origin_top
+        if self.pointer < self.end {
+            debug!("top: {:#x}", top);
+            top
+        } else {
+            -1 as isize as usize
+        }
     }
 
     // 获取临时页表
