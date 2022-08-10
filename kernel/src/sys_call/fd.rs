@@ -249,11 +249,11 @@ impl Task {
             let sub_node_name = sub_node_name.as_bytes();
             let node_size = ((19 + sub_node_name.len() as u16 + 1 + 7) / 8) * 8;
             let next = pos + node_size as usize;
-            buf[pos..pos+8].clone_from_slice(&(i as u64).to_ne_bytes());
+            buf[pos..pos+8].copy_from_slice(&(i as u64).to_ne_bytes());
             pos += 8;
-            buf[pos..pos+8].clone_from_slice(&(i as u64).to_ne_bytes());
+            buf[pos..pos+8].copy_from_slice(&(i as u64).to_ne_bytes());
             pos += 8;
-            buf[pos..pos+2].clone_from_slice(&node_size.to_ne_bytes());
+            buf[pos..pos+2].copy_from_slice(&node_size.to_ne_bytes());
             pos += 2;
             // buf[pos] = 8;   // 写入type  支持文件夹类型
             buf[pos] = match inode.get_file_type() {
@@ -262,7 +262,7 @@ impl Task {
                 _ => 0
             };
             pos += 1;
-            buf[pos..pos + sub_node_name.len()].clone_from_slice(sub_node_name);
+            buf[pos..pos + sub_node_name.len()].copy_from_slice(sub_node_name);
             // pos += node_size as usize;
             pos += sub_node_name.len();
             buf[pos..next].fill(0);   // 写入结束符

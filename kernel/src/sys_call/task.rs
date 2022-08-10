@@ -244,6 +244,7 @@ impl Task {
         let process = inner.process.clone();
         drop(inner);
         exec_with_process(process, task, &filename, args.iter().map(AsRef::as_ref).collect())?;
+        self.before_run();
         Ok(())
     }
     

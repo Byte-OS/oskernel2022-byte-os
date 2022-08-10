@@ -23,7 +23,7 @@ impl FileOP for EtcAdjtime {
         let readable = *self.0.borrow_mut();
         if readable {
             let bytes = b"0.000000 1643115317 0.000000\n1643115317\nUTC";
-            data[..bytes.len()].clone_from_slice(bytes);
+            data[..bytes.len()].copy_from_slice(bytes);
             *self.0.borrow_mut() = false;
             bytes.len()
         } else {

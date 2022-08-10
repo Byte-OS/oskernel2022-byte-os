@@ -1,7 +1,7 @@
 use core::cell::RefCell;
 use alloc::rc::Rc;
 use crate::memory::addr::UserAddr;
-use crate::{interrupt::Context, memory::page_table::PagingMode};
+use crate::interrupt::Context;
 use crate::task::task_scheduler::kill_task;
 
 use super::process::Process;
@@ -66,6 +66,7 @@ impl Task {
     }
 
     pub fn before_run(&self) {
+        debug!("run before task");
         let inner = self.inner.borrow();
         let process = inner.process.borrow_mut();
         process.pmm.change_satp();

@@ -23,7 +23,7 @@ impl FileOP for DevRtc {
         let readable = *self.0.borrow_mut();
         if readable {
             let bytes = b"MemTotal:       8024 kB";
-            data[..bytes.len()].clone_from_slice(bytes);
+            data[..bytes.len()].copy_from_slice(bytes);
             *self.0.borrow_mut() = false;
             bytes.len()
         } else {

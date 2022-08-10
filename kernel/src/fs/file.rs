@@ -156,7 +156,7 @@ impl File {
         let inner = self.0.borrow_mut();
         let mut len = inner.buf.len() - offset;
         if len > buf.len() { len = buf.len(); }
-        buf[..len].clone_from_slice(&inner.buf[offset..offset + len]);
+        buf[..len].copy_from_slice(&inner.buf[offset..offset + len]);
     }
 
     pub fn mmap(&self, pmm: Rc<PageMappingManager>, virt_addr: VirtAddr) -> Result<(), RuntimeError>{
@@ -225,7 +225,7 @@ impl FileOP for File {
         let mut inner = self.0.borrow_mut();
         let remain = inner.file_size - inner.offset;
         let len = if remain < data.len() { remain } else { data.len() };
-        data[..len].clone_from_slice(&inner.buf[inner.offset..inner.offset + len]);
+        data[..len].copy_from_slice(&inner.buf[inner.offset..inner.offset + len]);
         inner.offset += len;
         len
     }
@@ -237,7 +237,7 @@ impl FileOP for File {
             panic!("无法写入超出部分");
         }
         let start = inner.offset;
-        inner.buf[start..end].clone_from_slice(&data);
+        inner.buf[start..end].copy_from_slice(&data);
         inner.offset += count;
         // 需要更新文件数据
         if inner.offset >= inner.file_size {
@@ -252,7 +252,7 @@ impl FileOP for File {
         let inner = self.0.borrow_mut();
         let remain = inner.file_size - pos;
         let len = if remain < data.len() { remain } else { data.len() };
-        data[..len].clone_from_slice(&inner.buf[pos..pos + len]);
+        data[..len].copy_from_slice(&inner.buf[pos..pos + len]);
         len
     }
 

@@ -80,12 +80,13 @@ change_task:
     sret
 
 .global __task_restore
+.align 2
 __task_restore:
     csrrw sp, sscratch, sp
 
     # 因为sp 0 和 2未使用所以 存在这里无事
     sd tp, 0(sp)
-    ld tp, 11*8(sp) # 加载从x11保存的 context地址
+    ld tp, 10*8(sp) # 加载从x10保存的 context地址
 
 __store_task_context:
     # 保存x1寄存器
