@@ -76,7 +76,7 @@ flash: k210
 	python3 -m serial.tools.miniterm --eol LF --dtr 0 --rts 0 --filter direct $(K210-SERIALPORT) 115200
 
 run: qemu
-#	@cp fs-origin.img fs.img
+	@cp fs-origin.img fs.img
 	@qemu-system-riscv64 \
             -machine virt \
             -bios $(BOOTLOADER) \
@@ -86,7 +86,7 @@ run: qemu
 			-kernel $(BIN_FILE) \
 			-nographic \
 			-smp 4 -m 128m
-#	@rm fs.img
+	@rm fs.img
 # qemu-system-riscv64 -machine virt -bios sbi-qemu -device loader,file=kernel-qemu,addr=0x80200000 -drive file=fs.img,if=none,format=raw,id=x0 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0 -kernel kernel-qemu -nographic -smp 4 
 
 

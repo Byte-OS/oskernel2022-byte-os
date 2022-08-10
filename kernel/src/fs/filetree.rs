@@ -102,12 +102,6 @@ impl INode {
 
     // 根据路径 获取文件节点
     pub fn get(current: Option<Rc<INode>>, path: &str) -> Result<Rc<INode>, RuntimeError> {
-        // 如果有节点
-        // if let Some(node) = current {
-        //     node.get_children(path)
-        // } else {
-        //     Self::root().get_children(path)
-        // }
         if let Some(node) = current {
             node.find(path)
         } else {

@@ -12,10 +12,21 @@ use crate::task::fd_table::FD_NULL;
 use crate::task::fd_table::FD_RANDOM;
 
 impl Task {
-    pub fn sys_brk(&self, _top_pos: usize) -> Result<(), RuntimeError> {
+    pub fn sys_brk(&self, top_pos: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
+        // let mut process = inner.process.borrow_mut();
+        // debug!("brk  top_pos: {:#x}", top_pos);
+        // if top_pos == 0 {
+        //     let top = process.heap.get_heap_top();
+        //     drop(process);
+        //     debug!("brk top: {:#x}", top);
+        //     inner.context.x[10] = top;
+        // } else {
+        //     let ret = process.heap.set_heap_top(top_pos);
+        //     drop(process);
+        //     inner.context.x[10] = ret;
+        // }
         inner.context.x[10] = SYS_CALL_ERR;
-        warn!("brk");
         Ok(())
     }
 

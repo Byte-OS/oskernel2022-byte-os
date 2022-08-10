@@ -36,7 +36,7 @@ pub mod fcntl_cmd {
 
 // 文件类型
 #[allow(dead_code)]
-#[derive(Default, Clone, Copy, PartialEq)]
+#[derive(Default, Clone, Copy, PartialEq, Debug)]
 pub enum FileType {
     File,           // 文件
     VirtFile,       // 虚拟文件
@@ -195,6 +195,20 @@ impl File {
             _ => { 0 }
         };
         inner.offset
+    }
+
+    pub fn entry_next(&self) -> Option<(usize, Rc<INode>)> {
+        let mut inner = self.0.borrow_mut();
+        let offset = inner.offset;
+        let child = {
+            let children = &mut inner.file.0.borrow_mut().children;
+            if offset >= children.len() {
+                return None;
+            }
+            children[offset].clone()
+        };
+        inner.offset += 1;
+        Some((offset, child))
     }
 }
 
