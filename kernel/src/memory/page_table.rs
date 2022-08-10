@@ -384,8 +384,8 @@ impl PageMappingManager {
     pub fn change_satp(&self) {
         let satp_addr = (self.paging_mode.clone() as usize) << 60 | usize::from(PhysPageNum::from(self.pte));
         unsafe {
-            asm!("csrw satp, a0",
-            "sfence.vma", in("a0") satp_addr)
+            asm!("csrw satp, {}",
+            "sfence.vma", in(reg) satp_addr)
         }
     }
 

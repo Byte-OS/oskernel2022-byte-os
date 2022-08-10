@@ -47,6 +47,7 @@ pub fn exec_by_str(str: &str) {
     debug!("执行任务: {}", str);
     let args: Vec<&str> = str.split(" ").collect();
     if let Ok(task) = exec(args[0], args[0..].to_vec()) {
+        task.before_run();
         add_task_to_scheduler(task);
     }
 }

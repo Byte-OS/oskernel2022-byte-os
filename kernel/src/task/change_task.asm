@@ -38,7 +38,7 @@ change_task:
     # 申请栈空间
     addi sp, sp, -32*8
     
-    csrrw a0, satp, a0
+    # csrrw a0, satp, a0
     # 保存x1寄存器
     SAVE_N 1
     # 保存x3寄存器
@@ -51,13 +51,12 @@ change_task:
     .endr
 
     # 不知道为什么需要这行代码 对齐? 还是 需要缓冲？
-    nop
 
-    la a0, __task_restore
-    csrw stvec, a0
+    la a1, __task_restore
+    csrw stvec, a1
 
     csrw sscratch, sp
-    mv sp, a1
+    mv sp, a0
 
     # 恢复 CSR
     LOAD    t0, 32
@@ -78,7 +77,6 @@ change_task:
 
     # 恢复 sp（又名 x2）这里最后恢复是为了上面可以正常使用 LOAD 宏
     LOAD    x2, 2
-    sfence.vma
     sret
 
 .global __task_restore
@@ -122,9 +120,6 @@ __load_kernel_context:
         LOAD_N %n
         .set n, n+1
     .endr
-
-    # csrrw a0, satp, a0
-    # sfence.vma
 
     la a0, kernel_callback_entry
     csrw stvec, a0

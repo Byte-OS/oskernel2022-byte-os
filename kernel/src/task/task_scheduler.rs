@@ -25,6 +25,7 @@ impl TaskScheduler {
     // 执行下一个任务
     pub fn switch_next(&mut self) {
         if let Some(task) = self.queue.pop_front() {
+            task.before_run();
             task.inner.borrow_mut().status = TaskStatus::READY;
             self.queue.push_back(task);
         }
