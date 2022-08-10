@@ -1,5 +1,5 @@
 use alloc::{collections::VecDeque, rc::Rc};
-use crate::{sync::mutex::Mutex, task::pid::PidGenerater, interrupt::timer::task_time_refresh};
+use crate::{sync::mutex::Mutex, task::pid::PidGenerater, interrupt::timer::task_time_refresh, memory::page_table::switch_to_kernel_page};
 use super::{task::{Task, TaskStatus}, task_queue::load_next_task};
 
 // 任务控制器管理器
@@ -77,6 +77,8 @@ pub fn start_tasks() {
     let mut task_scheduler = TASK_SCHEDULER.force_get();
     task_scheduler.start();
     warn!("恢复任务");
+    switch_to_kernel_page();
+    // 切换到内核页表
 }
 
 pub fn add_task_to_scheduler(task: Rc<Task>) {
