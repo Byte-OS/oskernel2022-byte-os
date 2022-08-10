@@ -44,7 +44,7 @@ impl Task {
 
         let clear_child_tid = self.clear_child_tid.borrow().clone();
         if clear_child_tid.is_valid() {
-            *clear_child_tid.translate(self.get_pmm()) = 0;
+            *clear_child_tid.transfer() = 0;
         }
         Err(RuntimeError::KillCurrentTask)
     }
@@ -72,13 +72,17 @@ impl Task {
     
     // 设置 tid addr
     pub fn sys_set_tid_address(&self, tid_ptr: UserAddr<u32>) -> Result<(), RuntimeError> {
-        let tid_ptr = tid_ptr.translate(self.get_pmm());
+        // 测试写入用户空间
+        let tid_ptr_user = tid_ptr.bits() as *mut u32;
+        unsafe { tid_ptr_user.write(1234); }
+
+        let tid_ptr = tid_ptr.transfer();
         let mut inner = self.inner.borrow_mut();
         let pmm = inner.process.borrow().pmm.clone();
         let clear_child_tid = self.clear_child_tid.borrow().clone();
 
         *tid_ptr = if clear_child_tid.is_valid() {
-            clear_child_tid.translate(pmm).clone()
+            clear_child_tid.transfer().clone()
         } else {
             0
         };
@@ -98,7 +102,7 @@ impl Task {
         let mut inner = self.inner.borrow_mut();
     
         // 获取参数
-        let sys_info = ptr.translate(inner.process.borrow().pmm.clone());
+        let sys_info = ptr.transfer();
         // 写入系统信息
         write_string_to_raw(&mut sys_info.sysname, "ByteOS");
         write_string_to_raw(&mut sys_info.nodename, "ByteOS");
@@ -188,7 +192,7 @@ impl Task {
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.clone();
         let process = process.borrow();
-        let ptid_ref = ptid.translate(process.pmm.clone());
+        let ptid_ref = ptid.transfer();
         
         let ctid = process.tasks.len();
         drop(process);
@@ -220,11 +224,11 @@ impl Task {
         let inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
         let pmm = process.pmm.clone();
-        let filename = filename.read_string(pmm.clone());
+        let filename = filename.read_string();
 
         debug!("run {}", filename);
-        let args = argv.translate_until(pmm.clone(), |x| !x.is_valid());
-        let args:Vec<String> = args.iter_mut().map(|x| x.read_string(pmm.clone())).collect();
+        let args = argv.transfer_until(|x| !x.is_valid());
+        let args:Vec<String> = args.iter_mut().map(|x| x.read_string()).collect();
 
         // 读取envp
         // let envp = argv.translate_until(pmm.clone(), |x| !x.is_valid());
@@ -243,7 +247,7 @@ impl Task {
     // wait task
     pub fn sys_wait4(&self, pid: usize, ptr: UserAddr<i32>, _options: usize) -> Result<(), RuntimeError> {
         debug!("pid: {:#x}, ptr: {:#x}, _options: {}", pid, ptr.bits(), _options);
-        let ptr = ptr.translate(self.get_pmm());
+        let ptr = ptr.transfer();
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.clone();
         let mut process = process.borrow_mut();
@@ -305,7 +309,7 @@ impl Task {
     // wait for futex
     pub fn sys_futex(&self, uaddr: UserAddr<i32>, op: u32, value: i32, value2: usize, value3: usize) -> Result<(), RuntimeError> {
         debug!("sys_futex uaddr: {:#x} op: {:#x} value: {:#x}", uaddr.bits(), op, value);
-        let uaddr_ref = uaddr.translate(self.get_pmm());
+        let uaddr_ref = uaddr.transfer();
         let op = FutexFlags::from_bits_truncate(op);
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();

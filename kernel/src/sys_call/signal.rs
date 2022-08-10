@@ -18,10 +18,10 @@ impl Task {
             self.tid
         );
         if oldset.is_valid() {
-            oldset.translate(pmm.clone()).copy_from(&inner.sig_mask);
+            oldset.transfer().copy_from(&inner.sig_mask);
         }
         if set.is_valid() {
-            let sig = set.translate(pmm.clone());
+            let sig = set.transfer();
             match how {
                 // block
                 0 => inner.sig_mask.block(sig),
@@ -42,10 +42,10 @@ impl Task {
         let mut process = inner.process.borrow_mut();
 
         if oldact.is_valid() {
-            oldact.translate(process.pmm.clone()).copy_from(&process.sig_actions[signum]);
+            oldact.transfer().copy_from(&process.sig_actions[signum]);
         }
         if act.is_valid() {
-            let act = act.translate(process.pmm.clone());
+            let act = act.transfer();
             debug!(
                 "rt_sigaction: signal={:?}, act={:?}, oldact={:?}, sigsetsize={}, thread={}",
                 signum,

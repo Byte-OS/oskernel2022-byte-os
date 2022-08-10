@@ -214,10 +214,7 @@ impl VirtAddr {
     pub fn as_mut_ptr(&mut self) -> *mut u8 {
         self.0 as *mut u8
     }
-    // 翻译地址
-    pub fn translate(&self, pmm: Rc<PageMappingManager>) -> PhysAddr {
-        pmm.get_phys_addr(self.clone()).unwrap()
-    }
+    
     #[inline]
     // 判断地址是否有效
     pub fn is_valid(&self) -> bool {

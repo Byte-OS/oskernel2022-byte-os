@@ -132,36 +132,36 @@ impl Task {
 
     pub fn sys_sendto(&self, fd: usize, buf: VirtAddr, len: usize, _flags: usize,
                             sa: UserAddr<SocketAddr>, _sa_size: usize) -> Result<(), RuntimeError> {
-        let sa = sa.translate(self.get_pmm());
-        let mut inner = self.inner.borrow_mut();
-        let process = inner.process.borrow_mut();
-        let buf = get_buf_from_phys_addr(buf.translate(
-            process.pmm.clone()), len);
+        // let sa = sa.transfer(self.get_pmm());
+        // let mut inner = self.inner.borrow_mut();
+        // let process = inner.process.borrow_mut();
+        // let buf = get_buf_from_phys_addr(buf.translate(
+        //     process.pmm.clone()), len);
 
-        let file = process.fd_table.get(fd)?;
+        // let file = process.fd_table.get(fd)?;
 
-        let send_size = file.write(buf, buf.len());
-        SOCKET_BUF.lock().socket_buf.insert(sa.clone(), file);
-        drop(process);
+        // let send_size = file.write(buf, buf.len());
+        // SOCKET_BUF.lock().socket_buf.insert(sa.clone(), file);
+        // drop(process);
 
-        inner.context.x[10] = send_size;
+        // inner.context.x[10] = send_size;
         Ok(())
     }
 
     pub fn sys_recvfrom(&self, _fd: usize, buf: VirtAddr, len: usize, _flags: usize,
         sa: UserAddr<SocketAddr>, _addr_len: usize) -> Result<(), RuntimeError> {
 
-        let sa = sa.translate(self.get_pmm());
-        let mut inner = self.inner.borrow_mut();
-        let process = inner.process.borrow_mut();
-        let buf = get_buf_from_phys_addr(buf.translate(
-            process.pmm.clone()), len);
+        // let sa = sa.translate(self.get_pmm());
+        // let mut inner = self.inner.borrow_mut();
+        // let process = inner.process.borrow_mut();
+        // let buf = get_buf_from_phys_addr(buf.translate(
+        //     process.pmm.clone()), len);
 
-        let file = SOCKET_BUF.lock().socket_buf.get(sa).unwrap().clone();
+        // let file = SOCKET_BUF.lock().socket_buf.get(sa).unwrap().clone();
 
-        let read_len = file.read(buf);
-        drop(process);
-        inner.context.x[10] = read_len;
+        // let read_len = file.read(buf);
+        // drop(process);
+        // inner.context.x[10] = read_len;
         Ok(())
     }
 

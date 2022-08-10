@@ -123,8 +123,8 @@ __load_kernel_context:
         .set n, n+1
     .endr
 
-    csrrw a0, satp, a0
-    sfence.vma
+    # csrrw a0, satp, a0
+    # sfence.vma
 
     la a0, kernel_callback_entry
     csrw stvec, a0

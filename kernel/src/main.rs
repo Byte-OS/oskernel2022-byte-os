@@ -82,6 +82,11 @@ pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
     // 提示信息
     info!("Welcome to test os!");
 
+    // 开启SUM位 让内核可以访问用户空间
+    unsafe {
+        sstatus::set_sum();
+    }
+
     // 初始化内存
     memory::init();
 

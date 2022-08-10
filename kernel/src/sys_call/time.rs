@@ -9,7 +9,7 @@ use crate::interrupt::timer::get_ticks;
 
 impl Task {
     pub fn sys_nanosleep(&self, req_ptr: UserAddr<TimeSpec>, _rem_ptr: VirtAddr) -> Result<(), RuntimeError> {
-        let req_time = req_ptr.translate(self.get_pmm());
+        let req_time = req_ptr.transfer();
 
         let mut inner = self.inner.borrow_mut();
 
@@ -60,80 +60,80 @@ impl Task {
     }
 
     pub fn sys_gettime(&self, _clock_id: usize, times_ptr: VirtAddr) -> Result<(), RuntimeError> {
-        let mut inner = self.inner.borrow_mut();
-        let process = inner.process.borrow_mut();
+        // let mut inner = self.inner.borrow_mut();
+        // let process = inner.process.borrow_mut();
 
-        let req_ptr = times_ptr.translate(process.pmm.clone()).0 as *mut TimeSpec;
-        let req = unsafe { req_ptr.as_mut().unwrap() };
+        // let req_ptr = times_ptr.transfer().0 as *mut TimeSpec;
+        // let req = unsafe { req_ptr.as_mut().unwrap() };
 
-        let time_now = TimeSpec::now();
-        req.tv_sec = time_now.tv_sec;
-        req.tv_nsec = time_now.tv_nsec;
-        drop(process);
-        inner.context.x[10] = 0;
+        // let time_now = TimeSpec::now();
+        // req.tv_sec = time_now.tv_sec;
+        // req.tv_nsec = time_now.tv_nsec;
+        // drop(process);
+        // inner.context.x[10] = 0;
         Ok(())
     }
 
     pub fn sys_utimeat(&self, dir_fd: usize, filename: VirtAddr, times_ptr: VirtAddr, _flags: usize) -> Result<(), RuntimeError> {
-        let mut inner = self.inner.borrow_mut();
-        let process = inner.process.borrow_mut();
+        // let mut inner = self.inner.borrow_mut();
+        // let process = inner.process.borrow_mut();
 
-        let mut inode = if dir_fd == FD_CWD {
-            // process.workspace.clone()
-            // INode::get(None, &process.workspace)?
-            process.workspace.clone()
-        } else {
-            let file = process.fd_table.get_file(dir_fd).map_err(|_| (RuntimeError::EBADF))?;
-            file.get_inode()
-        };
+        // let mut inode = if dir_fd == FD_CWD {
+        //     // process.workspace.clone()
+        //     // INode::get(None, &process.workspace)?
+        //     process.workspace.clone()
+        // } else {
+        //     let file = process.fd_table.get_file(dir_fd).map_err(|_| (RuntimeError::EBADF))?;
+        //     file.get_inode()
+        // };
 
-        // 更新参数
-        let times = unsafe {
-            &*(times_ptr.translate(process.pmm.clone()).0 as *const TimeSpec as *const [TimeSpec; 2])
-        };
+        // // 更新参数
+        // let times = unsafe {
+        //     &*(times_ptr.transfer().0 as *const TimeSpec as *const [TimeSpec; 2])
+        // };
 
-        if filename.0 != 0 {
-            let filename = process.pmm.get_phys_addr(filename).unwrap();
-            let filename = get_string_from_raw(filename);
+        // if filename.0 != 0 {
+        //     let filename = process.pmm.get_phys_addr(filename).unwrap();
+        //     let filename = get_string_from_raw(filename);
 
-            if &filename == "/dev/null/invalid" {
-                drop(process);
-                inner.context.x[10] = 0;
-                return Ok(());
-            }
+        //     if &filename == "/dev/null/invalid" {
+        //         drop(process);
+        //         inner.context.x[10] = 0;
+        //         return Ok(());
+        //     }
 
-            inode = INode::get(inode.into(), &filename).map_err(|_| (RuntimeError::EBADF))?;
-        }
+        //     inode = INode::get(inode.into(), &filename).map_err(|_| (RuntimeError::EBADF))?;
+        // }
 
-        const UTIME_NOW: usize = 0x3fffffff;
-        const UTIME_OMIT: usize = 0x3ffffffe;
+        // const UTIME_NOW: usize = 0x3fffffff;
+        // const UTIME_OMIT: usize = 0x3ffffffe;
 
-        let _inode_inner = inode.0.borrow_mut();
+        // let _inode_inner = inode.0.borrow_mut();
 
-        if times[0].tv_nsec as usize != UTIME_OMIT {
-            let _time = if times[0].tv_nsec as usize == UTIME_NOW {
-                TimeSpec::now()
-            } else {
-                times[0]
-            };
+        // if times[0].tv_nsec as usize != UTIME_OMIT {
+        //     let _time = if times[0].tv_nsec as usize == UTIME_NOW {
+        //         TimeSpec::now()
+        //     } else {
+        //         times[0]
+        //     };
 
-            // inode_inner.st_atime_sec = time.tv_sec;
-            // inode_inner.st_atime_nsec = time.tv_nsec as u64;
-        };
+        //     // inode_inner.st_atime_sec = time.tv_sec;
+        //     // inode_inner.st_atime_nsec = time.tv_nsec as u64;
+        // };
 
-        if times[1].tv_nsec as usize != UTIME_OMIT {
-            let _time = if times[1].tv_nsec as usize == UTIME_NOW {
-                TimeSpec::now()
-            } else {
-                times[1]
-            };
+        // if times[1].tv_nsec as usize != UTIME_OMIT {
+        //     let _time = if times[1].tv_nsec as usize == UTIME_NOW {
+        //         TimeSpec::now()
+        //     } else {
+        //         times[1]
+        //     };
 
-            // inode_inner.st_mtime_sec = time.tv_sec;
-            // inode_inner.st_mtime_nsec = time.tv_nsec as u64;
-        }
+        //     // inode_inner.st_mtime_sec = time.tv_sec;
+        //     // inode_inner.st_mtime_nsec = time.tv_nsec as u64;
+        // }
 
-        drop(process);
-        inner.context.x[10] = 0;
+        // drop(process);
+        // inner.context.x[10] = 0;
         Ok(())
     }
 }

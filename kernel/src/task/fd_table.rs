@@ -1,6 +1,6 @@
 use alloc::rc::Rc;
 use hashbrown::HashMap;
-use crate::{fs::{file::{FileOP, File}, stdio::{StdIn, StdOut, StdErr}}, runtime_err::RuntimeError, memory::addr::VirtAddr, sys_call::consts::EMFILE};
+use crate::{fs::{file::{FileOP, File}, stdio::{StdIn, StdOut, StdErr}}, runtime_err::RuntimeError, memory::addr::{VirtAddr, UserAddr}, sys_call::consts::EMFILE};
 
 pub const FD_NULL: usize = 0xffffffffffffff9c;
 pub const FD_CWD: usize = -100 as isize as usize;
@@ -9,7 +9,7 @@ pub const FD_RANDOM: usize = usize::MAX;
 #[repr(C)]
 #[derive(Clone)]
 pub struct IoVec {
-    pub iov_base: VirtAddr,
+    pub iov_base: UserAddr<u8>,
     pub iov_len: usize
 }
 

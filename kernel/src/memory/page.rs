@@ -1,6 +1,6 @@
 use core::{mem::size_of, slice::from_raw_parts_mut};
 use alloc::string::{String, ToString};
-use alloc::{vec::Vec, rc::Rc};
+use alloc::vec::Vec;
 
 use crate::sync::mutex::Mutex;
 use crate::memory::addr::PAGE_SIZE;
@@ -9,8 +9,6 @@ use crate::runtime_err::RuntimeError;
 
 use super::addr::PhysPageNum;
 use super::addr::UserAddr;
-use super::addr::VirtAddr;
-use super::page_table::PageMappingManager;
 
 const USIZE_PER_PAGES: usize = PAGE_SIZE / size_of::<usize>();
 
@@ -141,20 +139,18 @@ pub fn init() {
 }
 
 impl<T> UserAddr<T> {
-    // 
-    pub fn translate(&self, pmm: Rc<PageMappingManager>) -> &'static mut T{
-        VirtAddr::from(self.0 as usize).translate(pmm).tranfer::<T>()
+    pub fn transfer(&self) -> &'static mut T {
+        PhysAddr::from(self.0 as usize).tranfer::<T>()
     }
 
     // 读取一定长度的内存
-    pub fn translate_vec(&self, pmm: Rc<PageMappingManager>, count: usize) -> &'static mut [T] {
-        let addr = VirtAddr::from(self.0 as usize).translate(pmm).0;
-        unsafe { core::slice::from_raw_parts_mut(addr as *mut T, count) }
+    pub fn transfer_vec(&self, count: usize) -> &'static mut [T] {
+        unsafe { core::slice::from_raw_parts_mut(self.0, count) }
     }
 
     // 读取内存直到发生结束条件
-    pub fn translate_until(&self, pmm: Rc<PageMappingManager>, until: fn(&T) -> bool) -> &'static mut [T] {
-        let addr = VirtAddr::from(self.0 as usize).translate(pmm).0;
+    pub fn transfer_until(&self, until: fn(&T) -> bool) -> &'static mut [T] {
+        let addr = self.0 as usize;
         let mut end_addr = addr;
         let count = loop {
             let target_ref = unsafe {(end_addr as *const T).as_ref()}.unwrap();
@@ -169,7 +165,7 @@ impl<T> UserAddr<T> {
 
 impl UserAddr<u8> {
     // 读取字符串
-    pub fn read_string(&self, pmm: Rc<PageMappingManager>) -> String {
-        String::from_utf8_lossy(self.translate_until(pmm, |c| *c == 0)).to_string()
+    pub fn read_string(&self) -> String {
+        String::from_utf8_lossy(self.transfer_until(|c| *c == 0)).to_string()
     }
 }

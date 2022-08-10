@@ -12,7 +12,6 @@ use crate::fs::stdio::StdNull;
 use crate::fs::stdio::StdZero;
 use crate::interrupt::timer::TimeSpec;
 use crate::memory::addr::UserAddr;
-use crate::sys_call::Dirent;
 use crate::task::fd_table::IoVec;
 use crate::task::pipe::PipeWriter;
 use crate::task::task::Task;
@@ -33,7 +32,7 @@ impl Task {
         let process = inner.process.borrow_mut();
 
         // 获取参数
-        let buf = buf.translate_vec(process.pmm.clone(), size);
+        let buf = buf.transfer_vec(size);
         // 获取路径
         let pwd = process.workspace.clone();
         let pwd_buf = pwd.get_pwd();
@@ -73,7 +72,7 @@ impl Task {
     }
     // 创建文件
     pub fn sys_mkdirat(&self, dir_fd: usize, filename: UserAddr<u8>, flags: usize) -> Result<(), RuntimeError> {
-        let filename = filename.read_string(self.get_pmm());
+        let filename = filename.read_string();
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
 
@@ -93,7 +92,7 @@ impl Task {
     }
     // 取消链接文件
     pub fn sys_unlinkat(&self, fd: usize, filename: UserAddr<u8>, _flags: usize) -> Result<(), RuntimeError> {
-        let filename = filename.read_string(self.get_pmm());
+        let filename = filename.read_string();
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
 
@@ -112,7 +111,7 @@ impl Task {
     }
     // 更改工作目录
     pub fn sys_chdir(&self, filename: UserAddr<u8>) -> Result<(), RuntimeError> {
-        let filename = filename.read_string(self.get_pmm());
+        let filename = filename.read_string();
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
 
@@ -125,7 +124,7 @@ impl Task {
     }
     // 打开文件
     pub fn sys_openat(&self, fd: usize, filename: UserAddr<u8>, flags: usize, _open_mod: usize) -> Result<(), RuntimeError> {
-        let filename = filename.read_string(self.get_pmm());
+        let filename = filename.read_string();
         debug!("open file: {}  flags: {:#x}", filename, flags);
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
@@ -224,7 +223,7 @@ impl Task {
 
     // 管道符
     pub fn sys_pipe2(&self, req_ptr: UserAddr<u32>) -> Result<(), RuntimeError> {
-        let pipe_arr = req_ptr.translate_vec(self.get_pmm(), 2);
+        let pipe_arr =  req_ptr.transfer_vec(2);
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
         // 创建pipe
@@ -240,7 +239,6 @@ impl Task {
     }
     // 获取文件信息
     pub fn sys_getdents(&self, fd: usize, ptr: UserAddr<u8>, len: usize) -> Result<(), RuntimeError> {
-        // todo!("getdents")
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
         debug!("get dents: fd: {} ptr: {:#x} len: {:#x}", fd, ptr.bits(), len);
@@ -253,31 +251,27 @@ impl Task {
             let sub_node_name = sub_nodes[i].get_filename();
             debug!("子节点: {}", sub_node_name);
             let sub_node_name = sub_node_name.as_bytes();
-            let node_size = ((18 + sub_node_name.len() as u16 + 1 + 7) / 8) * 8;
-            buf[pos..pos+8].clone_from_slice(&((i + 1) as u64).to_ne_bytes());
+            let node_size = ((18 + sub_node_name.len() as u16 + 1 + 15) / 16) * 16;
+            buf[pos..pos+8].clone_from_slice(&(i as u64).to_ne_bytes());
             pos += 8;
-            buf[pos..pos+8].clone_from_slice(&(0 as u64).to_ne_bytes());
+            buf[pos..pos+8].clone_from_slice(&(i as u64).to_ne_bytes());
             pos += 8;
             buf[pos..pos+2].clone_from_slice(&node_size.to_ne_bytes());
             pos += 2;
-            buf[pos] = 8;   // 写入type 
+            buf[pos] = 0;   // 写入type
             pos += 1;
             buf[pos..pos + sub_node_name.len()].clone_from_slice(sub_node_name);
             // pos += node_size as usize;
             pos += sub_node_name.len();
-            buf[pos] = 0;
-            pos += 1;
         }
         drop(process);
-        debug!("written size: {}", pos);
-        // inner.context.x[10] = pos;
         inner.context.x[10] = 0;
         
         Ok(())
     }
 
     pub fn sys_statfs(&self, _fd: usize, buf_ptr: UserAddr<StatFS>) -> Result<(), RuntimeError> {
-        let buf = buf_ptr.translate(self.get_pmm());
+        let buf = buf_ptr.transfer();
         
         buf.f_type = 32;
         buf.f_bsize = 512;
@@ -297,7 +291,7 @@ impl Task {
     // 读取
     pub fn sys_read(&self, fd: usize, buf_ptr: UserAddr<u8>, count: usize) -> Result<(), RuntimeError> {
         debug!("sys_read, fd: {}, buf_ptr: {:#x}, count: {}", fd, buf_ptr.bits(), count);
-        let buf = buf_ptr.translate_vec(self.get_pmm(), count);
+        let buf = buf_ptr.transfer_vec(count);
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
 
@@ -316,7 +310,7 @@ impl Task {
 
     // 写入
     pub fn sys_write(&self, fd: usize, buf_ptr: UserAddr<u8>, count: usize) -> Result<(), RuntimeError> {
-        let buf = buf_ptr.translate_vec(self.get_pmm(), count);
+        let buf = buf_ptr.transfer_vec(count);
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
         
@@ -340,7 +334,7 @@ impl Task {
     }
     // 写入
     pub fn sys_writev(&self, fd: usize, iov: UserAddr<IoVec>, iovcnt: usize) -> Result<(), RuntimeError> {
-        let iov_vec = iov.translate_vec(self.get_pmm(), iovcnt);
+        let iov_vec = iov.transfer_vec(iovcnt);
         
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
@@ -348,8 +342,9 @@ impl Task {
         let fd = process.fd_table.get(fd)?;
         let mut cnt = 0;
         for i in iov_vec {
-            let buf = get_buf_from_phys_addr(i.iov_base.translate(process.pmm.clone()), 
-                i.iov_len);
+            // let buf = get_buf_from_phys_addr(i.iov_base.translate(process.pmm.clone()), 
+            //     i.iov_len);
+            let buf = i.iov_base.transfer_vec(i.iov_len);
             cnt += fd.write(buf, i.iov_len);
         }
         drop(process);
@@ -358,7 +353,7 @@ impl Task {
     }
 
     pub fn sys_readv(&self, fd: usize, iov: UserAddr<IoVec>, iovcnt: usize) -> Result<(), RuntimeError> {
-        let iov_vec = iov.translate_vec(self.get_pmm(), iovcnt);
+        let iov_vec = iov.transfer_vec(iovcnt);
 
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
@@ -366,8 +361,9 @@ impl Task {
         let fd = process.fd_table.get(fd)?;
         let mut cnt = 0;
         for i in iov_vec {
-            let buf = get_buf_from_phys_addr(i.iov_base.translate(process.pmm.clone()), 
-                i.iov_len);
+            // let buf = get_buf_from_phys_addr(i.iov_base, 
+                // i.iov_len);
+            let buf = i.iov_base.transfer_vec(i.iov_len);
             cnt += fd.read(buf);
         }
         drop(process);
@@ -377,7 +373,7 @@ impl Task {
 
     pub fn sys_fstat(&self, _fd: usize, buf_ptr: UserAddr<Kstat>) -> Result<(), RuntimeError> {
         debug!("sys_fstat: {}", _fd);
-        let _kstat = buf_ptr.translate(self.get_pmm());
+        let _kstat = buf_ptr.transfer();
         let mut inner = self.inner.borrow_mut();
         // let process = inner.process.borrow_mut();
 
@@ -409,8 +405,8 @@ impl Task {
 
     // 获取文件信息
     pub fn sys_fstatat(&self, dir_fd: usize, filename: UserAddr<u8>, stat_ptr: UserAddr<Kstat>, _flags: usize) -> Result<(), RuntimeError> {
-        let filename = filename.read_string(self.get_pmm());
-        let kstat = stat_ptr.translate(self.get_pmm());
+        let filename = filename.read_string();
+        let kstat = stat_ptr.transfer();
         debug!("sys_fstat: dir_fd {:#x}, filename: {}", dir_fd,filename);
 
         let mut inner = self.inner.borrow_mut();
@@ -474,7 +470,7 @@ impl Task {
 
     // 原子读
     pub fn sys_pread(&self, fd: usize, ptr: UserAddr<u8>, len: usize, offset: usize) -> Result<(), RuntimeError> {
-        let buf = ptr.translate_vec(self.get_pmm(), len);
+        let buf = ptr.transfer_vec(len);
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
         let file = process.fd_table.get_file(fd)?;
@@ -485,7 +481,7 @@ impl Task {
     }
 
     pub fn sys_ppoll(&self, fds: UserAddr<PollFD>, nfds: usize, timeout: UserAddr<TimeSpec>) -> Result<(), RuntimeError> {
-        let fds = fds.translate_vec(self.get_pmm(), nfds);
+        let fds = fds.transfer_vec(nfds);
         let mut inner = self.inner.borrow_mut();
         debug!("wait for fds: {}", fds.len());
         for i in fds {
