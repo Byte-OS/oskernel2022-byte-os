@@ -22,8 +22,7 @@ impl FileOP for ProcMeminfo {
     fn read(&self, data: &mut [u8]) -> usize {
         let readable = *self.0.borrow_mut();
         if readable {
-            let s = "MemTotal:       8024 kB";
-            let bytes = s.as_bytes();
+            let bytes = b"MemTotal:       8024 kB";
             data[..bytes.len()].clone_from_slice(bytes);
             *self.0.borrow_mut() = false;
             bytes.len()

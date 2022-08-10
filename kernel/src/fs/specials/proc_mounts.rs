@@ -22,8 +22,7 @@ impl FileOP for ProcMounts {
     fn read(&self, data: &mut [u8]) -> usize {
         let readable = *self.0.borrow_mut();
         if readable {
-            let s = "fs / fs rw,nosuid,nodev,noexec,relatime 0 0";
-            let bytes = s.as_bytes();
+            let bytes = b"fs / fs rw,nosuid,nodev,noexec,relatime 0 0";
             data[..bytes.len()].clone_from_slice(bytes);
             *self.0.borrow_mut() = false;
             bytes.len()
