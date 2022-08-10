@@ -2,6 +2,7 @@ pub mod timer;
 
 use core::arch::global_asm;
 use core::arch::asm;
+use k210_pac::i2c0::con;
 use riscv::register::scause::Trap;
 use riscv::register::scause::Exception;
 use riscv::register::scause::Interrupt;
@@ -46,8 +47,17 @@ fn breakpoint(context: &mut Context) {
 }
 
 // 中断错误
-fn fault(_context: &mut Context, _scause: Scause, _stval: usize) {
-    debug!("中断 {:#x} 地址 {:#x} stval: {:#x}", _scause.bits(), _context.sepc, _stval);
+fn fault(context: &mut Context, _scause: Scause, _stval: usize) {
+    debug!("中断 {:#x} 地址 {:#x} stval: {:#x}", _scause.bits(), context.sepc, _stval);
+    debug!("a0: {:#x}, a1: {:#x}
+    a2: {:#x}, a3: {:#x}
+    a4: {:#x}, a5: {:#x}, 
+    a6: {:#x}, a7: {:#x}", 
+    context.x[10], context.x[11],
+    context.x[12], context.x[13],
+    context.x[14], context.x[15],
+    context.x[16], context.x[17],
+    );
     panic!("未知中断")
 }
 
