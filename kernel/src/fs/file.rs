@@ -196,6 +196,20 @@ impl File {
         };
         inner.offset
     }
+
+    pub fn entry_next(&self) -> Option<(usize, Rc<INode>)> {
+        let mut inner = self.0.borrow_mut();
+        let offset = inner.offset;
+        let child = {
+            let children = &mut inner.file.0.borrow_mut().children;
+            if offset >= children.len() {
+                return None;
+            }
+            children[offset].clone()
+        };
+        inner.offset += 1;
+        Some((offset, child))
+    }
 }
 
 impl FileOP for File {

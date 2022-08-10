@@ -245,16 +245,18 @@ impl Task {
         let process = inner.process.borrow_mut();
         debug!("get dents: fd: {} ptr: {:#x} len: {:#x}", fd, ptr.bits(), len);
         let buf = ptr.translate_vec(process.pmm.clone(), len);
-        let dir_node = process.fd_table.get_file(fd)?.get_inode();
+        let dir_file = process.fd_table.get_file(fd)?;
         
-        let sub_nodes = dir_node.clone_children();
         let mut pos = 0;
-        for i in 0..sub_nodes.len() {
-            let sub_node_name = sub_nodes[i].get_filename();
+        while let Some((i, inode)) = dir_file.entry_next() {
+
+    
+            let sub_node_name = inode.get_filename();
             debug!("子节点: {}", sub_node_name);
             let sub_node_name = sub_node_name.as_bytes();
             let node_size = ((18 + sub_node_name.len() as u16 + 1 + 7) / 8) * 8;
-            buf[pos..pos+8].clone_from_slice(&((i + 1) as u64).to_ne_bytes());
+            let next = pos + node_size as usize;
+            buf[pos..pos+8].clone_from_slice(&(i as u64).to_ne_bytes());
             pos += 8;
             buf[pos..pos+8].clone_from_slice(&(0 as u64).to_ne_bytes());
             pos += 8;
@@ -266,8 +268,9 @@ impl Task {
             // pos += node_size as usize;
             pos += sub_node_name.len();
             buf[pos] = 0;
-            pos += 1;
+            pos = next;
         }
+
         drop(process);
         debug!("written size: {}", pos);
         // inner.context.x[10] = pos;
