@@ -12,7 +12,7 @@ use crate::task::fd_table::FD_NULL;
 use crate::task::fd_table::FD_RANDOM;
 
 impl Task {
-    pub fn sys_brk(&self, top_pos: usize) -> Result<(), RuntimeError> {
+    pub fn sys_brk(&self, _top_pos: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         // let mut process = inner.process.borrow_mut();
         // debug!("brk  top_pos: {:#x}", top_pos);

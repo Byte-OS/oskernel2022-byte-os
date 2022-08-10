@@ -1,5 +1,4 @@
 use alloc::rc::Rc;
-use crate::console::puts;
 use crate::fs::StatFS;
 use crate::fs::file::File;
 use crate::fs::file::FileOP;
@@ -20,8 +19,6 @@ use crate::task::pipe::new_pipe;
 use crate::fs::file::Kstat;
 use crate::fs::filetree::INode;
 use crate::runtime_err::RuntimeError;
-use crate::memory::addr::get_buf_from_phys_addr;
-
 use super::OpenFlags;
 
 impl Task {
@@ -392,7 +389,7 @@ impl Task {
         // // 判断文件描述符是否存在
         let inode = process.fd_table.get_file(fd)?;
         let inode = inode.get_inode();
-        let inode = inode.0.borrow_mut();
+        let _inode = inode.0.borrow_mut();
         kstat.st_dev = 1;
         kstat.st_ino = 1;
         kstat.st_mode = 0;
@@ -502,7 +499,7 @@ impl Task {
         Ok(())
     }
 
-    pub fn sys_ppoll(&self, fds: UserAddr<PollFD>, nfds: usize, timeout: UserAddr<TimeSpec>) -> Result<(), RuntimeError> {
+    pub fn sys_ppoll(&self, fds: UserAddr<PollFD>, nfds: usize, _timeout: UserAddr<TimeSpec>) -> Result<(), RuntimeError> {
         let fds = fds.transfer_vec(nfds);
         let mut inner = self.inner.borrow_mut();
         debug!("wait for fds: {}", fds.len());

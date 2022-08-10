@@ -85,7 +85,7 @@ impl UserHeap {
 
     pub fn set_heap_top(&mut self, top: usize) -> usize {
         debug!("set top: {:#x}", top);
-        let origin_top = self.pointer;
+        let _origin_top = self.pointer;
         self.pointer = top;
         // origin_top
         if self.pointer < self.end {
@@ -153,7 +153,7 @@ pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path
     let mut base = 0x20000000;
     let mut relocated_arr = vec![];
 
-    base = match elf.relocate(process.pmm.clone(), base) {
+    base = match elf.relocate(base) {
         Ok(arr) => {
             relocated_arr = arr;
             base

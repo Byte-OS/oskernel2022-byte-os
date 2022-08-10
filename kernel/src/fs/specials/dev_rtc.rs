@@ -32,15 +32,15 @@ impl FileOP for DevRtc {
         }
     }
 
-    fn write(&self, data: &[u8], count: usize) -> usize {
+    fn write(&self, _data: &[u8], _count: usize) -> usize {
         todo!()
     }
 
-    fn read_at(&self, pos: usize, data: &mut [u8]) -> usize {
+    fn read_at(&self, _pos: usize, _data: &mut [u8]) -> usize {
         todo!()
     }
 
-    fn write_at(&self, pos: usize, data: &[u8], count: usize) -> usize {
+    fn write_at(&self, _pos: usize, _data: &[u8], _count: usize) -> usize {
         todo!()
     }
 

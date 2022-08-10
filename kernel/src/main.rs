@@ -4,7 +4,6 @@
 #![feature(panic_info_message)]
 #![feature(default_alloc_error_handler)]
 #![allow(unaligned_references)]
-#![feature(derive_default_enum)]
 #![feature(const_btree_new)]
 #![feature(drain_filter)]
 

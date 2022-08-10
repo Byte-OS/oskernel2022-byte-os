@@ -12,7 +12,7 @@ use crate::task::pid::get_next_pid;
 use crate::task::task::Task;
 use crate::task::{exec_with_process, UserHeap};
 use crate::runtime_err::RuntimeError;
-use crate::memory::addr::{UserAddr, write_string_to_raw};
+use crate::memory::addr::UserAddr;
 
 use crate::sync::mutex::Mutex;
 use crate::task::task::TaskStatus;
@@ -58,7 +58,7 @@ impl Task {
             Some(parent) => {
                 let parent = parent.upgrade().unwrap();
                 let parent = parent.borrow();
-                let task = parent.tasks[0].clone().upgrade().unwrap();
+                // let task = parent.tasks[0].clone().upgrade().unwrap();
                 drop(parent);
                 // 处理signal 17 SIGCHLD
                 // task.signal(17);
@@ -78,7 +78,6 @@ impl Task {
 
         let tid_ptr = tid_ptr.transfer();
         let mut inner = self.inner.borrow_mut();
-        let pmm = inner.process.borrow().pmm.clone();
         let clear_child_tid = self.clear_child_tid.borrow().clone();
 
         *tid_ptr = if clear_child_tid.is_valid() {
@@ -104,12 +103,17 @@ impl Task {
         // 获取参数
         let sys_info = ptr.transfer();
         // 写入系统信息
-        write_string_to_raw(&mut sys_info.sysname, "ByteOS");
-        write_string_to_raw(&mut sys_info.nodename, "ByteOS");
-        write_string_to_raw(&mut sys_info.release, "release");
-        write_string_to_raw(&mut sys_info.version, "alpha 1.1");
-        write_string_to_raw(&mut sys_info.machine, "riscv k210");
-        write_string_to_raw(&mut sys_info.domainname, "alexbd.cn");
+        let sys_name = b"ByteOS";
+        let sys_release = b"release";
+        let sys_version = b"alpha 1.1";
+        let sys_machine = b"riscv k210";
+        let sys_domain = b"alexbd.cn";
+        sys_info.sysname[..sys_name.len()].copy_from_slice(sys_name);
+        sys_info.nodename[..sys_name.len()].copy_from_slice(sys_name);
+        sys_info.release[..sys_release.len()].copy_from_slice(sys_release);
+        sys_info.version[..sys_version.len()].copy_from_slice(sys_version);
+        sys_info.machine[..sys_machine.len()].copy_from_slice(sys_machine);
+        sys_info.domainname[..sys_domain.len()].copy_from_slice(sys_domain);
         inner.context.x[10] = 0;
         Ok(())
     }
@@ -223,7 +227,6 @@ impl Task {
             _envp: UserAddr<UserAddr<u8>>) -> Result<(), RuntimeError> {
         let inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
-        let pmm = process.pmm.clone();
         let filename = filename.read_string();
 
         debug!("run {}", filename);

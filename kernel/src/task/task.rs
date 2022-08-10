@@ -1,10 +1,6 @@
 use core::cell::RefCell;
-
 use alloc::rc::Rc;
-
-
 use crate::memory::addr::UserAddr;
-use crate::memory::page_table::PageMappingManager;
 use crate::{interrupt::Context, memory::page_table::PagingMode};
 use crate::task::task_scheduler::kill_task;
 

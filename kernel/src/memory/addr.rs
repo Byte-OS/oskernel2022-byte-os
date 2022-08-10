@@ -4,11 +4,7 @@ use core::fmt::Formatter;
 use core::ops::Add;
 use core::slice;
 use core::mem::size_of;
-
-use alloc::string::String;
-use alloc::{rc::Rc, vec::Vec};
-
-use super::page_table::PageMappingManager;
+use alloc::vec::Vec;
 
 pub const PAGE_SIZE: usize = 4096;
 pub const PAGE_PTE_NUM: usize = 512;
@@ -318,30 +314,4 @@ impl<T> From<usize> for UserAddr<T> {
     fn from(addr: usize) -> Self {
         Self(addr as _)
     }
-}
-
-
-// 从内存中获取字符串 目前仅支持ascii码
-pub fn get_string_from_raw(addr: PhysAddr) -> String {
-    let mut ptr = addr.as_ptr();
-    let mut str: String = String::new();
-    loop {
-        let ch = unsafe { ptr.read() };
-        if ch == 0 {
-            break;
-        }
-        str.push(ch as char);
-        unsafe { ptr = ptr.add(1) };
-    }
-    str
-}
-
-// 将字符串写入内存 目前仅支持ascii码
-pub fn write_string_to_raw(target: &mut [u8], str: &str) {
-    let mut index = 0;
-    for c in str.chars() {
-        target[index] = c as u8;
-        index = index + 1;
-    }
-    target[index] = 0;
 }

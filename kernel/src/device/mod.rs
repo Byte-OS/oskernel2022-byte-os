@@ -59,6 +59,7 @@ pub fn add_virt_io(virtio: usize) {
     };
 }
 
+#[allow(unused)]
 pub fn add_sdcard() {
     // 创建SD存储设备
     let block_device = Box::new(SDCardWrapper::new());

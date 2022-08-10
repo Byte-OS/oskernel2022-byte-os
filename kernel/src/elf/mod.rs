@@ -30,16 +30,16 @@ pub const AT_EXECFN: usize = 31;
 pub const AT_SYSINFO: usize = 32;
 pub const AT_SYSINFO_EHDR: usize = 33;
 
-use alloc::{rc::Rc, vec::Vec};
+use alloc::vec::Vec;
 use xmas_elf::{ElfFile, program::Type, sections::SectionData, symbol_table::{DynEntry64, Entry}};
 
-use crate::{memory::{addr::{PAGE_SIZE, get_pages_num}, page_table::PageMappingManager}, runtime_err::RuntimeError};
+use crate::{memory::addr::{PAGE_SIZE, get_pages_num}, runtime_err::RuntimeError};
 
 pub trait ElfExtra {
     fn get_data_size(&self) -> usize;
     fn get_ph_addr(&self) -> Result<u64, RuntimeError>;
     fn dynsym(&self) -> Result<&[DynEntry64], &'static str>;
-    fn relocate(&self, pmm: Rc<PageMappingManager>, base: usize) -> Result<Vec<(usize, usize)>, &str>;
+    fn relocate(&self, base: usize) -> Result<Vec<(usize, usize)>, &str>;
 }
 
 
@@ -85,7 +85,7 @@ impl ElfExtra for ElfFile<'_> {
     }
 
 
-    fn relocate(&self, pmm: Rc<PageMappingManager>, base: usize) -> Result<Vec<(usize, usize)>, &str> {
+    fn relocate(&self, base: usize) -> Result<Vec<(usize, usize)>, &str> {
         let mut res = vec![];
         let data = self
             .find_section_by_name(".rela.dyn")
