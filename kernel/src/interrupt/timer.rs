@@ -6,7 +6,8 @@ use riscv::register::{sie, time};
 const CLOCK_FREQ: usize = 12500000;
 
 #[cfg(feature = "board_k210")]
-const CLOCK_FREQ: usize = 403000000 / 62;
+const CLOCK_FREQ: usize = 40300000000 / 62;
+// const CLOCK_FREQ: usize = 403000000 / 62;
 
 const CHANGE_TASK_TICKS: usize = 10;
 
