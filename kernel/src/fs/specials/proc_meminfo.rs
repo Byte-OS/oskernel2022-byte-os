@@ -24,7 +24,7 @@ impl FileOP for ProcMeminfo {
         if readable {
             let s = "MemTotal:       8024 kB";
             let bytes = s.as_bytes();
-            data[..bytes.len()].clone_from_slice(bytes);
+            data[..bytes.len()].copy_from_slice(bytes);
             *self.0.borrow_mut() = false;
             bytes.len()
         } else {

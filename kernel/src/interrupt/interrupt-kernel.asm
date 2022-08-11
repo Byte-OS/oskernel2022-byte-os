@@ -24,6 +24,9 @@
 
     .section .text
     .global kernel_callback_entry
+    .align 2
+
+
 # 内核中断调用入口
 kernel_callback_entry:
     addi    sp, sp, CONTEXT_SIZE*-8
@@ -33,7 +36,7 @@ kernel_callback_entry:
     # 将原来的 sp（sp 又名 x2）写入 2 位置
     addi    x1, sp, 34*8
     SAVE_K    x1, 2
-     # 保存 x3 至 x31
+    # 保存 x3 至 x31
     .set    n, 3
     .rept   29
         SAVE_K_N  %n

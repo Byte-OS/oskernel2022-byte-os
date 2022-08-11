@@ -104,7 +104,7 @@ pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
     busybox_node.linkat("ls");
     busybox_node.linkat("pwd");
 
-    cache_file("busybox");
+    // cache_file("busybox");
 
     INode::root().add(INode::new("proc".to_string(), 
         DiskFileEnum::None, FileType::Directory, None));

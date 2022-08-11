@@ -87,6 +87,11 @@ __task_restore:
 
     # 因为sp 0 和 2未使用所以 存在这里无事
     sd tp, 0(sp)
+
+    # 切换中断
+    la tp, kernel_callback_entry
+    csrw stvec, tp
+
     ld tp, 11*8(sp) # 加载从x11保存的 context地址
 
 __store_task_context:

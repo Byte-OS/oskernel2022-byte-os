@@ -107,7 +107,7 @@ impl MemMap {
         // 复制数据
         let new_data = get_buf_from_phys_page(phys_num_start, self.page_num);
         let old_data = get_buf_from_phys_page(self.ppn, self.page_num);
-        new_data.clone_from_slice(old_data);
+        new_data.copy_from_slice(old_data);
 
 
         Ok(Self {

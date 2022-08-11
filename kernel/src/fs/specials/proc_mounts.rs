@@ -24,7 +24,7 @@ impl FileOP for ProcMounts {
         if readable {
             let s = "fs / fs rw,nosuid,nodev,noexec,relatime 0 0";
             let bytes = s.as_bytes();
-            data[..bytes.len()].clone_from_slice(bytes);
+            data[..bytes.len()].copy_from_slice(bytes);
             *self.0.borrow_mut() = false;
             bytes.len()
         } else {

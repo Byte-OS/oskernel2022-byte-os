@@ -417,7 +417,7 @@ impl Task {
                 context.sepc += 4;
                 // 复制参数
                 let mut args = [0;7];
-                args.clone_from_slice(&context.x[10..17]);
+                args.copy_from_slice(&context.x[10..17]);
                 let call_type = context.x[17];
                 drop(context);
                 drop(task_inner);
