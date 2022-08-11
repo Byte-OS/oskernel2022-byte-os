@@ -32,7 +32,6 @@ impl Task {
 
     pub fn sys_mmap(&self, start: usize, len: usize, _prot: usize, 
             flags: usize, fd: usize, offset: usize) -> Result<(), RuntimeError> {
-        self.before_run();
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
         debug!("start: {:#x}, len: {}", start, len);
@@ -51,19 +50,7 @@ impl Task {
             let mem_map = MemMap::new(VirtAddr::from(start).into(), page_num, PTEFlags::UVRWX)?;
             p_start = mem_map.ppn.into();
             process.pmm.add_mapping_by_map(&mem_map)?;
-            // unsafe { sfence_vma_all(); }
-            debug!("刷新数据， {:#x}", p_start.0);
 
-            let test_start = process.pmm.get_entry(start.into())?;
-            debug!("flags: {:?}  ppn: {:#x}", test_start.flags(), test_start.ppn().0);
-
-            let ptr = (start) as *mut u8;
-            unsafe { ptr.write(3); }
-            // if start == 0x12d000 {
-            //     let ptr = 0x12d008 as *mut u8;
-            //     unsafe { ptr.write(3); }
-            //     debug!("测试写入完毕");
-            // }
             process.mem_set.0.push(mem_map);
         }
         let buf = get_buf_from_phys_addr(p_start, len);

@@ -83,7 +83,9 @@ pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
 
     // 开启SUM位 让内核可以访问用户空间
     unsafe {
+        debug!("before set: {:#x}", sstatus::read().bits());
         sstatus::set_sum();
+        debug!("after set: {:#x}", sstatus::read().bits());
     }
 
     // 初始化内存
@@ -111,7 +113,7 @@ pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
     INode::root().add(INode::new("proc".to_string(), 
         DiskFileEnum::None, FileType::Directory, None));
 
-    cache_file("busybox");
+    // cache_file("busybox");
 
     // 输出文件树
     print_file_tree(INode::root());

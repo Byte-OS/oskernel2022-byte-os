@@ -13,6 +13,7 @@ use super::addr::VirtAddr;
 use super::addr::PAGE_PTE_NUM;
 use super::addr::PAGE_SIZE;
 use super::addr::VirtPageNum;
+use super::page::ADDR_END;
 use super::page::PAGE_ALLOCATOR;
 use super::mem_map::MemMap;
 use super::mem_set::MemSet;
@@ -408,6 +409,13 @@ lazy_static! {
 
 // 初始化页面映射
 pub fn init() {
+    {
+        let kernel_page = KERNEL_PAGE_MAPPING.force_get();
+        
+        let mem_map = MemMap::exists_page(0x80000usize.into(), 0x80000usize.into(), 
+                (ADDR_END - 0x8000_0000) / PAGE_SIZE, PTEFlags::VRWX | PTEFlags::G | PTEFlags::D | PTEFlags::A);
+        kernel_page.add_mapping_by_map(&mem_map).expect("地址申请失败");
+    }
     switch_to_kernel_page();
 }
 

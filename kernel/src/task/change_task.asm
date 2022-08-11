@@ -77,6 +77,7 @@ change_task:
 
     # 恢复 sp（又名 x2）这里最后恢复是为了上面可以正常使用 LOAD 宏
     LOAD    x2, 2
+    sfence.vma
     sret
 
 .global __task_restore

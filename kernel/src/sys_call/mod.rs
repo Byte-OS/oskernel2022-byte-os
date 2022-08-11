@@ -394,7 +394,17 @@ impl Task {
                 context.sepc = context.sepc + 2;
             },
             // 时钟中断
-            Trap::Interrupt(Interrupt::SupervisorTimer) => timer::timer_handler(),
+            Trap::Interrupt(Interrupt::SupervisorTimer) => {
+                timer::timer_handler();
+                let value = context.sepc as *mut u16;
+                // let virt_addr = context.sepc;
+                // drop(context);
+                // drop(task_inner);
+                // let process = self.get_process();
+                // let process_mut = process.borrow_mut();
+                // let t_addr = process_mut.pmm.get_phys_addr(virt_addr.into())?.0 as *mut u16;
+                debug!("value: {:#x}", unsafe { value.read() });
+            },
             // 页处理错误
             Trap::Exception(Exception::StorePageFault) | Trap::Exception(Exception::StoreFault) => {
                 error!("缺页中断触发 缺页地址: {:#x} 触发地址:{:#x} 已同步映射", stval, context.sepc);
