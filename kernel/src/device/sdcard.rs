@@ -746,38 +746,44 @@ impl SDCardWrapper {
     pub fn new() -> Self {
         unsafe { Self(RefCell::new(init_sdcard())) }
     }
+
+    pub fn wait_for_one_sec() {
+        unsafe {
+            usleep(10000);
+        }
+    }
 }
 
 impl BlockDevice for SDCardWrapper {
     fn read_block(&mut self, block_id: usize, buf: &mut [u8]) {
-        self.0.borrow()
-            .read_sector(buf, block_id as u32)
-            .unwrap();
-        // let sd_card = self.0.borrow();
-        // let mut result = sd_card.read_sector(buf, block_id as u32);
-        // let mut cont_cnt = 0;
-        // while result.is_err() {
-        //     if cont_cnt >= 0 {
-        //         info!("[sdcard] read_sector(buf, {}) error. Retrying...", block_id);
-        //         result = sd_card.read_sector(buf, block_id as u32);
-        //     }
-        //     cont_cnt += 1;
-        //     if cont_cnt >= 5 {
-        //         info!(
-        //             "[sdcard] read_sector(buf[{}], {}) error exceeded contineous retry count, waiting...",
-        //             buf.len(),
-        //             block_id
-        //         );
-        //         Self::wait_for_one_sec();
-        //         if sd_card.read_sector(buf, block_id as u32).is_err() {
-        //             sd_card.init();
-        //             Self::wait_for_one_sec();
-        //         } else {
-        //             break;
-        //         }
-        //         cont_cnt = 0;
-        //     }
-        // }
+        // self.0.borrow()
+        //     .read_sector(buf, block_id as u32)
+        //     .unwrap();
+        let sd_card = self.0.borrow();
+        let mut result = sd_card.read_sector(buf, block_id as u32);
+        let mut cont_cnt = 0;
+        while result.is_err() {
+            if cont_cnt >= 0 {
+                info!("[sdcard] read_sector(buf, {}) error. Retrying...", block_id);
+                result = sd_card.read_sector(buf, block_id as u32);
+            }
+            cont_cnt += 1;
+            if cont_cnt >= 5 {
+                info!(
+                    "[sdcard] read_sector(buf[{}], {}) error exceeded contineous retry count, waiting...",
+                    buf.len(),
+                    block_id
+                );
+                Self::wait_for_one_sec();
+                if sd_card.read_sector(buf, block_id as u32).is_err() {
+                    sd_card.init();
+                    Self::wait_for_one_sec();
+                } else {
+                    break;
+                }
+                cont_cnt = 0;
+            }
+        }
     }
     fn write_block(&mut self, block_id: usize, buf: &mut [u8]) {
         self.0
