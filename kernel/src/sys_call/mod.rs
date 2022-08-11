@@ -396,14 +396,6 @@ impl Task {
             // 时钟中断
             Trap::Interrupt(Interrupt::SupervisorTimer) => {
                 timer::timer_handler();
-                let value = context.sepc as *mut u16;
-                // let virt_addr = context.sepc;
-                // drop(context);
-                // drop(task_inner);
-                // let process = self.get_process();
-                // let process_mut = process.borrow_mut();
-                // let t_addr = process_mut.pmm.get_phys_addr(virt_addr.into())?.0 as *mut u16;
-                debug!("value: {:#x}", unsafe { value.read() });
             },
             // 页处理错误
             Trap::Exception(Exception::StorePageFault) | Trap::Exception(Exception::StoreFault) => {

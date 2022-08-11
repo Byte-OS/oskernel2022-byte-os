@@ -7,6 +7,7 @@ use super::exec;
 
 lazy_static! {
     pub static ref TASK_QUEUE: Mutex<VecDeque<&'static str>> = Mutex::new(VecDeque::from(vec![
+        "busybox sh busybox_testcode.sh",
         "busybox sh test.sh date.lua",
         "busybox sh test.sh file_io.lua",
         "busybox sh test.sh max_min.lua",
@@ -16,7 +17,6 @@ lazy_static! {
         "busybox sh test.sh sin30.lua",
         "busybox sh test.sh sort.lua",
         "busybox sh test.sh strings.lua",
-        "busybox sh busybox_testcode.sh",
 
         // "ls"
 

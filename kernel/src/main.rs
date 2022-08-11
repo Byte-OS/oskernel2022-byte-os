@@ -81,7 +81,10 @@ pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
     // 提示信息
     info!("Welcome to test os!");
 
-    // 开启SUM位 让内核可以访问用户空间
+    // 开启SUM位 让内核可以访问用户空间  踩坑：  
+    // only in qemu. eg: qemu is riscv 1.10    k210 is riscv 1.9.1  
+    // in 1.10 is SUM but in 1.9.1 is PUM which is the opposite meaning with SUM
+    #[cfg(not(feature = "board_k210"))]
     unsafe {
         debug!("before set: {:#x}", sstatus::read().bits());
         sstatus::set_sum();
@@ -113,7 +116,8 @@ pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
     INode::root().add(INode::new("proc".to_string(), 
         DiskFileEnum::None, FileType::Directory, None));
 
-    // cache_file("busybox");
+    cache_file("busybox");
+    // cache_file("lua");
 
     // 输出文件树
     print_file_tree(INode::root());
