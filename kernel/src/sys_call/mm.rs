@@ -54,11 +54,13 @@ impl Task {
             process.pmm.add_mapping_by_map(&mem_map)?;
             unsafe { sfence_vma_all(); }
             debug!("刷新数据， {:#x}", p_start.0);
-            if start == 0x12d000 {
-                let ptr = 0x12d008 as *mut u8;
-                unsafe { ptr.write(3); }
-                debug!("测试写入完毕");
-            }
+            let ptr = (start) as *mut u8;
+            unsafe { ptr.write(3); }
+            // if start == 0x12d000 {
+            //     let ptr = 0x12d008 as *mut u8;
+            //     unsafe { ptr.write(3); }
+            //     debug!("测试写入完毕");
+            // }
             process.mem_set.0.push(mem_map);
         }
         let buf = get_buf_from_phys_addr(p_start, len);
