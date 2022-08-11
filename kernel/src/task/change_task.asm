@@ -53,9 +53,6 @@ change_task:
         .set n, n+1
     .endr
 
-    # 不知道为什么需要这行代码 对齐? 还是 需要缓冲？
-    nop
-
     la a0, __task_restore
     csrw stvec, a0
 
@@ -84,6 +81,7 @@ change_task:
     sret
 
 .global __task_restore
+.align 2
 __task_restore:
     csrrw sp, sscratch, sp
 
