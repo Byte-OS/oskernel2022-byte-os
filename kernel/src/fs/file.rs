@@ -36,14 +36,13 @@ pub mod fcntl_cmd {
 
 // 文件类型
 #[allow(dead_code)]
-#[derive(Default, Clone, Copy, PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum FileType {
     File,           // 文件
     VirtFile,       // 虚拟文件
     Directory,      // 文件夹
     Device,         // 设备
     Pipeline,       // 管道
-    #[default]
     None            // 空
 }
 

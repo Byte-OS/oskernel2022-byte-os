@@ -1,3 +1,5 @@
+use riscv::asm::sfence_vma_all;
+
 use crate::fs::file::FileOP;
 use crate::memory::mem_map::MemMap;
 use crate::memory::mem_map::MapFlags;
@@ -34,6 +36,7 @@ impl Task {
             flags: usize, fd: usize, offset: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
+        debug!("start: {:#x}, len: {}", start, len);
         let start = if start == 0 {
             process.mem_set.get_last_addr()
         } else {
@@ -43,12 +46,19 @@ impl Task {
         debug!("mmap pages: {}", len / PAGE_SIZE);
         let flags = MapFlags::from_bits_truncate(flags as u32);
         let mut p_start = process.pmm.get_phys_addr(start.into())?;
-        debug!("申请: {}", p_start.0);
+        debug!("申请: {:#x}", p_start.0);
         if p_start.0 < 0x8000_0000 {
             let page_num = len / PAGE_SIZE;
             let mem_map = MemMap::new(VirtAddr::from(start).into(), page_num, PTEFlags::UVRWX)?;
             p_start = mem_map.ppn.into();
             process.pmm.add_mapping_by_map(&mem_map)?;
+            unsafe { sfence_vma_all(); }
+            debug!("刷新数据， {:#x}", p_start.0);
+            if start == 0x12d000 {
+                let ptr = 0x12d008 as *mut u8;
+                unsafe { ptr.write(3); }
+                debug!("测试写入完毕");
+            }
             process.mem_set.0.push(mem_map);
         }
         let buf = get_buf_from_phys_addr(p_start, len);
