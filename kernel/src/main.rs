@@ -36,7 +36,7 @@ use core::arch::global_asm;
 use alloc::{rc::Rc, string::ToString};
 use riscv::register::sstatus;
 
-use crate::{fs::{filetree::{INode, DiskFileEnum}, file::FileType}, memory::page::get_free_page_num};
+use crate::{fs::{filetree::{INode, DiskFileEnum}, file::FileType, cache::cache_file}, memory::page::get_free_page_num};
 
 
 mod virtio_impl;
@@ -103,6 +103,8 @@ pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
     busybox_node.linkat("cp");
     busybox_node.linkat("ls");
     busybox_node.linkat("pwd");
+
+    cache_file("busybox");
 
     INode::root().add(INode::new("proc".to_string(), 
         DiskFileEnum::None, FileType::Directory, None));

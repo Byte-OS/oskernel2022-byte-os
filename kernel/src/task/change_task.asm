@@ -38,7 +38,10 @@ change_task:
     # 申请栈空间
     addi sp, sp, -32*8
     
+    # 切换satp 即刷新快表
     csrrw a0, satp, a0
+    sfence.vma
+
     # 保存x1寄存器
     SAVE_N 1
     # 保存x3寄存器
@@ -78,7 +81,6 @@ change_task:
 
     # 恢复 sp（又名 x2）这里最后恢复是为了上面可以正常使用 LOAD 宏
     LOAD    x2, 2
-    sfence.vma
     sret
 
 .global __task_restore
