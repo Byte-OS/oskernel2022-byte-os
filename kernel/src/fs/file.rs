@@ -134,7 +134,6 @@ impl File {
         let buf = get_buf_from_phys_page(elf_phy_start, elf_pages);
         inode.read_to(buf)?;
         let file_size = inode.get_file_size();
-        warn!("读取文件: {}", inode.get_filename());
         Ok(Rc::new(Self(RefCell::new(FileInner {
             file: inode,
             offset: 0,

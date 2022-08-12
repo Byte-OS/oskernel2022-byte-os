@@ -1,7 +1,7 @@
 use core::cell::RefCell;
 use alloc::{vec::Vec, rc::{Rc, Weak}};
 use crate::{memory::{page_table::PageMappingManager, mem_set::MemSet, addr::VirtAddr}, runtime_err::RuntimeError, interrupt::timer::TMS, fs::filetree::INode};
-use super::{task::{Task, TaskStatus}, stack::UserStack, UserHeap, fd_table::FDTable, task_scheduler::kill_process, signal::SigAction};
+use super::{task::{Task, TaskStatus}, stack::UserStack, fd_table::FDTable, task_scheduler::kill_process, signal::SigAction, user_heap::UserHeap};
 
 pub struct Process {
     pub pid: usize,                             // 进程id
@@ -54,6 +54,11 @@ impl Process {
         // TODO: 进程进入等待状态  等待目标进程结束
         // let task = self.get_task(0);
         // task.inner.borrow_mut().status = TaskStatus::WAITING;
+    }
+
+    pub fn new_heap(&mut self) -> Result<(), RuntimeError>{
+        self.heap = UserHeap::new(self.pmm.clone())?;
+        Ok(())
     }
 
     // 判断是否在等待状态

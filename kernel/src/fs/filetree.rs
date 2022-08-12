@@ -197,7 +197,8 @@ impl INode {
         // self.0.borrow_mut().file.read_exact(buf);
         // 读取错误 但是会抛出异常 UnexpectedEOF
         // self.to_file()?.read_exact(buf).expect("读取错误");
-        self.to_file()?.read_exact(buf);
+        let mut file = self.to_file()?;
+        file.read_exact(buf);
         Ok(buf.len())
     }
 

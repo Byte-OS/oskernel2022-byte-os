@@ -3,7 +3,6 @@ use crate::memory::mem_map::MemMap;
 use crate::memory::mem_map::MapFlags;
 use crate::memory::page_table::PTEFlags;
 use crate::runtime_err::RuntimeError;
-use crate::sys_call::SYS_CALL_ERR;
 use crate::task::task::Task;
 use crate::memory::addr::PAGE_SIZE;
 use crate::memory::addr::VirtAddr;
@@ -11,22 +10,24 @@ use crate::memory::addr::get_buf_from_phys_addr;
 use crate::task::fd_table::FD_NULL;
 use crate::task::fd_table::FD_RANDOM;
 
+use super::SYS_CALL_ERR;
+
 impl Task {
-    pub fn sys_brk(&self, _top_pos: usize) -> Result<(), RuntimeError> {
+    pub fn sys_brk(&self, top_pos: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
-        // let mut process = inner.process.borrow_mut();
-        // debug!("brk  top_pos: {:#x}", top_pos);
-        // if top_pos == 0 {
-        //     let top = process.heap.get_heap_top();
-        //     drop(process);
-        //     debug!("brk top: {:#x}", top);
-        //     inner.context.x[10] = top;
-        // } else {
-        //     let ret = process.heap.set_heap_top(top_pos);
-        //     drop(process);
-        //     inner.context.x[10] = ret;
-        // }
-        inner.context.x[10] = SYS_CALL_ERR;
+        let mut process = inner.process.borrow_mut();
+        if top_pos == 0 {
+            let top = process.heap.get_heap_top();
+            drop(process);
+            debug!("[sys_brk] brk_addr: {:X}; new_addr: {:X} caller addr: {:X}", top_pos, top, inner.context.sepc);
+            inner.context.x[10] = top;
+        } else {
+            let ret = process.heap.set_heap_top(top_pos)?;
+            debug!("[sys_brk] brk_addr: {:X}; new_addr: {:X} caller addr: {:X}", top_pos, ret, inner.context.sepc);
+            drop(process);
+            inner.context.x[10] = ret;
+        }
+        // inner.context.x[10] = SYS_CALL_ERR;
         Ok(())
     }
 
@@ -36,12 +37,16 @@ impl Task {
         let mut process = inner.process.borrow_mut();
         debug!("start: {:#x}, len: {}", start, len);
         let start = if start == 0 {
-            process.mem_set.get_last_addr()
+            let latest_addr = process.mem_set.get_last_addr();
+            if latest_addr < 0xd000_0000 {
+                0xd000_0000
+            } else {
+                latest_addr
+            }
         } else {
             start
         };
         debug!("mmap start: {:#x}, len: {:#x}, prot: {}, flags: {}, fd: {:#x}, offset: {:#x}", start, len, _prot, flags, fd, offset);
-        debug!("mmap pages: {}", len / PAGE_SIZE);
         let flags = MapFlags::from_bits_truncate(flags as u32);
         let mut p_start = process.pmm.get_phys_addr(start.into())?;
         debug!("申请: {:#x}", p_start.0);

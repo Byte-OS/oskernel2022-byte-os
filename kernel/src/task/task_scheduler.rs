@@ -45,11 +45,10 @@ impl TaskScheduler {
                 }
             }
             // TODO: 判断是否存在等待中的任务 如果存在就切换任务
-            debug!("tasks len: {}", self.queue.len());
             let task = self.queue[0].clone();
             self.is_run = true;
+            warn!("执行pid: {}   tid: {}   tasks len: {}", task.pid, task.tid, self.queue.len());
             task.run();
-            warn!("执行pid: {}   tid: {}", task.pid, task.tid);
             task.catch();
         }
     }
@@ -78,7 +77,6 @@ pub fn start_tasks() {
     task_time_refresh();
     let mut task_scheduler = TASK_SCHEDULER.force_get();
     task_scheduler.start();
-    warn!("恢复任务");
     switch_to_kernel_page();
     // 切换到内核页表
 }

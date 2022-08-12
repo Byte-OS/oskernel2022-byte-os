@@ -88,9 +88,6 @@ impl Task {
         };
 
         // 更新参数
-        // let times = unsafe {
-        //     &*(times_ptr.transfer().0 as *const TimeSpec as *const [TimeSpec; 2])
-        // };
         let times = times_ptr.transfer_vec(2);
 
         if filename.bits() != 0 {

@@ -83,7 +83,6 @@ impl Task {
         // 可能需要更换内存
         // usleep(1000);
         let context_ptr = &inner.context as *const Context as usize;
-        warn!("恢复任务");
         // 释放资源
         drop(process);
         drop(inner);

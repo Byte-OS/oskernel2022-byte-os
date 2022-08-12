@@ -30,89 +30,11 @@ pub mod task;
 pub mod signal;
 pub mod fd_table;
 pub mod task_scheduler;
+pub mod user_heap;
 
 pub const STDIN: usize = 0;
 pub const STDOUT: usize = 1;
 pub const STDERR: usize = 2;
-
-pub const DEFAULT_HEAP_BOTTOM: usize = 0xe0000000;
-pub const DEFAULT_HEAP_PAGE_NUM: usize = 5;
-
-#[allow(dead_code)]
-// 用户heap
-pub struct UserHeap {
-    start: usize, 
-    pointer: usize,
-    end: usize,
-    size: usize,
-    temp: usize,
-    pmm: Rc<PageMappingManager>,
-    mem_set: MemSet
-}
-
-impl UserHeap {
-    // 创建heap
-    pub fn new(pmm: Rc<PageMappingManager>) -> Result<Self, RuntimeError> {
-        // let phy_start = alloc()?;
-        let mut mem_set = MemSet::new();
-        let mem_map = MemMap::new((DEFAULT_HEAP_BOTTOM / PAGE_SIZE).into(), DEFAULT_HEAP_PAGE_NUM, PTEFlags::VRWX | PTEFlags::U)?;
-        pmm.add_mapping_by_map(&mem_map)?;
-        mem_set.0.push(mem_map);
-        // 申请页表作为heap
-        Ok(UserHeap {
-            start: DEFAULT_HEAP_BOTTOM,
-            pointer: DEFAULT_HEAP_BOTTOM,
-            end: DEFAULT_HEAP_BOTTOM + DEFAULT_HEAP_PAGE_NUM * PAGE_SIZE,
-            size: PAGE_SIZE,
-            temp: 0,
-            pmm,
-            mem_set
-        })
-    }
-
-    // 获取堆开始的地址
-    pub fn get_addr(&self) -> PhysAddr {
-        self.start.into()
-    }
-
-    pub fn get_heap_size(&self) -> usize {
-        self.end - self.start
-    }
-
-    pub fn get_heap_top(&self) -> usize {
-        self.pointer
-    }
-
-    pub fn set_heap_top(&mut self, top: usize) -> usize {
-        debug!("set top: {:#x}", top);
-        let _origin_top = self.pointer;
-        self.pointer = top;
-        // origin_top
-        if self.pointer < self.end {
-            debug!("top: {:#x}", top);
-            top
-        } else {
-            -1 as isize as usize
-        }
-    }
-
-    // 获取临时页表
-    pub fn get_temp(&mut self, pmm: Rc<PageMappingManager>) -> Result<PhysAddr, RuntimeError>{
-        if self.temp == 0 {
-            let mem_map = MemMap::new(0xe0000usize.into(), 1, PTEFlags::UVRWX).unwrap();
-            self.temp = mem_map.ppn.into();
-            pmm.add_mapping(mem_map.ppn, mem_map.vpn, PTEFlags::UVRWX)?;
-            // self.pmm.add_mapping_by_map(&mem_map).expect("临时页表申请内存不足");
-            self.mem_set.0.push(mem_map);
-        }
-        Ok(PhysPageNum::from(self.temp).into())
-    }
-
-    pub fn release_temp(&self) {
-        get_buf_from_phys_page(self.temp.into(), 1).fill(0)
-    }
-}
-
 
 // 获取pid
 pub fn get_new_pid() -> usize {
@@ -164,6 +86,7 @@ pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path
     };
 
     // 重新映射内存 并设置头
+    let mut heap_bottom = 0;
     let ph_count = elf_header.pt2.ph_count();
     for i in 0..ph_count {
         let ph = elf.program_header(i).unwrap();
@@ -179,6 +102,10 @@ pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path
 
             let vr_offset = ph.virtual_addr() as usize % 0x1000;
             let vr_offset_end = vr_offset + read_size;
+
+            // 判断是否大于结束 修改HEAP地址
+            let end_va = (((ph.virtual_addr() + ph.mem_size()) + 4095) / 4096 * 4096) as usize;
+            if end_va > heap_bottom { heap_bottom = end_va; }
 
             // 添加memset
             process.mem_set.inner().push(MemMap::exists_page(phy_start, VirtAddr::from(ph.virtual_addr() as usize + base).into(), 
@@ -224,17 +151,13 @@ pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path
     task_inner.context.x.fill(0);
     task_inner.context.sepc = base + entry_point;
     task_inner.context.x[2] = process.stack.get_stack_top();
+
+    // 设置heap_bottom
+    process.new_heap()?;
+    process.heap.set_heap_top(heap_bottom)?;
     drop(task_inner);
-
-    // 映射堆
-    let heap_ppn = process.heap.get_addr().into();
-
-    process.pmm.add_mapping(heap_ppn, 
-        0xf0110usize.into(), PTEFlags::VRWX | PTEFlags::U)?;
-
     drop(process);
-    // 释放读取的文件
-    
+
     // 任务管理器添加任务
     Ok(task)
 }

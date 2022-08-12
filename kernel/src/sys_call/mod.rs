@@ -293,7 +293,6 @@ impl Task {
 
     pub fn catch(&self) {
         let result = self.interrupt();
-        debug!("catch");
         if let Err(err) = result {
             match err {
                 RuntimeError::KillCurrentTask => {

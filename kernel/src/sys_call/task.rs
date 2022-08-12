@@ -10,12 +10,13 @@ use crate::task::task_scheduler::get_current_task;
 use crate::task::process::Process;
 use crate::task::pid::get_next_pid;
 use crate::task::task::Task;
-use crate::task::{exec_with_process, UserHeap};
+use crate::task::exec_with_process;
 use crate::runtime_err::RuntimeError;
 use crate::memory::addr::UserAddr;
 
 use crate::sync::mutex::Mutex;
 use crate::task::task::TaskStatus;
+use crate::task::user_heap::UserHeap;
 
 use super::UTSname;
 use super::SYS_CALL_ERR;
@@ -73,9 +74,6 @@ impl Task {
     // 设置 tid addr
     pub fn sys_set_tid_address(&self, tid_ptr: UserAddr<u32>) -> Result<(), RuntimeError> {
         // 测试写入用户空间
-        let tid_ptr_user = tid_ptr.bits() as *mut u32;
-        unsafe { tid_ptr_user.write(1234); }
-
         let tid_ptr = tid_ptr.transfer();
         let mut inner = self.inner.borrow_mut();
         let clear_child_tid = self.clear_child_tid.borrow().clone();
@@ -172,7 +170,9 @@ impl Task {
         // 复制fd_table
         child_process.fd_table = process.fd_table.clone();
         // 创建新的heap
-        child_process.heap = UserHeap::new(child_process.pmm.clone())?;
+        // child_process.heap = UserHeap::new(child_process.pmm.clone())?;
+        child_process.heap = process.heap.clone(child_process.pmm.clone())?;
+        debug!("heap_pointer: {:#x}", child_process.heap.get_heap_top());
         child_process.pmm.add_mapping_by_set(&child_process.mem_set)?;
         drop(process);
         drop(child_process);
@@ -243,7 +243,8 @@ impl Task {
         drop(process);
         let process = inner.process.clone();
         drop(inner);
-        exec_with_process(process, task, &filename, args.iter().map(AsRef::as_ref).collect())?;
+        exec_with_process(process.clone(), task, &filename, args.iter().map(AsRef::as_ref).collect())?;
+        // process.borrow_mut().new_heap()?;
         self.before_run();
         Ok(())
     }
@@ -413,7 +414,5 @@ pub fn futex_wake(addr: usize, count: usize) -> usize {
 }
 
 pub fn futex_requeue(_uaddr: usize, nr_wake: u32, _uaddr2: usize, _nr_limit: u32) -> isize {
-
-
     return nr_wake as isize;
 }
