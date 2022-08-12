@@ -44,6 +44,7 @@ pub const SYS_WRITEV: usize = 66;
 pub const SYS_PREAD: usize  = 67;
 pub const SYS_SENDFILE: usize = 71;
 pub const SYS_PPOLL: usize = 73;
+pub const SYS_READLINKAT: usize = 78;
 pub const SYS_FSTATAT: usize= 79;
 pub const SYS_FSTAT: usize  = 80;
 pub const SYS_UTIMEAT:usize = 88;
@@ -206,6 +207,8 @@ impl Task {
             SYS_SENDFILE => self.sys_sendfile(args[0], args[1], args[2], args[3]),
             // 等待ppoll
             SYS_PPOLL => self.sys_ppoll(args[0].into(), args[1], args[2].into()),
+            // 读取文件数据
+            SYS_READLINKAT => self.sys_readlinkat(args[0], args[1].into(), args[2].into(), args[3]),
             // 获取文件数据信息
             SYS_FSTATAT => self.sys_fstatat(args[0], args[1].into(), args[2].into(), args[3]),
             // 获取文件数据信息

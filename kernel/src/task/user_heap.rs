@@ -56,24 +56,19 @@ impl UserHeap {
             self.mem_set.0.push(mem_map);
             self.end = top + DEFAULT_HEAP_PAGE_NUM * PAGE_SIZE;
             return Ok(top);
-
-            // debug!("设置heap: {:#x}", DEFAULT_HEAP_BOTTOM);
-            // self.start = DEFAULT_HEAP_BOTTOM;
-            // self.pointer = DEFAULT_HEAP_BOTTOM;
-            // let mem_map = MemMap::new((DEFAULT_HEAP_BOTTOM / PAGE_SIZE).into(), DEFAULT_HEAP_PAGE_NUM, PTEFlags::VRWX | PTEFlags::U)?;
-            // self.pmm.add_mapping_by_map(&mem_map)?;
-            // self.mem_set.0.push(mem_map);
-            // self.end = DEFAULT_HEAP_BOTTOM + DEFAULT_HEAP_PAGE_NUM * PAGE_SIZE;
-            // return Ok(DEFAULT_HEAP_BOTTOM);
         }
 
-        let _origin_top = self.pointer;
         self.pointer = top;
         // origin_top
-        if self.pointer < self.end {
-            Ok(top)
-        } else {
-            Ok(-1 as isize as usize)
+        loop {
+            if self.pointer < self.end {
+                break Ok(top);
+            } else {
+                let page = MemMap::new((self.end / PAGE_SIZE).into(), 1, PTEFlags::UVRWX)?;
+                self.pmm.add_mapping_by_map(&page)?;
+                self.mem_set.0.push(page);
+                self.end += PAGE_SIZE;
+            }
         }
     }
 

@@ -1,4 +1,5 @@
 use alloc::rc::Rc;
+use alloc::string::ToString;
 use crate::fs::StatFS;
 use crate::fs::file::File;
 use crate::fs::file::FileOP;
@@ -507,6 +508,25 @@ impl Task {
             debug!("wait fd: {}", i.fd);
         }
         inner.context.x[10] = 1;
+        Ok(())
+    }
+
+    pub fn sys_readlinkat(&self, dir_fd: usize, path: UserAddr<u8>, 
+            buf: UserAddr<u8>, len: usize) -> Result<(), RuntimeError> {
+        let mut inner = self.inner.borrow_mut();
+        let path = path.read_string();
+        debug!("read {} from dir_fd: {:#x} len: {}", path, dir_fd, len);
+        let path = if path == "/proc/self/exe" {
+            "lmbench_all".to_string()
+        } else {
+            path
+        };
+
+        let buf = buf.transfer_vec(len);
+        let inode = INode::get(None, &path)?;
+        let read_len = inode.read_to(buf)?;
+        debug!("read_len: {:#x}", read_len);
+        inner.context.x[10] = read_len;
         Ok(())
     }
 
