@@ -386,6 +386,16 @@ impl Task {
         }
         Ok(())
     }
+
+    pub fn sys_tgkill(&self, tgid: usize, tid: usize, signum: usize) -> Result<(), RuntimeError> {
+        debug!("tgkill: tgid: {}  tid: {}  signum {}", tgid, tid, signum);
+        if let Some(task) = get_task(tgid, tid) {
+            task.signal(signum)?;
+        } else {
+            self.update_context(|x| x.x[10] = SYS_CALL_ERR);
+        }
+        Ok(())
+    }
 }
 
 lazy_static! {

@@ -57,6 +57,7 @@ pub const SYS_GETTIME: usize = 113;
 pub const SYS_SCHED_YIELD: usize = 124;
 pub const SYS_KILL: usize = 129;
 pub const SYS_TKILL: usize = 130;
+pub const SYS_TGKILL: usize = 131;
 pub const SYS_SIGACTION: usize = 134;
 pub const SYS_SIGPROCMASK: usize = 135;
 pub const SYS_SIGTIMEDWAIT: usize = 137;
@@ -233,6 +234,8 @@ impl Task {
             SYS_KILL => self.sys_kill(args[0], args[1]),
             // 结束任务进程
             SYS_TKILL => self.sys_tkill(args[0], args[1]),
+            // 结束进程
+            SYS_TGKILL => self.sys_tgkill(args[0], args[1], args[2]),
             // 释放sigacrtion
             SYS_SIGACTION => self.sys_sigaction(args[0], args[1].into(),args[2].into(), args[3]),
             // 遮盖信号
@@ -335,6 +338,10 @@ impl Task {
         let sig_action = process.sig_actions[signal];
 
         let handler = sig_action.handler;
+        // 如果没有处理器
+        if handler == 0 {
+            return Ok(());
+        }
         // 保存上下文
         let mut temp_context = inner.context.clone();
         let pmm = process.pmm.clone();

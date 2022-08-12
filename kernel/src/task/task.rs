@@ -95,4 +95,8 @@ impl Task {
     pub fn get_process(&self) -> Rc<RefCell<Process>> {
         self.inner.borrow_mut().process.clone()
     }
+
+    pub fn update_context(&self, f: fn(&mut Context)) {
+        f(&mut self.inner.borrow_mut().context)
+    }
 }
