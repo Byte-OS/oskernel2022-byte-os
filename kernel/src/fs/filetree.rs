@@ -271,10 +271,8 @@ fn split_path(path: &str) -> (&str, Option<&str>) {
 
 pub fn add_files_to_dir(dir: Dir, node: Rc<INode>) {
     for file_entry in dir.iter() {
-        info!("测试");
         let file_entry = file_entry.expect("文件节点异常");
         let filename = file_entry.file_name();
-        info!("file in dir: {}", filename);
         if filename == "." || filename == ".." {
             continue;
         }
@@ -297,8 +295,6 @@ pub fn add_files_to_dir(dir: Dir, node: Rc<INode>) {
 }
 
 pub fn init(path: &str, root_dir: Dir) {
-    info!("初始化   root_dir");
-    info!("fs 信息: {:?}", GLOBAL_FS.force_get().bpb);
     if path == "/" {
         let inode = INode::new(String::from(""), DiskFileEnum::DiskDir(root_dir.clone()), 
             FileType::Directory, None);
