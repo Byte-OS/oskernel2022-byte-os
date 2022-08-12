@@ -13,6 +13,7 @@ use crate::memory::mem_map::MemMap;
 use crate::memory::page::alloc_more;
 use crate::runtime_err::RuntimeError;
 use crate::task::process::Process;
+use crate::task::stack::DEFAULT_STACK_ADDR;
 use crate::task::task_scheduler::start_tasks;
 use crate::memory::{page_table::PTEFlags, addr::{PAGE_SIZE, VirtAddr, PhysAddr, PhysPageNum}};
 use crate::memory::mem_set::MemSet;
@@ -128,6 +129,7 @@ pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path
 
     // 添加参数
     let stack = &mut process.stack;
+    let random_ptr = stack.push_arr(&[0u8; 16]);
     
     let mut auxv = BTreeMap::new();
     auxv.insert(elf::AT_PLATFORM, stack.push_str("riscv"));
@@ -143,6 +145,7 @@ pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path
     auxv.insert(elf::AT_UID, 1);
     auxv.insert(elf::AT_EUID, 1);
     auxv.insert(elf::AT_SECURE, 0);
+    auxv.insert(elf::AT_RANDOM, random_ptr);
 
     stack.init_args(args, vec![], auxv);
     

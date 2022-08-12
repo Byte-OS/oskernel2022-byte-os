@@ -7,7 +7,7 @@ MODE_FLAG	:= --target=riscv64imac-unknown-none-elf
 KERNEL_FILE := target/$(TARGET)/$(MODE)/os
 BIN_FILE    := target/$(TARGET)/$(MODE)/kernel.bin
 DEBUG_FILE  ?= $(KERNEL_FILE)
-FEATURES	?= not_debug
+FEATURES	?= 
 
 OBJDUMP     := rust-objdump --arch-name=riscv64
 OBJCOPY     := rust-objcopy --binary-architecture=riscv64

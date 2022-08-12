@@ -5,8 +5,9 @@ use core::borrow::BorrowMut;
 use crate::{memory::{page_table::{PTEFlags, PageMappingManager}, addr::{VirtAddr, PAGE_SIZE}, mem_set::MemSet, mem_map::MemMap}, runtime_err::RuntimeError};
 
 
-const PTR_SIZE: usize = 8;
-const DEFAULT_STACK_PAGE_NUM: usize = 5;
+pub const PTR_SIZE: usize = 8;
+pub const DEFAULT_STACK_PAGE_NUM: usize = 5;
+pub const DEFAULT_STACK_ADDR: usize = 0xf0010000;
 
 pub struct UserStack {
     pub bottom: usize,
@@ -20,13 +21,13 @@ impl UserStack {
     // 创建新的栈
     pub fn new(pmm: Rc<PageMappingManager>) -> Result<Self, RuntimeError> {
         let mut mem_set = MemSet::new();
-        let mem_map = MemMap::new((0xf0010 - DEFAULT_STACK_PAGE_NUM).into(), DEFAULT_STACK_PAGE_NUM, PTEFlags::UVRWX)?;
+        let mem_map = MemMap::new((DEFAULT_STACK_ADDR / PAGE_SIZE - DEFAULT_STACK_PAGE_NUM).into(), DEFAULT_STACK_PAGE_NUM, PTEFlags::UVRWX)?;
         pmm.add_mapping_by_map(&mem_map)?;
         mem_set.inner().push(mem_map);
         Ok(UserStack { 
-            bottom: 0xf0010000, 
-            top: 0xf0010000 - DEFAULT_STACK_PAGE_NUM * PAGE_SIZE,
-            pointer: 0xf0010000,
+            bottom: DEFAULT_STACK_ADDR, 
+            top: DEFAULT_STACK_ADDR - DEFAULT_STACK_PAGE_NUM * PAGE_SIZE,
+            pointer: DEFAULT_STACK_ADDR,
             pmm,
             mem_set
         })
