@@ -101,13 +101,22 @@ impl Task {
         // 获取参数
         let sys_info = ptr.transfer();
         // 写入系统信息
-        let sys_name = b"ByteOS";
-        let sys_release = b"release";
-        let sys_version = b"alpha 1.1";
+
+        // let sys_name = b"ByteOS";
+        // let sys_nodename = b"ByteOS";
+        // let sys_release = b"release";
+        // let sys_version = b"alpha 1.1";
+        // let sys_machine = b"riscv k210";
+        // let sys_domain = b"alexbd.cn";
+        let sys_name = b"Linux";
+        let sys_nodename = b"debian";
+        let sys_release = b"5.10.0-7-riscv64";
+        let sys_version = b"#1 SMP Debian 5.10.40-1 (2021-05-28)";
         let sys_machine = b"riscv k210";
         let sys_domain = b"alexbd.cn";
+
         sys_info.sysname[..sys_name.len()].copy_from_slice(sys_name);
-        sys_info.nodename[..sys_name.len()].copy_from_slice(sys_name);
+        sys_info.nodename[..sys_nodename.len()].copy_from_slice(sys_nodename);
         sys_info.release[..sys_release.len()].copy_from_slice(sys_release);
         sys_info.version[..sys_version.len()].copy_from_slice(sys_version);
         sys_info.machine[..sys_machine.len()].copy_from_slice(sys_machine);
