@@ -12,7 +12,7 @@ lazy_static! {
 #[allow(unused)]
 pub fn cache_file(filename: &'static str) {
     let inode = INode::get(None, &filename).unwrap();
-    debug!("缓冲: {}", filename);
+    info!("缓冲文件: {}", filename);
     CACHE_FILES.force_get().insert(filename, File::cache(inode).unwrap());
 }
 

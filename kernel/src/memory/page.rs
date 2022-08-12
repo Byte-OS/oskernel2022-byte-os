@@ -82,7 +82,7 @@ impl MemoryPageAllocator {
                 self.pages[i..i+pages].fill(true);
                 let page = PhysPageNum::from((self.start >> 12) + i);
                 init_pages(page, pages);
-                debug!("申请地址: {:#x}  page_num: {}", page.0, pages);
+                // debug!("申请地址: {:#x}  page_num: {}", page.0, pages);
                 return Ok(page);
             }
             if i == 0 { break; }

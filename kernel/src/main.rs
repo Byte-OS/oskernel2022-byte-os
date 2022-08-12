@@ -86,9 +86,7 @@ pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
     // in 1.10 is SUM but in 1.9.1 is PUM which is the opposite meaning with SUM
     #[cfg(not(feature = "board_k210"))]
     unsafe {
-        debug!("before set: {:#x}", sstatus::read().bits());
         sstatus::set_sum();
-        debug!("after set: {:#x}", sstatus::read().bits());
     }
 
     // 初始化内存
