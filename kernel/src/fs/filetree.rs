@@ -271,8 +271,10 @@ fn split_path(path: &str) -> (&str, Option<&str>) {
 
 pub fn add_files_to_dir(dir: Dir, node: Rc<INode>) {
     for file_entry in dir.iter() {
+        info!("测试");
         let file_entry = file_entry.expect("文件节点异常");
         let filename = file_entry.file_name();
+        info!("file in dir: {}", filename);
         if filename == "." || filename == ".." {
             continue;
         }
