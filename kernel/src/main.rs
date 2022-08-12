@@ -101,6 +101,9 @@ pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
     // 初始化文件系统
     fs::init();
 
+    // 输出文件树
+    print_file_tree(INode::root());
+
     let busybox_node = INode::get(None, "busybox").expect("can't find busybox");
 
     // 创建busybox 指令副本
@@ -116,9 +119,6 @@ pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
 
     // cache_file("busybox");
     // cache_file("lua");
-
-    // 输出文件树
-    print_file_tree(INode::root());
 
     // 初始化多任务
     task::init();
