@@ -517,16 +517,18 @@ impl Task {
         let path = path.read_string();
         debug!("read {} from dir_fd: {:#x} len: {}", path, dir_fd, len);
         let path = if path == "/proc/self/exe" {
-            "lmbench_all".to_string()
+            "/lmbench_all".to_string()
         } else {
             path
         };
+        let path = path.as_bytes();
 
         let buf = buf.transfer_vec(len);
-        let inode = INode::get(None, &path)?;
-        let read_len = inode.read_to(buf)?;
-        debug!("read_len: {:#x}", read_len);
-        inner.context.x[10] = read_len;
+        // let inode = INode::get(None, &path)?;
+        // let read_len = inode.read_to(buf)?;
+        // debug!("read_len: {:#x}", read_len);
+        buf[..path.len()].copy_from_slice(path);
+        inner.context.x[10] = path.len();
         Ok(())
     }
 
