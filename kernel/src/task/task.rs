@@ -1,4 +1,4 @@
-use core::cell::RefCell;
+use core::cell::{RefCell, RefMut};
 use alloc::rc::Rc;
 use crate::interrupt::timer::TimeSpec;
 use crate::memory::addr::UserAddr;
@@ -121,5 +121,9 @@ impl Task {
 
     pub fn update_context(&self, f: fn(&mut Context)) {
         f(&mut self.inner.borrow_mut().context)
+    }
+
+    pub fn update_inner(&self, f: fn(RefMut<TaskInner>)) {
+        f(self.inner.borrow_mut())
     }
 }

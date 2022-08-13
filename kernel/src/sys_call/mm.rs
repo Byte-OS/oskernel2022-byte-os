@@ -27,7 +27,6 @@ impl Task {
             drop(process);
             inner.context.x[10] = ret;
         }
-        // inner.context.x[10] = SYS_CALL_ERR;
         Ok(())
     }
 
