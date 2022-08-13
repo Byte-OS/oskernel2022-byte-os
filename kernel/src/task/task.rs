@@ -1,11 +1,34 @@
 use core::cell::RefCell;
 use alloc::rc::Rc;
+use crate::interrupt::timer::TimeSpec;
 use crate::memory::addr::UserAddr;
 use crate::interrupt::Context;
 use crate::task::task_scheduler::kill_task;
 
 use super::process::Process;
 use super::signal::SigSet;
+
+#[allow(unused)]
+#[derive(Clone, Copy)]
+pub struct Rusage {
+    pub ru_utime: TimeSpec, /* user CPU time used */
+    pub ru_stime: TimeSpec, /* system CPU time used */
+    ru_maxrss: isize,      // 暂不使用
+    ru_ixrss: isize,       // 暂不使用
+    ru_idrss: isize,       // 暂不使用
+    ru_isrss: isize,       // 暂不使用
+    ru_minflt: isize,      // 暂不使用
+    ru_majflt: isize,      // 暂不使用
+    ru_nswap: isize,       // 暂不使用
+    ru_inblock: isize,     // 暂不使用
+    ru_oublock: isize,     // 暂不使用
+    ru_msgsnd: isize,      // 暂不使用
+    ru_msgrcv: isize,      // 暂不使用
+    ru_nsignals: isize,    // 暂不使用
+    ru_nvcsw: isize,       // 暂不使用
+    ru_nivcsw: isize,      // 暂不使用
+}
+
 
 #[derive(Clone, Copy, PartialEq)]
 // 任务状态

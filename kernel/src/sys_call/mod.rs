@@ -64,6 +64,7 @@ pub const SYS_SIGTIMEDWAIT: usize = 137;
 pub const SYS_SIGRETURN: usize = 139;
 pub const SYS_TIMES: usize  = 153;
 pub const SYS_UNAME: usize  = 160;
+pub const SYS_GETRUSAGE: usize = 165;
 pub const SYS_GETTIMEOFDAY: usize= 169;
 pub const SYS_GETPID:usize  = 172;
 pub const SYS_GETPPID:usize = 173;
@@ -252,6 +253,8 @@ impl Task {
             SYS_TIMES => self.sys_times(args[0]),
             // 获取系统信息
             SYS_UNAME => self.sys_uname(args[0].into()),
+            // 获取任务获取信息
+            SYS_GETRUSAGE => self.sys_getrusage(args[0], args[1].into()),
             // 获取时间信息
             SYS_GETTIMEOFDAY => self.sys_gettimeofday(args[0]),
             // 获取进程信息

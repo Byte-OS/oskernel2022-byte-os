@@ -65,9 +65,10 @@ impl Task {
 
         let req = times_ptr.transfer();
 
-        let time_now = TimeSpec::now();
-        req.tv_sec = time_now.tv_sec;
-        req.tv_nsec = time_now.tv_nsec;
+        // let time_now = TimeSpec::now();
+        // req.tv_sec = time_now.tv_sec;
+        // req.tv_nsec = time_now.tv_nsec;
+        *req = TimeSpec::now();
         drop(process);
         inner.context.x[10] = 0;
         Ok(())

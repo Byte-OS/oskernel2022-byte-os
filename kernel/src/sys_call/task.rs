@@ -4,19 +4,19 @@ use alloc::rc::{Rc, Weak};
 use hashbrown::HashMap;
 use crate::get_free_page_num;
 
+use crate::interrupt::timer::TimeSpec;
 use crate::task::task_scheduler::{add_task_to_scheduler, get_task, get_task_num};
 use crate::task::task_scheduler::switch_next;
 use crate::task::task_scheduler::get_current_task;
 use crate::task::process::Process;
 use crate::task::pid::get_next_pid;
-use crate::task::task::Task;
+use crate::task::task::{Task, Rusage};
 use crate::task::exec_with_process;
 use crate::runtime_err::RuntimeError;
 use crate::memory::addr::UserAddr;
 
 use crate::sync::mutex::Mutex;
 use crate::task::task::TaskStatus;
-use crate::task::user_heap::UserHeap;
 
 use super::UTSname;
 use super::SYS_CALL_ERR;
@@ -394,6 +394,16 @@ impl Task {
         } else {
             self.update_context(|x| x.x[10] = SYS_CALL_ERR);
         }
+        Ok(())
+    }
+
+    pub fn sys_getrusage(&self, who: usize, usage: UserAddr<Rusage>) -> Result<(), RuntimeError>{
+        debug!("who: {:#x}", who);
+        let mut inner = self.inner.borrow_mut();
+        let usage = usage.transfer();
+        usage.ru_stime = TimeSpec::now();
+        usage.ru_utime = TimeSpec::now();
+        inner.context.x[10] = 0;
         Ok(())
     }
 }

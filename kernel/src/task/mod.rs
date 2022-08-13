@@ -13,11 +13,8 @@ use crate::memory::mem_map::MemMap;
 use crate::memory::page::alloc_more;
 use crate::runtime_err::RuntimeError;
 use crate::task::process::Process;
-use crate::task::stack::DEFAULT_STACK_ADDR;
 use crate::task::task_scheduler::start_tasks;
-use crate::memory::{page_table::PTEFlags, addr::{PAGE_SIZE, VirtAddr, PhysAddr, PhysPageNum}};
-use crate::memory::mem_set::MemSet;
-use crate::memory::page_table::PageMappingManager;
+use crate::memory::{page_table::PTEFlags, addr::{PAGE_SIZE, VirtAddr, PhysAddr}};
 use self::task::Task;
 use self::task_scheduler::NEXT_PID;
 
