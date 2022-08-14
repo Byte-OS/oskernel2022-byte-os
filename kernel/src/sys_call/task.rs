@@ -5,6 +5,7 @@ use hashbrown::HashMap;
 use crate::get_free_page_num;
 
 use crate::interrupt::timer::TimeSpec;
+use crate::task::signal::Signal;
 use crate::task::task_scheduler::{add_task_to_scheduler, get_task, get_task_num};
 use crate::task::task_scheduler::switch_next;
 use crate::task::task_scheduler::get_current_task;
@@ -59,10 +60,10 @@ impl Task {
             Some(parent) => {
                 let parent = parent.upgrade().unwrap();
                 let parent = parent.borrow();
-                // let task = parent.tasks[0].clone().upgrade().unwrap();
+                let task = parent.tasks[0].clone().upgrade().unwrap();
                 drop(parent);
                 // 处理signal 17 SIGCHLD
-                // task.signal(17);
+                task.signal(17);
             }
             None => {}
         }

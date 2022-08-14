@@ -337,6 +337,8 @@ impl Task {
     pub fn signal(&self, signal: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
+
+        process.pmm.change_satp();
         
         let sig_action = process.sig_actions[signal];
 
