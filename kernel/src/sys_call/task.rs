@@ -400,10 +400,10 @@ impl Task {
     pub fn sys_getrusage(&self, who: usize, usage: UserAddr<Rusage>) -> Result<(), RuntimeError>{
         debug!("who: {:#x}", who);
         let mut inner = self.inner.borrow_mut();
-        let usage = usage.transfer();
-        usage.ru_stime = TimeSpec::now();
-        usage.ru_utime = TimeSpec::now();
-        inner.context.x[10] = 0;
+        // let usage = usage.transfer();
+        // usage.ru_stime = TimeSpec::now();
+        // usage.ru_utime = TimeSpec::now();
+        inner.context.x[10] = SYS_CALL_ERR;
         Ok(())
     }
 }

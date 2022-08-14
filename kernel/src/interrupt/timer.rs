@@ -11,8 +11,11 @@ const CLOCK_FREQ: usize = 4030000000 / 62;
 
 const CHANGE_TASK_TICKS: usize = 10;
 
-const INTERVAL: usize = CLOCK_FREQ / 100;
+// const INTERVAL: usize = CLOCK_FREQ / 100;
+const INTERVAL: usize = CLOCK_FREQ / 25;
+
 const MSEC_PER_SEC: usize = 1000;
+const NSEC_PER_SEC: usize = 1_000_000_000;
 
 // tms_utime记录的是进程执行用户代码的时间.
 // tms_stime记录的是进程执行内核代码的时间.
@@ -37,22 +40,27 @@ impl TMS {
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct TimeSpec {
-	pub tv_sec: u64,       /* 秒 */
-    pub tv_nsec: i64       /* 纳秒, 范围在0~999999999 */
+	pub tv_sec: usize,       /* 秒 */
+    pub tv_nsec: usize       /* 纳秒, 范围在0~999999999 */
 }
 
 impl TimeSpec {
     pub fn get_now(&mut self) {
         let ms = get_time_ms();
-        self.tv_sec = (ms / 1000) as u64;
-        self.tv_nsec = ((ms % 1000) * 1000) as i64;
+        self.tv_sec = ms / 1000;
+        self.tv_nsec = (ms % 1000) * 1000;
     }
 
     pub fn now() -> Self {
-        let ms = get_time_ms();
-        Self{
-            tv_sec: (ms / 1000) as u64,
-            tv_nsec: ((ms % 1000) * 1000) as i64
+        // let ms = get_time_ms();
+        // Self{
+        //     tv_sec: ms / 1000,
+        //     tv_nsec: (ms % 1000) * 1000
+        // }
+        let tick = time::read();
+        Self {
+            tv_sec: tick / CLOCK_FREQ,
+            tv_nsec: (tick % CLOCK_FREQ) * NSEC_PER_SEC / CLOCK_FREQ,
         }
     }
 }

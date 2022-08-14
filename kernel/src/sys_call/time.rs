@@ -69,6 +69,7 @@ impl Task {
         // req.tv_sec = time_now.tv_sec;
         // req.tv_nsec = time_now.tv_nsec;
         *req = TimeSpec::now();
+        debug!("time now: {}'{}''", req.tv_sec, req.tv_nsec);
         drop(process);
         inner.context.x[10] = 0;
         Ok(())

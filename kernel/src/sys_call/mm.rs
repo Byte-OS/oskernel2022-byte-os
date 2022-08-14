@@ -22,7 +22,11 @@ impl Task {
             debug!("[sys_brk] brk_addr: {:X}; new_addr: {:X} caller addr: {:X}", top_pos, top, inner.context.sepc);
             inner.context.x[10] = top;
         } else {
-            let ret = process.heap.set_heap_top(top_pos)?;
+            let ret = if top_pos > process.heap.get_heap_top() + PAGE_SIZE {
+                process.heap.get_heap_top()
+            } else {
+                process.heap.set_heap_top(top_pos)?
+            };
             debug!("[sys_brk] brk_addr: {:X}; new_addr: {:X} caller addr: {:X}", top_pos, ret, inner.context.sepc);
             drop(process);
             inner.context.x[10] = ret;
