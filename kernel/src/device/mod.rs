@@ -91,9 +91,9 @@ pub fn root_dir() -> Dir {
 
 /// 硬盘数据读取器
 pub struct DiskCursor {
-    sector: u64,
-    offset: usize,
-    disk_index: usize
+    pub sector: u64,
+    pub offset: usize,
+    pub disk_index: usize
 }
 
 impl DiskCursor {

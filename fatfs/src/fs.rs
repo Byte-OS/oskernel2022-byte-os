@@ -560,6 +560,7 @@ impl<IO: Read + Write + Seek, TP, OCC> FileSystem<IO, TP, OCC> {
     }
 
     fn unmount_internal(&self) -> Result<(), Error<IO::Error>> {
+        debug!("drop");
         self.flush_fs_info()?;
         self.set_dirty_flag(false)?;
         Ok(())
