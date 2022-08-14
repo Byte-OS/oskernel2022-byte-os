@@ -242,8 +242,12 @@ impl INode {
     }
 
     // 创建文件夹
+    // TODO: 创建文件夹
     pub fn mkdir(current: Option<Rc<INode>>, path: &str, _flags: u16) -> Result<Rc<INode>, RuntimeError>{
-        Self::get(current, path)
+        match Self::get(current, path) {
+            Ok(inode) => Ok(inode),
+            Err(_) => todo!()
+        }
     }
 
     // 删除自身
