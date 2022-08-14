@@ -1,4 +1,5 @@
 use alloc::{vec::Vec, collections::VecDeque};
+use k210_soc::sleep::usleep;
 
 use crate::{sync::mutex::Mutex, memory::page::get_free_page_num, task::task_scheduler::add_task_to_scheduler};
 
@@ -7,46 +8,25 @@ use super::exec;
 
 lazy_static! {
     pub static ref TASK_QUEUE: Mutex<VecDeque<&'static str>> = Mutex::new(VecDeque::from(vec![
+        "busybox sh busybox_testcode.sh",
+        "busybox sh test.sh date.lua",
+        "busybox sh test.sh file_io.lua",
+        "busybox sh test.sh max_min.lua",
+        "busybox sh test.sh random.lua",
+        "busybox sh test.sh remove.lua",
+        "busybox sh test.sh round_num.lua",
+        "busybox sh test.sh sin30.lua",
+        "busybox sh test.sh sort.lua",
+        "busybox sh test.sh strings.lua",
+        
+        // sleep
+
+        // lmbench_all
+        "busybox echo latency measurements",
+        "sleep",
         "lmbench_all lat_syscall -P 1 null",
         "lmbench_all lat_syscall -P 1 read",
         "lmbench_all lat_syscall -P 1 write",
-
-        // "busybox sh busybox_testcode.sh",
-        // "busybox sh test.sh date.lua",
-        // "busybox sh test.sh file_io.lua",
-        // "busybox sh test.sh max_min.lua",
-        // "busybox sh test.sh random.lua",
-        // "busybox sh test.sh remove.lua",
-        // "busybox sh test.sh round_num.lua",
-        // "busybox sh test.sh sin30.lua",
-        // "busybox sh test.sh sort.lua",
-        // "busybox sh test.sh strings.lua",
-
-        // // lmbench_all
-        // "busybox echo latency measurements",
-
-        // "sh echo_busybox.sh"
-        // "cat busybox_cmd.txt"
-
-        // 减少内存消耗 所以暂时不用下方的
-        // "busybox sh lua_testcode.sh"
-        // "lmbench_all lat_pipe -P 1"
-        // "lmbench_all lat_syscall"
-        // "sh test.sh date.lua"
-
-        // "busybox sh echo.sh"
-        // "busybox cat ./busybox_cmd.txt"
-        // "lua date.lua",
-        // "lua file_io.lua",
-        // "lua max_min.lua",
-        // "lua random.lua",
-        // "lua remove.lua",
-        // "lua round_num.lua",
-        // "lua sin30.lua",
-        // "lua sort.lua",
-        // "lua strings.lua",
-        // "busybox echo latency measurements",
-        // "lmbench_all lat_syscall -P 1 null",
 
     ]));
 }
@@ -63,13 +43,19 @@ pub fn exec_by_str(str: &str) {
 
 // 加载下一个任务
 pub fn load_next_task() -> bool {
-    if let Some(pro_name) = TASK_QUEUE.lock().pop_front() {
-        info!("剩余页表: {}", get_free_page_num());
-        exec_by_str(pro_name);
-        true
-    } else {
-        info!("剩余页表: {}", get_free_page_num());
-        false
+    loop {
+        if let Some(pro_name) = TASK_QUEUE.lock().pop_front() {
+            if pro_name == "sleep" {
+                usleep(100000);
+                continue;
+            }
+            info!("剩余页表: {}", get_free_page_num());
+            exec_by_str(pro_name);
+            break true
+        } else {
+            info!("剩余页表: {}", get_free_page_num());
+            break false
+        }
     }
 }
 
