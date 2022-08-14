@@ -4,7 +4,7 @@ use core::cell::RefCell;
 use alloc::{string::{String, ToString}, vec::Vec, rc::{Rc, Weak}};
 use fatfs::{Read, Write};
 
-use crate::{device::{DiskFile, Dir, GLOBAL_FS}, runtime_err::RuntimeError};
+use crate::{device::{DiskFile, Dir, GLOBAL_FS, root_dir}, runtime_err::RuntimeError};
 
 use super::{file::{FileType, File}, cache::get_cache_file};
 
@@ -91,7 +91,7 @@ impl INode {
 
     pub fn find(self: Rc<Self>, path: &str) -> Result<Rc<INode>, RuntimeError> {
         // traverse path
-        let (name, rest_opt) = split_path(path);
+        let (name, rest_opt) = get_curr_dir(path);
         if let Some(rest) = rest_opt {
             // 如果是文件夹
             self.get_children(name)?.find(rest)
@@ -115,6 +115,32 @@ impl INode {
             return Ok(file.clone());
         }
         File::new(inode)
+    }
+    // 根据路径 获取文件节点
+    pub fn open_or_create(current: Option<Rc<INode>>, path: &str) -> Result<Rc<File>, RuntimeError> {
+        if let Ok(inode) = Self::get(current.clone(), path) {
+            if let Some(file) = get_cache_file(&inode.get_filename()) {
+                return Ok(file.clone());
+            }
+            File::new(inode)
+        } else {
+            let mut file = 
+                root_dir().create_file(path).map_err(|_| RuntimeError::EBADF)?;
+            if let Err(err) = file.flush() {
+                debug!("can't save file: {:?}", err);
+            }
+
+            let (dir_path, filename) = split_path(path);
+            
+            let dir_inode = 
+                dir_path.map_or(Ok(INode::root()), |x| INode::get(current, x))?;
+
+            let parent_node = Some(Rc::downgrade(&dir_inode));
+            let file_node = INode::new(filename.to_string(), 
+            DiskFileEnum::DiskFile(file), FileType::File, parent_node);
+            dir_inode.clone().add(file_node.clone());
+            File::new(file_node)
+        }
     }
 
     // 获取当前路径
@@ -249,10 +275,18 @@ impl INode {
 
 }
 
-fn split_path(path: &str) -> (&str, Option<&str>) {
+fn get_curr_dir(path: &str) -> (&str, Option<&str>) {
     let trimmed_path = path.trim_matches('/');
     trimmed_path.find('/').map_or((trimmed_path, None), |n| {
         (&trimmed_path[..n], Some(&trimmed_path[n + 1..]))
+    })
+}
+
+// spilit_path get dir and filename
+fn split_path(path: &str) -> (Option<&str>, &str) {
+    let trimmed_path = path.trim_matches('/');
+    trimmed_path.find('/').map_or((None, trimmed_path), |n| {
+        (Some(&trimmed_path[..n]), &trimmed_path[n + 1..])
     })
 }
 
@@ -287,7 +321,7 @@ pub fn add_files_to_dir(dir: Dir, node: Rc<INode>) {
             let parent_node = Some(Rc::downgrade(&node));
             let dir_node = INode::new(filename, 
         DiskFileEnum::DiskFile(file_entry.to_file()), FileType::File, parent_node);
-                node.clone().add(dir_node.clone());
+            node.clone().add(dir_node.clone());
         } else {
             error!("不支持的文件类型");
         }

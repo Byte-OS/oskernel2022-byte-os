@@ -35,7 +35,7 @@ use core::arch::global_asm;
 use alloc::{rc::Rc, string::ToString};
 use riscv::register::sstatus;
 
-use crate::{fs::{filetree::{INode, DiskFileEnum}, file::FileType, cache::cache_file}, memory::page::get_free_page_num};
+use crate::{fs::{filetree::{INode, DiskFileEnum}, file::FileType, cache::cache_file}, memory::page::get_free_page_num, device::{root_dir, GLOBAL_FS}};
 
 
 mod virtio_impl;

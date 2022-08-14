@@ -175,7 +175,7 @@ impl Task {
         };
         // 根据文件类型匹配
         let file = if flags.contains(OpenFlags::CREATE) {
-            INode::open(current, &filename)?
+            INode::open_or_create(current, &filename)?
         } else {
             INode::open(current, &filename)?
         };
