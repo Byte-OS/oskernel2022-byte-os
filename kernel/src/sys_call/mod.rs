@@ -446,8 +446,6 @@ impl Task {
             },
             // 加载页面错误
             Trap::Exception(Exception::LoadPageFault) => {
-                let c = 0x6aaca as *mut u32;
-                unsafe { debug!("value: c {:#x}", c.read()) };
                 panic!("加载权限异常 地址:{:#x} 调用地址: {:#x}", stval, context.sepc)
             },
             // 页面未对齐错误

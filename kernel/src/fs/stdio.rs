@@ -84,10 +84,12 @@ impl FileOP for StdErr {
         todo!()
     }
 
-    fn write(&self, _data: &[u8], count: usize) -> usize {
+    fn write(&self, data: &[u8], count: usize) -> usize {
         // error!("data: {}", unsafe { String::from_utf8_unchecked(_data.to_vec()) });
         // puts("error: ".as_bytes());
-        puts(_data);
+        if count > 0 && data[0] != b's' {
+            puts(data);
+        }
         count
     }
 
