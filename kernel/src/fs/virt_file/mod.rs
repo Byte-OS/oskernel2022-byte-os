@@ -15,10 +15,10 @@ pub struct VirtFile {
 }
 
 impl VirtFile {
-    pub fn new() -> Self {
+    pub fn new(filename: String) -> Self {
         let now = TimeSpec::now();
         Self {  
-            filename: "".to_string(),
+            filename,
             mem_set: MemSet::new(),
             mtime: now,
             atime: now,

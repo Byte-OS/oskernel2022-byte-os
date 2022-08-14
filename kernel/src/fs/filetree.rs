@@ -125,23 +125,21 @@ impl INode {
             }
             File::new(inode)
         } else {
-            // let mut file = 
-            //     root_dir().create_file(path).map_err(|_| RuntimeError::EBADF)?;
-            // if let Err(err) = file.flush() {
-            //     debug!("can't save file: {:?}", err);
-            // }
-
-            // let (dir_path, filename) = split_path(path);
+            let (dir_path, filename) = split_path(path);
             
-            // let dir_inode = 
-            //     dir_path.map_or(Ok(INode::root()), |x| INode::get(current, x))?;
+            debug!("split path: {:?}  filename: {}", dir_path, filename);
 
-            // let parent_node = Some(Rc::downgrade(&dir_inode));
-            // let file_node = INode::new(filename.to_string(), 
-            // DiskFileEnum::DiskFile(file), FileType::File, parent_node);
-            // dir_inode.clone().add(file_node.clone());
-            // File::new(file_node)
-            Err(RuntimeError::FileNotFound)
+            let dir_inode = 
+                dir_path.map_or(Ok(INode::root()), |x| INode::get(current, x))?;
+
+            let file = VirtFile::new(filename.to_string());
+
+            let parent_node = Some(Rc::downgrade(&dir_inode));
+            let file_node = INode::new(filename.to_string(), 
+            DiskFileEnum::VirtFile(file), FileType::VirtFile, parent_node);
+            dir_inode.clone().add(file_node.clone());
+            File::new(file_node)
+            // Err(RuntimeError::FileNotFound)
         }
     }
 
@@ -166,6 +164,13 @@ impl INode {
     pub fn is_dir(&self) -> bool {
         match self.0.borrow().file_type {
             FileType::Directory => true,
+            _ => false
+        }
+    }
+
+    pub fn is_virt_file(&self) -> bool {
+        match self.0.borrow().file_type {
+            FileType::VirtFile => true,
             _ => false
         }
     }
@@ -287,7 +292,7 @@ fn get_curr_dir(path: &str) -> (&str, Option<&str>) {
 // spilit_path get dir and filename
 fn split_path(path: &str) -> (Option<&str>, &str) {
     let trimmed_path = path.trim_matches('/');
-    trimmed_path.find('/').map_or((None, trimmed_path), |n| {
+    trimmed_path.rfind('/').map_or((None, trimmed_path), |n| {
         (Some(&trimmed_path[..n]), &trimmed_path[n + 1..])
     })
 }

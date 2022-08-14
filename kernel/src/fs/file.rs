@@ -86,12 +86,33 @@ pub struct FileInner {
     pub file_size: usize,
     pub mem_size: usize,
     pub buf: &'static mut [u8],
-    pub mem_map: Option<Rc<MemMap>>
+    pub mem_map: Option<Rc<MemMap>>,
+    pub file_type: FileType
 }
 
 impl File {
     pub fn new(inode: Rc<INode>) -> Result<Rc<Self>, RuntimeError>{
-        if !inode.is_dir() {
+        if inode.is_dir() {
+            Ok(Rc::new(Self(RefCell::new(FileInner {
+                file: inode,
+                offset: 0,
+                file_size: 0,
+                buf: get_buf_from_phys_page(PhysPageNum::from(0x80020usize), 0),
+                mem_size: 0,
+                mem_map: None,
+                file_type: FileType::Directory
+            }))))
+        } else if inode.is_virt_file() {
+            Ok(Rc::new(Self(RefCell::new(FileInner {
+                file: inode,
+                offset: 0,
+                file_size: 0,
+                buf: get_buf_from_phys_page(PhysPageNum::from(0x80020usize), 0),
+                mem_size: 0,
+                mem_map: None,
+                file_type: FileType::VirtFile
+            }))))
+        } else {
             // 申请页表存储程序
             let elf_pages = get_pages_num(inode.get_file_size());
             // 申请页表
@@ -108,17 +129,10 @@ impl File {
                 file_size,
                 buf,
                 mem_size: elf_pages * PAGE_SIZE,
-                mem_map: Some(Rc::new(mem_map))
+                mem_map: Some(Rc::new(mem_map)),
+                file_type: FileType::File
             }))))
-        } else {
-            Ok(Rc::new(Self(RefCell::new(FileInner {
-                file: inode,
-                offset: 0,
-                file_size: 0,
-                buf: get_buf_from_phys_page(PhysPageNum::from(0x80020usize), 0),
-                mem_size: 0,
-                mem_map: None
-            }))))
+            
         }
     }
 
@@ -140,7 +154,8 @@ impl File {
             file_size,
             buf,
             mem_size: elf_pages * PAGE_SIZE,
-            mem_map: Some(Rc::new(mem_map))
+            mem_map: Some(Rc::new(mem_map)),
+            file_type: FileType::File
         }))))
         
     }
@@ -230,20 +245,25 @@ impl FileOP for File {
 
     fn write(&self, data: &[u8], count: usize) -> usize {
         let mut inner = self.0.borrow_mut();
-        let end = inner.offset + count;
-        if end >= inner.mem_size {
-            panic!("无法写入超出部分");
+        if inner.file_type == FileType::File {
+            let end = inner.offset + count;
+            if end >= inner.mem_size {
+                panic!("无法写入超出部分");
+            }
+            let start = inner.offset;
+            inner.buf[start..end].copy_from_slice(&data);
+            inner.offset += count;
+            // 需要更新文件数据
+            if inner.offset >= inner.file_size {
+                inner.file_size = inner.offset;
+                let _file_size = inner.file_size;
+                let _inode = inner.file.0.borrow_mut();
+            }
+            count
+        } else {
+            // 写入虚拟文件
+            count
         }
-        let start = inner.offset;
-        inner.buf[start..end].copy_from_slice(&data);
-        inner.offset += count;
-        // 需要更新文件数据
-        if inner.offset >= inner.file_size {
-            inner.file_size = inner.offset;
-            let _file_size = inner.file_size;
-            let _inode = inner.file.0.borrow_mut();
-        }
-        count
     }
 
     fn read_at(&self, pos: usize, data: &mut [u8]) -> usize {

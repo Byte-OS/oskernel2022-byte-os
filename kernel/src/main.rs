@@ -123,6 +123,7 @@ pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
         // 非k210缓冲文件
         cache_file("busybox");
         cache_file("lua");
+        cache_file("lmbench_all");
     }
 
     // 初始化多任务

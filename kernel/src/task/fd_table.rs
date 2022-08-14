@@ -66,7 +66,7 @@ impl FDTable {
     // 加入描述符
     pub fn push(&mut self, value: Rc<dyn FileOP>) -> usize {
         let index = self.alloc();
-        if index > 41 { return EMFILE; }
+        // if index > 41 { return EMFILE; }
         self.set(index, value);
         index
     }
