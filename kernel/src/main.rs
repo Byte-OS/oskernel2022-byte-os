@@ -33,21 +33,12 @@ use core::arch::global_asm;
 
 
 use alloc::{rc::Rc, string::ToString};
-use fatfs::Read;
-use fatfs::Write;
 use riscv::register::sstatus;
-
-use crate::console::puts;
-use crate::device::DiskCursor;
 use crate::fs::filetree::INode;
 use crate::fs::filetree::DiskFileEnum;
 use crate::fs::file::FileType;
 use crate::fs::cache::cache_file;
 use crate::memory::page::get_free_page_num;
-use crate::device::root_dir;
-use crate::device::GLOBAL_FS;
-
-
 mod virtio_impl;
 
 

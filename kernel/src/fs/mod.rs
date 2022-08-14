@@ -4,6 +4,7 @@ pub mod filetree;
 pub mod stdio;
 pub mod cache;
 pub mod specials;
+pub mod virt_file;
 
 pub use partition::Partition;
 

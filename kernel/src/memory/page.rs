@@ -113,6 +113,10 @@ pub fn init_pages(page: PhysPageNum, num: usize) {
     unsafe { from_raw_parts_mut(PhysAddr::from(page).0 as *mut usize, USIZE_PER_PAGES * num) }.fill(0);
 }
 
+pub fn alloc() -> Result<PhysPageNum, RuntimeError> {
+    PAGE_ALLOCATOR.lock().alloc()
+}
+
 pub fn alloc_more(pages: usize) -> Result<PhysPageNum, RuntimeError> {
     PAGE_ALLOCATOR.lock().alloc_more(pages)
 }

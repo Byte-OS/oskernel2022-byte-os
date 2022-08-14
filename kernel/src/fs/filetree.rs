@@ -6,7 +6,7 @@ use fatfs::{Read, Write};
 
 use crate::{device::{DiskFile, Dir, GLOBAL_FS, root_dir}, runtime_err::RuntimeError};
 
-use super::{file::{FileType, File}, cache::get_cache_file};
+use super::{file::{FileType, File}, cache::get_cache_file, virt_file::VirtFile};
 
 
 pub static mut FILE_TREE: Option<Rc<INode>> = None;
@@ -15,6 +15,7 @@ pub static mut FILE_TREE: Option<Rc<INode>> = None;
 pub enum DiskFileEnum {
     DiskFile(DiskFile),
     DiskDir(Dir),
+    VirtFile(VirtFile),
     None
 }
 
@@ -124,22 +125,23 @@ impl INode {
             }
             File::new(inode)
         } else {
-            let mut file = 
-                root_dir().create_file(path).map_err(|_| RuntimeError::EBADF)?;
-            if let Err(err) = file.flush() {
-                debug!("can't save file: {:?}", err);
-            }
+            // let mut file = 
+            //     root_dir().create_file(path).map_err(|_| RuntimeError::EBADF)?;
+            // if let Err(err) = file.flush() {
+            //     debug!("can't save file: {:?}", err);
+            // }
 
-            let (dir_path, filename) = split_path(path);
+            // let (dir_path, filename) = split_path(path);
             
-            let dir_inode = 
-                dir_path.map_or(Ok(INode::root()), |x| INode::get(current, x))?;
+            // let dir_inode = 
+            //     dir_path.map_or(Ok(INode::root()), |x| INode::get(current, x))?;
 
-            let parent_node = Some(Rc::downgrade(&dir_inode));
-            let file_node = INode::new(filename.to_string(), 
-            DiskFileEnum::DiskFile(file), FileType::File, parent_node);
-            dir_inode.clone().add(file_node.clone());
-            File::new(file_node)
+            // let parent_node = Some(Rc::downgrade(&dir_inode));
+            // let file_node = INode::new(filename.to_string(), 
+            // DiskFileEnum::DiskFile(file), FileType::File, parent_node);
+            // dir_inode.clone().add(file_node.clone());
+            // File::new(file_node)
+            Err(RuntimeError::FileNotFound)
         }
     }
 

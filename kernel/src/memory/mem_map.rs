@@ -1,3 +1,4 @@
+use crate::memory::page::alloc;
 use crate::runtime_err::RuntimeError;
 
 use super::addr::PhysPageNum;
@@ -60,6 +61,17 @@ impl MemMap {
             ppn: phys_num_start,
             vpn: 0usize.into(),
             page_num,
+            flags: PTEFlags::VRWX
+        })
+    }
+
+    // 申请开始页表和页表数量 申请内存
+    pub fn new_virt_file_page() -> Result<Self, RuntimeError> {
+        let phys_num_start = alloc()?;
+        Ok(Self {
+            ppn: phys_num_start,
+            vpn: 0usize.into(),
+            page_num: 1,
             flags: PTEFlags::VRWX
         })
     }
