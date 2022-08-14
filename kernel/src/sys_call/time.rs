@@ -75,7 +75,6 @@ impl Task {
     }
 
     pub fn sys_utimeat(&self, dir_fd: usize, filename: UserAddr<u8>, times_ptr: UserAddr<TimeSpec>, _flags: usize) -> Result<(), RuntimeError> {
-        
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
 
@@ -93,6 +92,7 @@ impl Task {
 
         if filename.bits() != 0 {
             let filename = filename.read_string();
+            debug!("dir_fd: {:#x}, filename: {}, _flags: {:#x}", dir_fd, filename, _flags);
 
             if &filename == "/dev/null/invalid" {
                 drop(process);
@@ -100,7 +100,7 @@ impl Task {
                 return Ok(());
             }
 
-            inode = INode::get(inode.into(), &filename).map_err(|_| (RuntimeError::EBADF))?;
+            inode = INode::get(inode.into(), &filename)?;
         }
 
         const UTIME_NOW: usize = 0x3fffffff;

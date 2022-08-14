@@ -5,6 +5,7 @@ use riscv::register::scause::Interrupt;
 use riscv::register::stval;
 use riscv::register::sstatus;
 use crate::interrupt::timer;
+use crate::sys_call::consts::ENOENT;
 use crate::task::task_scheduler::kill_task;
 use crate::sys_call::consts::EBADF;
 use crate::interrupt::timer::set_last_ticks;
@@ -68,6 +69,9 @@ pub const SYS_GETRUSAGE: usize = 165;
 pub const SYS_GETTIMEOFDAY: usize= 169;
 pub const SYS_GETPID:usize  = 172;
 pub const SYS_GETPPID:usize = 173;
+pub const SYS_GETUID: usize = 174;
+// pub const SYS_GETEUID: usize = 175;
+pub const SYS_GETGID: usize = 176;
 pub const SYS_GETTID: usize = 178;
 pub const SYS_SOCKET: usize = 198;
 pub const SYS_BIND: usize   = 200;
@@ -261,6 +265,16 @@ impl Task {
             SYS_GETPID => self.sys_getpid(),
             // 获取进程父进程
             SYS_GETPPID => self.sys_getppid(),
+            // 获取uid
+            SYS_GETUID => {
+                self.update_context(|x| x.x[10] = 1);
+                Ok(())
+            },
+            // 获取gid
+            SYS_GETGID => {
+                self.update_context(|x| x.x[10] = 1);
+                Ok(())
+            },
             // 获取tid
             SYS_GETTID => self.sys_gettid(),
             // 申请socket
@@ -318,7 +332,7 @@ impl Task {
                 RuntimeError::FileNotFound => {
                     let mut inner = self.inner.borrow_mut();
                     warn!("文件未找到");
-                    inner.context.x[10] = SYS_CALL_ERR;
+                    inner.context.x[10] = ENOENT;
                 }
                 RuntimeError::EBADF => {
                     let mut inner = self.inner.borrow_mut();

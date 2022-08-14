@@ -117,8 +117,12 @@ pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
     INode::root().add(INode::new("proc".to_string(), 
         DiskFileEnum::None, FileType::Directory, None));
 
-    // cache_file("busybox");
-    // cache_file("lua");
+    #[cfg(not(feature = "board_k210"))]
+    {
+        // 非k210缓冲文件
+        cache_file("busybox");
+        cache_file("lua");
+    }
 
     // 初始化多任务
     task::init();

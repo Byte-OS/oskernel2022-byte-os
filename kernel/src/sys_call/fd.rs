@@ -73,6 +73,7 @@ impl Task {
         let filename = filename.read_string();
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
+        debug!("dir_fd: {:#x}, filename: {}", dir_fd, filename);
 
         // 判断文件描述符是否存在
         let current = if dir_fd == FD_NULL {
@@ -83,7 +84,9 @@ impl Task {
             let file = process.fd_table.get_file(dir_fd)?;
             Some(file.get_inode())
         };
-        INode::mkdir(current, &filename, flags as u16)?;
+        if filename != "/" {
+            INode::mkdir(current, &filename, flags as u16)?;
+        }
         drop(process);
         inner.context.x[10] = 0;
         Ok(())
