@@ -1,7 +1,9 @@
 use alloc::{vec::Vec, collections::VecDeque};
 use k210_soc::sleep::usleep;
 
-use crate::{sync::mutex::Mutex, memory::page::get_free_page_num, task::task_scheduler::add_task_to_scheduler};
+use crate::sync::mutex::Mutex;
+use crate::memory::page::get_free_page_num;
+use crate::task::task_scheduler::add_task_to_scheduler;
 
 
 use super::exec;

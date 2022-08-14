@@ -1,6 +1,14 @@
 use alloc::rc::Rc;
 
-use crate::{memory::{page_table::{PageMappingManager, PTEFlags}, mem_set::MemSet, addr::{PhysAddr, PAGE_SIZE, get_buf_from_phys_page, PhysPageNum}, mem_map::MemMap}, runtime_err::RuntimeError};
+use crate::memory::page_table::PageMappingManager;
+use crate::memory::page_table::PTEFlags;
+use crate::memory::mem_set::MemSet;
+use crate::memory::addr::PhysAddr;
+use crate::memory::addr::PAGE_SIZE;
+use crate::memory::addr::get_buf_from_phys_page;
+use crate::memory::addr::PhysPageNum;
+use crate::memory::mem_map::MemMap;
+use crate::runtime_err::RuntimeError;
 
 pub const DEFAULT_HEAP_BOTTOM: usize = 0x10f000;
 // pub const DEFAULT_HEAP_BOTTOM: usize = 0x10c000;

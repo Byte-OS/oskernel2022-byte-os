@@ -1,8 +1,15 @@
 use crate::memory::addr::VirtPageNum;
-use alloc::{vec::Vec, collections::BTreeMap, rc::Rc};
-use core::borrow::BorrowMut;
+use alloc::vec::Vec;
+use alloc::collections::BTreeMap;
+use alloc::rc::Rc;
 
-use crate::{memory::{page_table::{PTEFlags, PageMappingManager}, addr::{VirtAddr, PAGE_SIZE}, mem_set::MemSet, mem_map::MemMap}, runtime_err::RuntimeError};
+use crate::memory::page_table::PTEFlags;
+use crate::memory::page_table::PageMappingManager;
+use crate::memory::addr::VirtAddr;
+use crate::memory::addr::PAGE_SIZE;
+use crate::memory::mem_set::MemSet;
+use crate::memory::mem_map::MemMap;
+use crate::runtime_err::RuntimeError;
 
 
 pub const PTR_SIZE: usize = 8;
@@ -122,8 +129,8 @@ impl UserStack {
 
     // 释放资源
     pub fn release(&mut self) {
-        let mem_set = self.mem_set.borrow_mut();
-        mem_set.release();
+        // let mem_set = self.mem_set.borrow_mut();
+        // mem_set.release();
     }
 
     pub fn alloc_until(&mut self, until_addr: usize) -> Result<(), RuntimeError> {
