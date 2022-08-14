@@ -12,7 +12,8 @@ const CLOCK_FREQ: usize = 4030000000 / 62;
 const CHANGE_TASK_TICKS: usize = 10;
 
 // const INTERVAL: usize = CLOCK_FREQ / 100;
-const INTERVAL: usize = CLOCK_FREQ / 25;
+// const INTERVAL: usize = CLOCK_FREQ / 25;
+const INTERVAL: usize = CLOCK_FREQ / 1;
 
 const MSEC_PER_SEC: usize = 1000;
 const NSEC_PER_SEC: usize = 1_000_000_000;

@@ -191,6 +191,7 @@ impl Task {
     
     // clone task
     pub fn sys_clone(&self, flags: usize, new_sp: usize, ptid: UserAddr<u32>, tls: usize, ctid_ptr: UserAddr<u32>) -> Result<(), RuntimeError> {
+        let flags = flags & 0x4fff;
         if flags == 0x4111 || flags == 0x11 {
             // VFORK | VM | SIGCHILD
             warn!("sys_clone is calling sys_fork instead, ignoring other args");
@@ -198,14 +199,13 @@ impl Task {
         }
 
         debug!(
-            "clone: flags={:?}, newsp={:#x}, parent_tid={:#x}, child_tid={:#x}, newtls={:#x}",
+            "clone: flags={:#x}, newsp={:#x}, parent_tid={:#x}, child_tid={:#x}, newtls={:#x}",
             flags, new_sp, ptid.bits(), ctid_ptr.0 as usize, tls
         );
 
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.clone();
         let process = process.borrow();
-        let ptid_ref = ptid.transfer();
         
         let ctid = process.tasks.len();
         drop(process);
@@ -224,11 +224,14 @@ impl Task {
 
         drop(new_task_inner);
         drop(inner);
-        *ptid_ref = ctid as u32;
+        if ptid.is_valid() {
+            *ptid.transfer() = ctid as u32;
+        }
         // 执行 set_tid_address
         new_task.set_tid_address(ctid_ptr);
         // just finish clone, not change task
         Ok(())
+        // Err(RuntimeError::ChangeTask)
     }
 
     // 执行文件
@@ -261,25 +264,19 @@ impl Task {
     // wait task
     pub fn sys_wait4(&self, pid: usize, ptr: UserAddr<i32>, _options: usize) -> Result<(), RuntimeError> {
         debug!("pid: {:#x}, ptr: {:#x}, _options: {}", pid, ptr.bits(), _options);
-        let ptr = ptr.transfer();
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.clone();
         let mut process = process.borrow_mut();
-        // let target = 
-        //     process.children.iter().find(|&x| x.borrow().pid == pid);
-        
-        // if let Some(exit_code) = target.map_or(None, |x| x.borrow().exit_code) {
-        //     *ptr = exit_code as u16;
-        //     inner.context.x[10] = pid;
-        //     return Ok(())
-        // }
+
 
         if pid != SYS_CALL_ERR {
             let target = 
             process.children.iter().find(|&x| x.borrow().pid == pid);
         
             if let Some(exit_code) = target.map_or(None, |x| x.borrow().exit_code) {
-                *ptr = exit_code as i32;
+                if ptr.is_valid() {
+                    *ptr.transfer() = exit_code as i32;
+                }
                 inner.context.x[10] = pid;
                 return Ok(())
             }
@@ -296,7 +293,9 @@ impl Task {
 
             if cprocess_vec.len() != 0 {
                 let cprocess = cprocess_vec[0].borrow();
-                *ptr = cprocess.exit_code.unwrap() as i32;
+                if ptr.is_valid() {
+                    *ptr.transfer() = cprocess.exit_code.unwrap() as i32;
+                }
                 inner.context.x[10] = cprocess.pid;
                 return Ok(());
             }

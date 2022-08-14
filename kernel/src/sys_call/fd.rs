@@ -320,6 +320,7 @@ impl Task {
 
     // 写入
     pub fn sys_write(&self, fd: usize, buf_ptr: UserAddr<u8>, count: usize) -> Result<(), RuntimeError> {
+        debug!("write fd: {} buf_ptr: {:#x} count: {}", fd, buf_ptr.bits(), count);
         let buf = buf_ptr.transfer_vec(count);
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();

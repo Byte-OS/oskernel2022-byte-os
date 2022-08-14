@@ -394,7 +394,7 @@ impl Task {
         let stval = stval::read();
         let mut task_inner = self.inner.borrow_mut();
         let context = &mut task_inner.context;
-        warn!("中断发生: {:#x}, 地址: {:#x}", scause.bits(), context.sepc);
+        // warn!("中断发生: {:#x}, 地址: {:#x}", scause.bits(), context.sepc);
         // 更新TICKS
         set_last_ticks();
 
