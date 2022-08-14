@@ -33,6 +33,7 @@ use core::arch::global_asm;
 
 
 use alloc::{rc::Rc, string::ToString};
+use fatfs::Write;
 use riscv::register::sstatus;
 
 use crate::fs::filetree::INode;
@@ -131,7 +132,21 @@ pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
     }
 
     // 初始化多任务
-    task::init();
+    // task::init();
+    {
+        // let mut file = 
+        //     root_dir().create_file("tmp.txt").expect("can't create file");
+        // if let Err(err) = file.write_all(b"jagsdjkaskdbkasbdkabsjkdbajksdbjagsdjkaskdbkasbdkabsjkdbajksdb
+        // jagsdjkaskdbkasbdkabsjkdbajksdbjagsdjkaskdbkasbdkabsjkdbajksdbjagsdjkaskdbkasbdkabsjkdbajksdbjagsdjkaskdbkasbdkabsjkdbajksdb
+        // jagsdjkaskdbkasbdkabsjkdbajksdbjagsdjkaskdbkasbdkabsjkdbajksdbjagsdjkaskdbkasbdkabsjkdbajksdb") {
+        //     debug!("can't save file");
+        // }
+        let mut file = root_dir().open_file("test.txt").expect("can't create file");
+        file.write_all("jagsdjkaskdbkasbdkabsjkdbajksdbjagsdjkaskdbkasbdkabsjkdbajksdb
+            jagsdjkaskdbkasbdkabsjkdbajksdbjagsdjkaskdbkasbdkabsjkdbajksdbjagsdjkaskdbkasbdkabsjkdbajksdbjagsdjkaskdbkasbdkabsjkdbajksdb
+            jagsdjkaskdbkasbdkabsjkdbajksdbjagsdjkaskdbkasbdkabsjkdbajksdbjagsdjkaskdbkasbdkabsjkdbajksdb".as_bytes());
+        file.flush();
+    }
 
     // 输出剩余页表
     debug!("剩余页表: {}", get_free_page_num());

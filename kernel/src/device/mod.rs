@@ -172,9 +172,9 @@ impl fatfs::Write for DiskCursor {
         } else {
             (self.offset, self.offset + buf.len())
         };
-        data[start..end].copy_from_slice(&buf[..end - start]);
+        data[start..end].clone_from_slice(&buf);
         block_device.write_block(self.sector as usize, &mut data);
-        self.move_cursor(end - start);
+        self.move_cursor(buf.len());
 
         Ok(buf.len())
     }
