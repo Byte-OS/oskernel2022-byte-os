@@ -60,10 +60,19 @@ impl Task {
             Some(parent) => {
                 let parent = parent.upgrade().unwrap();
                 let parent = parent.borrow();
-                let task = parent.tasks[0].clone().upgrade().unwrap();
-                drop(parent);
-                // 处理signal 17 SIGCHLD
-                task.signal(17);
+                let end: UserAddr<TimeSpec> = 0x10bb78.into();
+                let start: UserAddr<TimeSpec> = 0x10bad0.into();
+
+                println!("start: {:?}   end: {:?}",start.transfer(), end.transfer());
+
+                let target_end: UserAddr<TimeSpec> = parent.pmm.get_phys_addr(0x10bb78usize.into())?.0.into();
+                let target_start: UserAddr<TimeSpec> = parent.pmm.get_phys_addr(0x10bad0usize.into())?.0.into();
+                *target_start.transfer() = *start.transfer();
+                *target_end.transfer() = *end.transfer();
+                // let task = parent.tasks[0].clone().upgrade().unwrap();
+                // drop(parent);
+                // // 处理signal 17 SIGCHLD
+                // task.signal(17);
             }
             None => {}
         }
@@ -187,6 +196,7 @@ impl Task {
         drop(process);
         drop(child_process);
         drop(inner);
+        // Ok(())
         Err(RuntimeError::ChangeTask)
     }
     
@@ -398,11 +408,10 @@ impl Task {
     }
 
     pub fn sys_getrusage(&self, who: usize, usage: UserAddr<Rusage>) -> Result<(), RuntimeError>{
-        debug!("who: {:#x}", who);
         let mut inner = self.inner.borrow_mut();
-        // let usage = usage.transfer();
-        // usage.ru_stime = TimeSpec::now();
-        // usage.ru_utime = TimeSpec::now();
+        let usage = usage.transfer();
+        usage.ru_stime = TimeSpec::now();
+        usage.ru_utime = TimeSpec::now();
         inner.context.x[10] = SYS_CALL_ERR;
         Ok(())
     }

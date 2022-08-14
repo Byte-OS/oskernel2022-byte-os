@@ -23,7 +23,9 @@ lazy_static! {
 
         // 减少内存消耗 所以暂时不用下方的
         // "busybox sh lua_testcode.sh"
-        "lmbench_all lat_syscall -P 1 null"
+        "lmbench_all lat_syscall -P 1 null",
+        "lmbench_all lat_syscall -P 1 read",
+        "lmbench_all lat_syscall -P 1 write"
         // "lmbench_all lat_pipe -P 1"
         // "lmbench_all lat_syscall"
         // "sh test.sh date.lua"

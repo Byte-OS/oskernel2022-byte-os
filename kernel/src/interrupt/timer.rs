@@ -6,8 +6,8 @@ use riscv::register::{sie, time};
 const CLOCK_FREQ: usize = 12500000;
 
 #[cfg(feature = "board_k210")]
-const CLOCK_FREQ: usize = 4030000000 / 62;
-// const CLOCK_FREQ: usize = 403000000 / 62;
+// const CLOCK_FREQ: usize = 4030000000 / 62;
+const CLOCK_FREQ: usize = 403000000 / 62;
 
 const CHANGE_TASK_TICKS: usize = 10;
 
@@ -39,7 +39,7 @@ impl TMS {
 }
 
 #[repr(C)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub struct TimeSpec {
 	pub tv_sec: usize,       /* 秒 */
     pub tv_nsec: usize       /* 纳秒, 范围在0~999999999 */
