@@ -8,14 +8,15 @@ pub const DEFAULT_HEAP_BOTTOM: usize = 0x10f000;
 pub const DEFAULT_HEAP_PAGE_NUM: usize = 5;
 
 #[allow(dead_code)]
+#[derive(Clone)]
 // 用户heap
 pub struct UserHeap {
-    start: usize,
-    pointer: usize,
-    end: usize,
-    temp: usize,
-    pmm: Rc<PageMappingManager>,
-    mem_set: MemSet
+    pub start: usize,
+    pub pointer: usize,
+    pub end: usize,
+    pub temp: usize,
+    pub pmm: Rc<PageMappingManager>,
+    pub mem_set: MemSet
 }
 
 impl UserHeap {
@@ -88,7 +89,7 @@ impl UserHeap {
         get_buf_from_phys_page(self.temp.into(), 1).fill(0)
     }
 
-    pub fn clone(&self, pmm: Rc<PageMappingManager>) -> Result<Self, RuntimeError> {
+    pub fn clone_with_data(&self, pmm: Rc<PageMappingManager>) -> Result<Self, RuntimeError> {
         let mem_set = self.mem_set.clone_with_data()?;
         pmm.add_mapping_by_set(&mem_set)?;
         Ok(Self {

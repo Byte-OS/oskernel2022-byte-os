@@ -49,6 +49,31 @@ impl Process {
         Ok((process, task))
     }
 
+    pub fn fork(pid: usize, parent: Rc<RefCell<Process>>) -> Result<(Rc<RefCell<Process>>, Rc<Task>), RuntimeError> {
+        let parent_inner = parent.borrow_mut();
+        let pmm = Rc::new(PageMappingManager::new()?);
+        pmm.add_mapping_by_set(&parent_inner.mem_set)?;
+        pmm.add_mapping_by_set(&parent_inner.heap.mem_set)?;
+        let process = Rc::new(RefCell::new(Self { 
+            pid, 
+            parent: Some(Rc::downgrade(&parent)), 
+            pmm: pmm, 
+            mem_set: parent_inner.mem_set.clone(), 
+            tasks: vec![], 
+            entry: parent_inner.entry, 
+            stack: parent_inner.stack.clone(), 
+            heap: parent_inner.heap.clone(), 
+            workspace: INode::root(),
+            fd_table: parent_inner.fd_table.clone(),
+            children: vec![],
+            sig_actions: [SigAction::empty(); 64],
+            tms: TMS::new(),
+            exit_code: None
+        }));
+        let task = Task::new(0, process.clone());
+        Ok((process, task))
+    }
+
     // 进程进行等待
     pub fn wait(&self) {
         // TODO: 进程进入等待状态  等待目标进程结束

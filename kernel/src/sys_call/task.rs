@@ -60,15 +60,17 @@ impl Task {
             Some(parent) => {
                 let parent = parent.upgrade().unwrap();
                 let parent = parent.borrow();
-                let end: UserAddr<TimeSpec> = 0x10bb78.into();
-                let start: UserAddr<TimeSpec> = 0x10bad0.into();
 
-                println!("start: {:?}   end: {:?}",start.transfer(), end.transfer());
+                // let end: UserAddr<TimeSpec> = 0x10bb78.into();
+                // let start: UserAddr<TimeSpec> = 0x10bad0.into();
 
-                let target_end: UserAddr<TimeSpec> = parent.pmm.get_phys_addr(0x10bb78usize.into())?.0.into();
-                let target_start: UserAddr<TimeSpec> = parent.pmm.get_phys_addr(0x10bad0usize.into())?.0.into();
-                *target_start.transfer() = *start.transfer();
-                *target_end.transfer() = *end.transfer();
+                // println!("start: {:?}   end: {:?}",start.transfer(), end.transfer());
+
+                // let target_end: UserAddr<TimeSpec> = parent.pmm.get_phys_addr(0x10bb78usize.into())?.0.into();
+                // let target_start: UserAddr<TimeSpec> = parent.pmm.get_phys_addr(0x10bad0usize.into())?.0.into();
+                // *target_start.transfer() = *start.transfer();
+                // *target_end.transfer() = *end.transfer();
+
                 // let task = parent.tasks[0].clone().upgrade().unwrap();
                 // drop(parent);
                 // // 处理signal 17 SIGCHLD
@@ -190,9 +192,39 @@ impl Task {
         child_process.fd_table = process.fd_table.clone();
         // 创建新的heap
         // child_process.heap = UserHeap::new(child_process.pmm.clone())?;
-        child_process.heap = process.heap.clone(child_process.pmm.clone())?;
+        child_process.heap = process.heap.clone_with_data(child_process.pmm.clone())?;
         debug!("heap_pointer: {:#x}", child_process.heap.get_heap_top());
         child_process.pmm.add_mapping_by_set(&child_process.mem_set)?;
+        drop(process);
+        drop(child_process);
+        drop(inner);
+        // Ok(())
+        Err(RuntimeError::ChangeTask)
+    }
+
+    pub fn sys_spec_fork(&self) -> Result<(), RuntimeError>{
+        // return self.sys_fork();
+        let mut inner = self.inner.borrow_mut();
+        let process = inner.process.clone();
+
+        let cpid = get_next_pid();
+        let (child_process, child_task) =
+            Process::fork(cpid, process.clone())?;
+        
+        let mut process = process.borrow_mut();
+        process.children.push(child_process.clone());
+
+        let mut child_task_inner = child_task.inner.borrow_mut();
+        child_task_inner.context.clone_from(&inner.context);
+        child_task_inner.context.x[10] = 0;
+        drop(child_task_inner);
+
+        add_task_to_scheduler(child_task.clone());
+
+        inner.context.x[10] = cpid;
+        let mut child_process = child_process.borrow_mut();
+        child_process.stack = process.stack.clone_with_data(child_process.pmm.clone())?;
+
         drop(process);
         drop(child_process);
         drop(inner);
@@ -202,11 +234,13 @@ impl Task {
     
     // clone task
     pub fn sys_clone(&self, flags: usize, new_sp: usize, ptid: UserAddr<u32>, tls: usize, ctid_ptr: UserAddr<u32>) -> Result<(), RuntimeError> {
-        let flags = flags & 0x4fff;
+        // let flags = flags & 0x4fff;
         if flags == 0x4111 || flags == 0x11 {
             // VFORK | VM | SIGCHILD
             warn!("sys_clone is calling sys_fork instead, ignoring other args");
             return self.sys_fork();
+        } else if flags == 0x1200011 {
+            return self.sys_spec_fork();
         }
 
         debug!(
