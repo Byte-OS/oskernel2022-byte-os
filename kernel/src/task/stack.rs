@@ -129,8 +129,7 @@ impl UserStack {
 
     // 释放资源
     pub fn release(&mut self) {
-        // let mem_set = self.mem_set.borrow_mut();
-        // mem_set.release();
+        self.mem_set.release();
     }
 
     pub fn alloc_until(&mut self, until_addr: usize) -> Result<(), RuntimeError> {

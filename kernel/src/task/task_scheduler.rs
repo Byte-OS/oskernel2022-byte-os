@@ -53,7 +53,7 @@ impl TaskScheduler {
             // TODO: 判断是否存在等待中的任务 如果存在就切换任务
             let task = self.queue[0].clone();
             self.is_run = true;
-            // warn!("执行pid: {}   tid: {}   tasks len: {}", task.pid, task.tid, self.queue.len());
+            warn!("执行pid: {}   tid: {}   tasks len: {}", task.pid, task.tid, self.queue.len());
             task.run();
             task.catch();
         }

@@ -2,10 +2,10 @@ use alloc::vec::Vec;
 use alloc::string::String;
 use alloc::rc::{Rc, Weak};
 use hashbrown::HashMap;
+use k210_pac::i2c0::con;
 use crate::get_free_page_num;
 
 use crate::interrupt::timer::TimeSpec;
-use crate::task::signal::Signal;
 use crate::task::task_scheduler::{add_task_to_scheduler, get_task, get_task_num};
 use crate::task::task_scheduler::switch_next;
 use crate::task::task_scheduler::get_current_task;
@@ -19,7 +19,7 @@ use crate::memory::addr::UserAddr;
 use crate::sync::mutex::Mutex;
 use crate::task::task::TaskStatus;
 
-use super::UTSname;
+use super::{UTSname, CloneFlags};
 use super::SYS_CALL_ERR;
 
 bitflags! {
@@ -55,6 +55,7 @@ impl Task {
     pub fn sys_exit_group(&self, exit_code: usize) -> Result<(), RuntimeError> {
         let inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
+        debug!("exit pid: {}", self.pid);
         process.exit(exit_code);
         match &process.parent {
             Some(parent) => {
@@ -202,8 +203,9 @@ impl Task {
         Err(RuntimeError::ChangeTask)
     }
 
-    pub fn sys_spec_fork(&self) -> Result<(), RuntimeError>{
+    pub fn sys_spec_fork(&self, flags: usize, new_sp: usize, ptid: UserAddr<u32>, tls: usize, ctid_ptr: UserAddr<u32>) -> Result<(), RuntimeError>{
         // return self.sys_fork();
+        let flags = CloneFlags::from_bits_truncate(flags);
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.clone();
 
@@ -221,9 +223,18 @@ impl Task {
 
         add_task_to_scheduler(child_task.clone());
 
-        inner.context.x[10] = cpid;
         let mut child_process = child_process.borrow_mut();
         child_process.stack = process.stack.clone_with_data(child_process.pmm.clone())?;
+        // child_process.heap = process.heap.clone_with_data(child_process.pmm.clone())?;
+        inner.context.x[10] = cpid;
+
+        if flags.contains(CloneFlags::CLONE_CHILD_SETTID) {
+            *ctid_ptr.transfer() = cpid as u32;
+        }
+
+        if flags.contains(CloneFlags::CLONE_CHILD_CLEARTID) {
+            
+        }
 
         drop(process);
         drop(child_process);
@@ -235,12 +246,17 @@ impl Task {
     // clone task
     pub fn sys_clone(&self, flags: usize, new_sp: usize, ptid: UserAddr<u32>, tls: usize, ctid_ptr: UserAddr<u32>) -> Result<(), RuntimeError> {
         // let flags = flags & 0x4fff;
+        debug!(
+            "clone: flags={:#x}, newsp={:#x}, parent_tid={:#x}, child_tid={:#x}, newtls={:#x}",
+            flags, new_sp, ptid.bits(), ctid_ptr.0 as usize, tls
+        );
         if flags == 0x4111 || flags == 0x11 {
             // VFORK | VM | SIGCHILD
             warn!("sys_clone is calling sys_fork instead, ignoring other args");
             return self.sys_fork();
         } else if flags == 0x1200011 {
-            return self.sys_spec_fork();
+            return self.sys_spec_fork(0x11, new_sp, ptid, tls, ctid_ptr);
+            // return self.sys_fork();
         }
 
         debug!(
@@ -317,11 +333,12 @@ impl Task {
         if pid != SYS_CALL_ERR {
             let target = 
             process.children.iter().find(|&x| x.borrow().pid == pid);
-        
+
             if let Some(exit_code) = target.map_or(None, |x| x.borrow().exit_code) {
                 if ptr.is_valid() {
                     *ptr.transfer() = exit_code as i32;
                 }
+
                 inner.context.x[10] = pid;
                 return Ok(())
             }
@@ -360,7 +377,8 @@ impl Task {
             _pid,
             _signum
         );
-        inner.context.x[10] = 1;
+
+        inner.context.x[10] = 0;
         Ok(())
     }
 

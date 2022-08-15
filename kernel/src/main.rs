@@ -105,15 +105,20 @@ pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
     // 输出文件树
     print_file_tree(INode::root());
 
-    let busybox_node = INode::get(None, "busybox").expect("can't find busybox");
-
     // 创建busybox 指令副本
+    let busybox_node = INode::get(None, "busybox").expect("can't find busybox");
     busybox_node.linkat("sh");
     busybox_node.linkat("echo");
     busybox_node.linkat("cat");
     busybox_node.linkat("cp");
     busybox_node.linkat("ls");
     busybox_node.linkat("pwd");
+    INode::mkdir(None, "/bin", 0).expect("can't create bin directory");
+    INode::mkdir(None, "/sbin", 0).expect("can't create sbin directory");
+    busybox_node.linkat("bin/busybox");
+    let lmbench_all = INode::get(None, "lmbench_all").expect("can't find busybox");
+    lmbench_all.linkat("sbin/lmbench_all");
+    lmbench_all.linkat("bin/lmbench_all");
 
     INode::root().add(INode::new("proc".to_string(), 
         DiskFileEnum::None, FileType::Directory, None));

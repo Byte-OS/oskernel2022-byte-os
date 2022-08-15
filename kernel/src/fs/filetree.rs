@@ -288,13 +288,21 @@ impl INode {
     }
 
     // link at
-    pub fn linkat(&self, filename: &str) {
+    pub fn linkat(&self, path: &str) {
+        let (dir, filename) = split_path(path);
+        let pnode = match dir {
+            Some(path) => INode::get(None, path).expect("don't hava this folder"),
+            None => INode::root()
+        };
         let inner = self.0.borrow_mut();
         let new_node = Self::new(filename.to_string(), inner.file.clone(),
             inner.file_type, inner.parent.clone());
-        if let Some(node) = inner.parent.as_ref().map_or(None, |x| x.upgrade()) {
-            node.add(new_node);
-        }
+
+        pnode.add(new_node);
+
+        // if let Some(node) = inner.parent.as_ref().map_or(None, |x| x.upgrade()) {
+        //     node.add(new_node);
+        // }
         // let parent_node = self.0.
     }
 

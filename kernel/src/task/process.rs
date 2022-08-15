@@ -121,6 +121,7 @@ impl Process {
 
     // 结束进程
     pub fn exit(&mut self, exit_code: usize) {
+        self.release();
         // 如果没有子进程
         self.exit_code = Some(exit_code);
         // 进程回收
@@ -140,6 +141,7 @@ impl Process {
     // 释放内存
     pub fn release(&mut self) {
         self.stack.release();
+        self.heap.mem_set.release();
         self.mem_set.release();
         self.pmm.release();
     }
