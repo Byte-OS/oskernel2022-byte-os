@@ -482,11 +482,14 @@ impl Task {
     }
 
     pub fn sys_lseek(&self, fd: usize, offset: usize, whence: usize) -> Result<(), RuntimeError> {
+        debug!("lseek: fd {}, offset: {}, whench: {}", fd, offset as isize, whence);
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
 
         let file = process.fd_table.get_file(fd)?;
         let offset = file.lseek(offset, whence);
+        // debug!("lseek Filename: {}", file.get_inode().get_filename());
+        // let inode = file.get_inode();
         drop(process);
         inner.context.x[10] = offset;
         Ok(())

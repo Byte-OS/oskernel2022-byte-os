@@ -16,6 +16,7 @@ pub enum DiskFileEnum {
     DiskFile(DiskFile),
     DiskDir(Dir),
     VirtFile(VirtFile),
+    VirtDir,
     None
 }
 
@@ -244,9 +245,22 @@ impl INode {
     // 创建文件夹
     // TODO: 创建文件夹
     pub fn mkdir(current: Option<Rc<INode>>, path: &str, _flags: u16) -> Result<Rc<INode>, RuntimeError>{
-        match Self::get(current, path) {
+        match Self::get(current.clone(), path) {
             Ok(inode) => Ok(inode),
-            Err(_) => todo!()
+            Err(_) => {
+                // 创建文件夹
+                let (dir, filename) = split_path(path);
+                let pnode = match dir {
+                    Some(path) => INode::get(current, path)?,
+                    None => INode::root()
+                };
+
+                let parent_node = Some(Rc::downgrade(&pnode));
+                let file_node = INode::new(filename.to_string(), 
+                DiskFileEnum::VirtDir, FileType::Directory, parent_node);
+                pnode.clone().add(file_node.clone());
+                Ok(file_node)
+            }
         }
     }
 

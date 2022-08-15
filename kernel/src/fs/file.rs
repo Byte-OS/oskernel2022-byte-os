@@ -223,6 +223,10 @@ impl File {
         inner.offset += 1;
         Some((offset, child))
     }
+
+    pub fn get_file_type(&self) -> FileType {
+        self.0.borrow_mut().file_type
+    }
 }
 
 impl FileOP for File {
@@ -288,6 +292,8 @@ impl dyn FileOP {
         TypeId::of::<T>() == self.type_id()
     }
     pub fn downcast<T: 'static>(self: Rc<Self>) -> Result<Rc<T>,Rc<Self>> {
+        debug!("type_id: {:?}   self type_id: {:?}   file: {:?}", 
+            TypeId::of::<T>(), self.type_id(), TypeId::of::<File>());
         if self.is::<T>() {
             unsafe {
                 Ok(Rc::from_raw(Rc::into_raw(self) as _))

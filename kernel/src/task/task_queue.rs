@@ -11,10 +11,15 @@ use super::exec;
 lazy_static! {
     pub static ref TASK_QUEUE: Mutex<VecDeque<&'static str>> = Mutex::new(VecDeque::from(vec![
         // 调试信息
+        "busybox touch test.txt",
+        "busybox sh busybox_testcode.sh"
+        // "busybox rm test.txt"
+        // "busybox sh busybox_test.sh"
+        // "busybox cp busybox_cmd.txt busybox_cmd.bak",
         // "busybox cp busybox_cmd.txt busybox_cmd.bak",
         // "busybox rm busybox_cmd.bak",
-        "busybox mkdir test",
-        "busybox rmdir test"
+        // "busybox mkdir test",
+        // "busybox rmdir test"
         // "busybox find -name \"busybox_cmd.txt\""
 
         // "busybox sh busybox_testcode.sh",
@@ -98,4 +103,3 @@ pub fn load_next_task() -> bool {
         false
     }
 }
-
