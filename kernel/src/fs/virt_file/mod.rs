@@ -56,4 +56,8 @@ impl FileOP for VirtFile {
     fn get_size(&self) -> usize {
         self.file_size
     }
+
+    fn lseek(&self, offset: usize, whence: usize) -> usize {
+        todo!()
+    }
 }

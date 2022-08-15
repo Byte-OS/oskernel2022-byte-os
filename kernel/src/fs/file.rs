@@ -76,6 +76,7 @@ pub trait FileOP: Any {
 	fn read_at(&self, pos: usize, data: &mut [u8]) -> usize;
 	fn write_at(&self, pos: usize, data: &[u8], count: usize) -> usize;
 	fn get_size(&self) -> usize;
+    fn lseek(&self, offset: usize, whence: usize) -> usize;
 }
 
 pub struct File(pub RefCell<FileInner>);
@@ -178,38 +179,6 @@ impl File {
         pmm.add_mapping_range(mem_map.ppn.into(), virt_addr, mem_map.page_num * PAGE_SIZE, PTEFlags::UVRWX)
     }
 
-    pub fn lseek(&self, offset: usize, whence: usize) -> usize {
-        let mut inner = self.0.borrow_mut();
-
-        if offset > 0x80000 {
-            return offset;
-        }
-        inner.offset = match whence {
-            // SEEK_SET
-            0 => { 
-                if offset < inner.file_size {
-                    offset
-                } else {
-                    inner.file_size
-                }
-            }
-            // SEEK_CUR
-            1 => { 
-                if inner.offset + offset < inner.file_size {
-                    inner.offset + offset
-                } else {
-                    inner.file_size
-                }
-            }
-            // SEEK_END
-            2 => {
-                inner.file_size + offset
-            }
-            _ => { 0 }
-        };
-        inner.offset
-    }
-
     pub fn entry_next(&self) -> Option<(usize, Rc<INode>)> {
         let mut inner = self.0.borrow_mut();
         let offset = inner.offset;
@@ -284,6 +253,38 @@ impl FileOP for File {
 
     fn get_size(&self) -> usize {
         self.0.borrow_mut().file_size
+    }
+
+    fn lseek(&self, offset: usize, whence: usize) -> usize {
+        let mut inner = self.0.borrow_mut();
+
+        if offset > 0x80000 {
+            return offset;
+        }
+        inner.offset = match whence {
+            // SEEK_SET
+            0 => { 
+                if offset < inner.file_size {
+                    offset
+                } else {
+                    inner.file_size
+                }
+            }
+            // SEEK_CUR
+            1 => { 
+                if inner.offset + offset < inner.file_size {
+                    inner.offset + offset
+                } else {
+                    inner.file_size
+                }
+            }
+            // SEEK_END
+            2 => {
+                inner.file_size + offset
+            }
+            _ => { 0 }
+        };
+        inner.offset
     }
 }
 

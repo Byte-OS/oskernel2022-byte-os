@@ -37,6 +37,10 @@ impl FileOP for StdIn {
     fn get_size(&self) -> usize {
         0
     }
+
+    fn lseek(&self, offset: usize, whence: usize) -> usize {
+        todo!()
+    }
 }
 
 impl FileOP for StdOut {
@@ -67,6 +71,10 @@ impl FileOP for StdOut {
     }
 
     fn get_size(&self) -> usize {
+        todo!()
+    }
+
+    fn lseek(&self, offset: usize, whence: usize) -> usize {
         todo!()
     }
 }
@@ -104,6 +112,10 @@ impl FileOP for StdErr {
     fn get_size(&self) -> usize {
         todo!()
     }
+
+    fn lseek(&self, offset: usize, whence: usize) -> usize {
+        todo!()
+    }
 }
 
 impl FileOP for StdZero {
@@ -136,6 +148,10 @@ impl FileOP for StdZero {
     fn get_size(&self) -> usize {
         todo!()
     }
+
+    fn lseek(&self, offset: usize, whence: usize) -> usize {
+        todo!()
+    }
 }
 
 impl FileOP for StdNull {
@@ -164,6 +180,10 @@ impl FileOP for StdNull {
     }
 
     fn get_size(&self) -> usize {
+        todo!()
+    }
+
+    fn lseek(&self, offset: usize, whence: usize) -> usize {
         todo!()
     }
 }

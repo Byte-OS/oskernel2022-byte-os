@@ -46,4 +46,8 @@ impl FileOP for ProcMeminfo {
     fn get_size(&self) -> usize {
         todo!()
     }
+
+    fn lseek(&self, offset: usize, whence: usize) -> usize {
+        todo!()
+    }
 }

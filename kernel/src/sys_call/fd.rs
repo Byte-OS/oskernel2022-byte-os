@@ -486,7 +486,7 @@ impl Task {
         let mut inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
 
-        let file = process.fd_table.get_file(fd)?;
+        let file = process.fd_table.get(fd)?;
         let offset = file.lseek(offset, whence);
         // debug!("lseek Filename: {}", file.get_inode().get_filename());
         // let inode = file.get_inode();

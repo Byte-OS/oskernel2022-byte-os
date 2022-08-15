@@ -95,6 +95,10 @@ impl FileOP for SocketFile {
     fn get_size(&self) -> usize {
         self.0.borrow().len()
     }
+
+    fn lseek(&self, offset: usize, whence: usize) -> usize {
+        todo!()
+    }
 }
 
 impl Task {

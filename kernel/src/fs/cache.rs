@@ -3,7 +3,7 @@ use hashbrown::HashMap;
 
 use crate::{sync::mutex::Mutex, fs::file::File};
 
-use super::filetree::INode;
+use super::{filetree::INode, file::FileOP};
 
 lazy_static! {
     pub static ref CACHE_FILES: Mutex<HashMap<&'static str, Rc<File>>> = Mutex::new(HashMap::new());
