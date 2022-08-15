@@ -19,7 +19,7 @@ impl FileOP for EtcAdjtime {
         todo!()
     }
 
-    fn read(&self, data: &mut [u8]) -> usize {
+    fn read_at(&self, _pos: usize, data: &mut [u8]) -> usize {
         let readable = *self.0.borrow_mut();
         if readable {
             let bytes = b"0.000000 1643115317 0.000000\n1643115317\nUTC";
@@ -31,23 +31,11 @@ impl FileOP for EtcAdjtime {
         }
     }
 
-    fn write(&self, _data: &[u8], _count: usize) -> usize {
-        todo!()
-    }
-
-    fn read_at(&self, _pos: usize, _data: &mut [u8]) -> usize {
-        todo!()
-    }
-
     fn write_at(&self, _pos: usize, _data: &[u8], _count: usize) -> usize {
-        todo!()
+        todo!("not implemente write adjtime")
     }
 
     fn get_size(&self) -> usize {
-        todo!()
-    }
-
-    fn lseek(&self, offset: usize, whence: usize) -> usize {
-        todo!()
+        0
     }
 }

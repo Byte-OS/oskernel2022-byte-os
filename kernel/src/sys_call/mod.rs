@@ -441,10 +441,11 @@ impl Task {
             // 用户请求
             Trap::Exception(Exception::UserEnvCall) => {
                 // 将 恢复地址 + 4 跳过调用地址
-                if context.x[17] != 113 && context.x[17] != 173 && context.x[17] != 165 && context.x[17] != 64
-                && context.x[17] != 57 && context.x[17] != 63 {
-                    debug!("中断号: {} 调用地址: {:#x}", context.x[17], context.sepc);
-                }
+                // if context.x[17] != 113 && context.x[17] != 173 && context.x[17] != 165 && context.x[17] != 64
+                // && context.x[17] != 57 && context.x[17] != 63 {
+                //     debug!("中断号: {} 调用地址: {:#x}", context.x[17], context.sepc);
+                // }
+                debug!("中断号: {} 调用地址: {:#x}", context.x[17], context.sepc);
 
                 // 对sepc + 4
                 context.sepc += 4;

@@ -12,6 +12,7 @@ use crate::fs::stdio::StdNull;
 use crate::fs::stdio::StdZero;
 use crate::interrupt::timer::TimeSpec;
 use crate::memory::addr::UserAddr;
+use crate::task::fd_table::FileDesc;
 use crate::task::fd_table::IoVec;
 use crate::task::pipe::PipeWriter;
 use crate::task::task::Task;
@@ -46,7 +47,7 @@ impl Task {
     pub fn sys_dup(&self, fd: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
-        let fd_v = process.fd_table.get(fd)?;
+        let fd_v = process.fd_table.get(fd)?.clone();
         // 判断文件描述符是否存在
         let new_fd = process.fd_table.push(fd_v);
         drop(process);
@@ -59,10 +60,10 @@ impl Task {
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
         // 判断是否存在文件描述符
-        let fd_v = process.fd_table.get(fd)?;
-        if let Ok(file) = fd_v.clone().downcast::<File>() {
-            file.lseek(0, 0);
-        }
+        let fd_v = process.fd_table.get(fd)?.clone();
+        // if let Ok(file) = fd_v.clone().downcast::<File>() {
+        //     file.lseek(0, 0);
+        // }
         process.fd_table.set(new_fd, fd_v);
         drop(process);
         inner.context.x[10] = new_fd;
@@ -134,32 +135,32 @@ impl Task {
         let flags = OpenFlags::from_bits_truncate(flags as u32);
 
         if filename == "/dev/zero" {
-            let fd = process.fd_table.push(Rc::new(StdZero));
+            let fd = process.fd_table.push(FileDesc::new(Rc::new(StdZero)));
             drop(process);
             inner.context.x[10] = fd;
             return Ok(())
         } else if filename == "/dev/null" {
-            let fd = process.fd_table.push(Rc::new(StdNull));
+            let fd = process.fd_table.push(FileDesc::new(Rc::new(StdNull)));
             drop(process);
             inner.context.x[10] = fd;
             return Ok(())
         } else if filename == "/proc/mounts" {
-            let fd = process.fd_table.push(Rc::new(ProcMounts::new()));
+            let fd = process.fd_table.push(FileDesc::new(Rc::new(ProcMounts::new())));
             drop(process);
             inner.context.x[10] = fd;
             return Ok(())
         } else if filename == "/proc/meminfo" {
-            let fd = process.fd_table.push(Rc::new(ProcMeminfo::new()));
+            let fd = process.fd_table.push(FileDesc::new(Rc::new(ProcMeminfo::new())));
             drop(process);
             inner.context.x[10] = fd;
             return Ok(())
         } else if filename == "/etc/adjtime" {
-            let fd = process.fd_table.push(Rc::new(EtcAdjtime::new()));
+            let fd = process.fd_table.push(FileDesc::new(Rc::new(EtcAdjtime::new())));
             drop(process);
             inner.context.x[10] = fd;
             return Ok(())
         } else if filename == "/dev/rtc" {
-            let fd = process.fd_table.push(Rc::new(DevRtc::new()));
+            let fd = process.fd_table.push(FileDesc::new(Rc::new(DevRtc::new())));
             drop(process);
             inner.context.x[10] = fd;
             return Ok(())
@@ -179,11 +180,11 @@ impl Task {
         } else {
             INode::open(current, &filename)?
         };
-        if flags.contains(OpenFlags::WRONLY) {
-            file.lseek(0, 2);
-        }
+        // if flags.contains(OpenFlags::WRONLY) {
+        //     file.lseek(0, 2);
+        // }
         let fd = process.fd_table.alloc();
-        process.fd_table.set(fd, file);
+        process.fd_table.set(fd, FileDesc::new(file));
         drop(process);
         debug!("return fd: {}", fd);
         inner.context.x[10] = fd;
@@ -203,18 +204,14 @@ impl Task {
     pub fn sys_sendfile(&self, out_fd: usize, in_fd: usize, offset_ptr: usize, count: usize) -> Result<(), RuntimeError> {
         debug!("out_fd: {}  in_fd: {}  offset_ptr: {:#x}   count: {}", out_fd, in_fd, offset_ptr, count);
         let mut inner = self.inner.borrow_mut();
-        let process = inner.process.borrow_mut();
+        let mut process = inner.process.borrow_mut();
         let in_file = process.fd_table.get(in_fd)?;
-        let out_file = process.fd_table.get(out_fd)?;
         let size = in_file.get_size();
         let mut buf = vec![0u8; size];
         let read_size = in_file.read(&mut buf);
+
+        let out_file = process.fd_table.get(out_fd)?;
         out_file.write(&buf, buf.len());
-        // let file = out_file.downcast::<File>();
-        // file.lseek(0, 0);
-        // if let Ok(file) = out_file.downcast::<File>() {
-        //     file.lseek(0, 0);
-        // }
 
         drop(process);
         debug!("write size: {}", read_size);
@@ -306,7 +303,7 @@ impl Task {
         debug!("sys_read, fd: {}, buf_ptr: {:#x}, count: {}", fd, buf_ptr.bits(), count);
         let buf = buf_ptr.transfer_vec(count);
         let mut inner = self.inner.borrow_mut();
-        let process = inner.process.borrow_mut();
+        let mut process = inner.process.borrow_mut();
 
         // 判断文件描述符是否存在
         let reader = process.fd_table.get(fd)?;
@@ -323,22 +320,15 @@ impl Task {
 
     // 写入
     pub fn sys_write(&self, fd: usize, buf_ptr: UserAddr<u8>, count: usize) -> Result<(), RuntimeError> {
-        // debug!("write fd: {} buf_ptr: {:#x} count: {}", fd, buf_ptr.bits(), count);
+        debug!("write fd: {} buf_ptr: {:#x} count: {}", fd, buf_ptr.bits(), count);
         let buf = buf_ptr.transfer_vec(count);
         let mut inner = self.inner.borrow_mut();
-        let process = inner.process.borrow_mut();
+        let mut process = inner.process.borrow_mut();
         
         // 判断文件描述符是否存在
         let writer = process.fd_table.get(fd)?;
         let value = if writer.writeable() {
-            match writer.clone().downcast::<PipeWriter>() {
-                Ok(writer) => {
-                    writer.write(buf, buf.len())
-                },
-                Err(_) => {
-                    writer.write(buf, buf.len())
-                }
-            }
+            writer.write(buf, buf.len())
         } else {
             usize::MAX
         };
@@ -351,7 +341,7 @@ impl Task {
         let iov_vec = iov.transfer_vec(iovcnt);
         
         let mut inner = self.inner.borrow_mut();
-        let process = inner.process.borrow_mut();
+        let mut process = inner.process.borrow_mut();
         
         let fd = process.fd_table.get(fd)?;
         let mut cnt = 0;
@@ -370,9 +360,9 @@ impl Task {
         let iov_vec = iov.transfer_vec(iovcnt);
 
         let mut inner = self.inner.borrow_mut();
-        let process = inner.process.borrow_mut();
+        let mut process = inner.process.borrow_mut();
         
-        let fd = process.fd_table.get(fd)?;
+        let mut fd = process.fd_table.get(fd)?;
         let mut cnt = 0;
         for i in iov_vec {
             // let buf = get_buf_from_phys_addr(i.iov_base, 
@@ -484,9 +474,9 @@ impl Task {
     pub fn sys_lseek(&self, fd: usize, offset: usize, whence: usize) -> Result<(), RuntimeError> {
         debug!("lseek: fd {}, offset: {}, whench: {}", fd, offset as isize, whence);
         let mut inner = self.inner.borrow_mut();
-        let process = inner.process.borrow_mut();
+        let mut process = inner.process.borrow_mut();
 
-        let file = process.fd_table.get(fd)?;
+        let mut file = process.fd_table.get(fd)?;
         let offset = file.lseek(offset, whence);
         // debug!("lseek Filename: {}", file.get_inode().get_filename());
         // let inode = file.get_inode();

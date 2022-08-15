@@ -6,6 +6,8 @@ use alloc::vec::Vec;
 
 use crate::fs::file::FileOP;
 
+use super::fd_table::FileDesc;
+
 // #[derive(Clone)]
 // pub struct PipeBuf (Arc<RefCell<VecDeque<u8>>>);
 
@@ -146,7 +148,7 @@ impl PipeBuf {
         })))
     }
     // 读取字节
-    pub fn read(&self, buf: &mut [u8]) -> usize {
+    pub fn read_at(&self, mut pos: usize, buf: &mut [u8]) -> usize {
         let mut read_index = 0;
         let mut pipe = self.0.borrow_mut();
         loop {
@@ -154,20 +156,19 @@ impl PipeBuf {
                 break;
             }
 
-            if pipe.read_offset < pipe.buf.len() {
-                buf[read_index] = pipe.buf[pipe.read_offset];
+            if pos < pipe.buf.len() {
+                buf[read_index] = pipe.buf[pos];
             } else {
                 break;
             }
 
-            pipe.read_offset += 1;
+            pos += 1;
             read_index += 1;
         }
         read_index
     }
 
-    // 写入字节
-    pub fn write(&self, buf: &[u8], count: usize) -> usize {
+    pub fn write_at(&self, mut pos: usize, buf: &[u8], count: usize) -> usize{
         let mut write_index = 0;
         let mut pipe = self.0.borrow_mut();
         loop {
@@ -177,7 +178,7 @@ impl PipeBuf {
             
             // queue.push_back(buf[write_index]);
             pipe.buf.push(buf[write_index]);
-            pipe.write_offset += 1;
+            pos += 1;
             write_index += 1;
         }
         write_index
@@ -187,6 +188,11 @@ impl PipeBuf {
     pub fn available(&self) -> usize {
         let pipe = self.0.borrow_mut();
         pipe.write_offset - pipe.read_offset
+    }
+
+    pub fn get_size(&self) -> usize {
+        let pipe = self.0.borrow_mut();
+        pipe.buf.len()
     }
 }
 
@@ -203,49 +209,19 @@ impl FileOP for PipeReader {
         false
     }
 
-    fn read(&self, data: &mut [u8]) -> usize {
-        self.0.read(data)
-    }
-
-    fn write(&self, _data: &[u8], _count: usize) -> usize {
-        todo!()
-    }
-
-    fn read_at(&self, _pos: usize, data: &mut [u8]) -> usize {
-        self.0.read(data)
+    fn read_at(&self, pos: usize, data: &mut [u8]) -> usize {
+        debug!("write?");
+        self.0.read_at(pos, data)
     }
 
     fn write_at(&self, _pos: usize, _data: &[u8], _count: usize) -> usize {
+        debug!("write?");
         todo!()
     }
 
     fn get_size(&self) -> usize {
-        self.0.available()
-    }
-
-    fn lseek(&self, offset: usize, whence: usize) -> usize {
-        let offset = offset as isize;
-        let pipe = &self.0;
-        let mut pipe_inner = pipe.0.borrow_mut();
-        let res = match whence {
-            0 => {
-                pipe_inner.read_offset = offset as usize;
-                offset
-            },
-            1 => {
-                if offset == -840 {
-                    pipe_inner.read_offset += -869 as isize as usize;
-                } else if offset == -978 {
-                    pipe_inner.read_offset += -993 as isize as usize;
-                } else {
-                    pipe_inner.read_offset += offset as usize;
-                }
-                pipe_inner.read_offset as isize
-            },
-            2 => todo!(),
-            _ => todo!()
-        };
-        res as usize
+        // self.0.available()
+        self.0.get_size()
     }
 }
 
@@ -258,34 +234,24 @@ impl FileOP for PipeWriter {
         true
     }
 
-    fn read(&self, _data: &mut [u8]) -> usize {
-        todo!()
-    }
-
-    fn write(&self, data: &[u8], count: usize) -> usize {
-        self.0.write(data, count)
-    }
-
     fn read_at(&self, _pos: usize, _data: &mut [u8]) -> usize {
+        debug!("write?");
         todo!()
     }
 
-    fn write_at(&self, _pos: usize, _data: &[u8], _count: usize) -> usize {
-        todo!()
+    fn write_at(&self, pos: usize, data: &[u8], count: usize) -> usize {
+        debug!("write?");
+        self.0.write_at(pos, data, count)
     }
 
     fn get_size(&self) -> usize {
-        todo!()
-    }
-
-    fn lseek(&self, offset: usize, whence: usize) -> usize {
-        todo!()
+        self.0.get_size()
     }
 }
 
-pub fn new_pipe() -> (Rc<PipeReader>, Rc<PipeWriter>) {
+pub fn new_pipe() -> (FileDesc, FileDesc) {
     let pipe_buf = PipeBuf::new();
-    let pipe_reader  = Rc::new(PipeReader(pipe_buf.clone()));
-    let pipe_writer = Rc::new(PipeWriter(pipe_buf.clone()));
+    let pipe_reader  = FileDesc::new(Rc::new(PipeReader(pipe_buf.clone())));
+    let pipe_writer = FileDesc::new(Rc::new(PipeWriter(pipe_buf.clone())));
     (pipe_reader, pipe_writer)
 }

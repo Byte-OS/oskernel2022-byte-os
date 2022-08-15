@@ -4,7 +4,7 @@ use core::cell::RefCell;
 use alloc::{string::{String, ToString}, vec::Vec, rc::{Rc, Weak}};
 use fatfs::{Read, Write};
 
-use crate::{device::{DiskFile, Dir, GLOBAL_FS, root_dir}, runtime_err::RuntimeError};
+use crate::{device::{DiskFile, Dir}, runtime_err::RuntimeError};
 
 use super::{file::{FileType, File}, cache::get_cache_file, virt_file::VirtFile};
 

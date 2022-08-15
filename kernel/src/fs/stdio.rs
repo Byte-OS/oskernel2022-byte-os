@@ -1,5 +1,3 @@
-use alloc::string::String;
-
 use crate::console::puts;
 use super::file::FileOP;
 
@@ -18,28 +16,16 @@ impl FileOP for StdIn {
         false
     }
 
-    fn read(&self, _data: &mut [u8]) -> usize {
-        todo!()
-    }
-
-    fn write(&self, _data: &[u8], _count: usize) -> usize {
-        todo!()
-    }
-
     fn read_at(&self, _pos: usize, _data: &mut [u8]) -> usize {
         todo!()
     }
 
     fn write_at(&self, _pos: usize, _data: &[u8], _count: usize) -> usize {
-        todo!()
+        todo!("not implemente write stdin")
     }
 
     fn get_size(&self) -> usize {
         0
-    }
-
-    fn lseek(&self, offset: usize, whence: usize) -> usize {
-        todo!()
     }
 }
 
@@ -52,15 +38,6 @@ impl FileOP for StdOut {
         true
     }
 
-    fn read(&self, _data: &mut [u8]) -> usize {
-        0
-    }
-
-    fn write(&self, data: &[u8], _count: usize) -> usize {
-        puts(data);
-        data.len()
-    }
-
     fn read_at(&self, _pos: usize, _data: &mut [u8]) -> usize {
         0
     }
@@ -71,11 +48,7 @@ impl FileOP for StdOut {
     }
 
     fn get_size(&self) -> usize {
-        todo!()
-    }
-
-    fn lseek(&self, offset: usize, whence: usize) -> usize {
-        todo!()
+        0
     }
 }
 
@@ -88,33 +61,19 @@ impl FileOP for StdErr {
         true
     }
 
-    fn read(&self, _data: &mut [u8]) -> usize {
+    fn read_at(&self, _pos: usize, _data: &mut [u8]) -> usize {
         todo!()
     }
 
-    fn write(&self, data: &[u8], count: usize) -> usize {
-        // error!("data: {}", unsafe { String::from_utf8_unchecked(_data.to_vec()) });
-        // puts("error: ".as_bytes());
+    fn write_at(&self, _pos: usize, data: &[u8], count: usize) -> usize {
         if count > 0 && data[0] != b's' {
             puts(data);
         }
         count
     }
 
-    fn read_at(&self, _pos: usize, _data: &mut [u8]) -> usize {
-        todo!()
-    }
-
-    fn write_at(&self, _pos: usize, _data: &[u8], _count: usize) -> usize {
-        todo!()
-    }
-
     fn get_size(&self) -> usize {
-        todo!()
-    }
-
-    fn lseek(&self, offset: usize, whence: usize) -> usize {
-        todo!()
+        0
     }
 }
 
@@ -127,30 +86,17 @@ impl FileOP for StdZero {
         todo!()
     }
 
-    fn read(&self, data: &mut [u8]) -> usize {
-        data.fill(0);
-        data.len()
-    }
-
-    fn write(&self, _data: &[u8], _count: usize) -> usize {
-        todo!()
-    }
-
     fn read_at(&self, _pos: usize, data: &mut [u8]) -> usize {
         data.fill(0);
         data.len()
     }
 
     fn write_at(&self, _pos: usize, _data: &[u8], _count: usize) -> usize {
-        todo!()
+        todo!("not implemente write stzero")
     }
 
     fn get_size(&self) -> usize {
-        todo!()
-    }
-
-    fn lseek(&self, offset: usize, whence: usize) -> usize {
-        todo!()
+        0
     }
 }
 
@@ -163,14 +109,6 @@ impl FileOP for StdNull {
         true
     }
 
-    fn read(&self, _data: &mut [u8]) -> usize {
-        0
-    }
-
-    fn write(&self, _data: &[u8], count: usize) -> usize {
-        count
-    }
-
     fn read_at(&self, _pos: usize, _data: &mut [u8]) -> usize {
         0
     }
@@ -180,10 +118,6 @@ impl FileOP for StdNull {
     }
 
     fn get_size(&self) -> usize {
-        todo!()
-    }
-
-    fn lseek(&self, offset: usize, whence: usize) -> usize {
-        todo!()
+        0
     }
 }

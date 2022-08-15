@@ -71,12 +71,9 @@ pub struct Kstat {
 pub trait FileOP: Any {
 	fn readable(&self) -> bool;
 	fn writeable(&self) -> bool;
-	fn read(&self, data: &mut [u8]) -> usize;
-	fn write(&self, data: &[u8], count: usize) -> usize;
 	fn read_at(&self, pos: usize, data: &mut [u8]) -> usize;
 	fn write_at(&self, pos: usize, data: &[u8], count: usize) -> usize;
 	fn get_size(&self) -> usize;
-    fn lseek(&self, offset: usize, whence: usize) -> usize;
 }
 
 pub struct File(pub RefCell<FileInner>);
@@ -207,38 +204,6 @@ impl FileOP for File {
         true
     }
 
-    fn read(&self, data: &mut [u8]) -> usize {
-        let mut inner = self.0.borrow_mut();
-        let remain = inner.file_size - inner.offset;
-        let len = if remain < data.len() { remain } else { data.len() };
-        data[..len].copy_from_slice(&inner.buf[inner.offset..inner.offset + len]);
-        inner.offset += len;
-        len
-    }
-
-    fn write(&self, data: &[u8], count: usize) -> usize {
-        let mut inner = self.0.borrow_mut();
-        if inner.file_type == FileType::File {
-            let end = inner.offset + count;
-            if end >= inner.mem_size {
-                panic!("无法写入超出部分");
-            }
-            let start = inner.offset;
-            inner.buf[start..end].copy_from_slice(&data);
-            inner.offset += count;
-            // 需要更新文件数据
-            if inner.offset >= inner.file_size {
-                inner.file_size = inner.offset;
-                let _file_size = inner.file_size;
-                let _inode = inner.file.0.borrow_mut();
-            }
-            count
-        } else {
-            // 写入虚拟文件
-            count
-        }
-    }
-
     fn read_at(&self, pos: usize, data: &mut [u8]) -> usize {
         let inner = self.0.borrow_mut();
         let remain = inner.file_size - pos;
@@ -247,44 +212,33 @@ impl FileOP for File {
         len
     }
 
-    fn write_at(&self, _pos: usize, _data: &[u8], _count: usize) -> usize {
-        todo!()
+    fn write_at(&self, pos: usize, data: &[u8], count: usize) -> usize {
+        let mut inner = self.0.borrow_mut();
+        if inner.file_type == FileType::File {
+            let end = pos + count;
+            if end >= inner.mem_size {
+                panic!("无法写入超出部分");
+            }
+
+            let start = pos;
+            inner.buf[start..end].copy_from_slice(&data);
+
+            // inner.offset += count;
+            // // 需要更新文件数据
+            // if inner.offset >= inner.file_size {
+            //     inner.file_size = inner.offset;
+            //     let _file_size = inner.file_size;
+            //     let _inode = inner.file.0.borrow_mut();
+            // }
+            count
+        } else {
+            // 写入虚拟文件
+            count
+        }
     }
 
     fn get_size(&self) -> usize {
         self.0.borrow_mut().file_size
-    }
-
-    fn lseek(&self, offset: usize, whence: usize) -> usize {
-        let mut inner = self.0.borrow_mut();
-
-        if offset > 0x80000 {
-            return offset;
-        }
-        inner.offset = match whence {
-            // SEEK_SET
-            0 => { 
-                if offset < inner.file_size {
-                    offset
-                } else {
-                    inner.file_size
-                }
-            }
-            // SEEK_CUR
-            1 => { 
-                if inner.offset + offset < inner.file_size {
-                    inner.offset + offset
-                } else {
-                    inner.file_size
-                }
-            }
-            // SEEK_END
-            2 => {
-                inner.file_size + offset
-            }
-            _ => { 0 }
-        };
-        inner.offset
     }
 }
 

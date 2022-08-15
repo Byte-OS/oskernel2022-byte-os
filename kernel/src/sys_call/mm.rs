@@ -69,7 +69,6 @@ impl Task {
         if flags.contains(MapFlags::MAP_FIXED) {
             warn!("contains: fixed");
         }
-
         if fd == FD_NULL {
             todo!()
         } else if fd == FD_RANDOM {

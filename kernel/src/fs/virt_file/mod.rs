@@ -1,4 +1,4 @@
-use alloc::string::{String, ToString};
+use alloc::string::String;
 
 use crate::{memory::mem_set::MemSet, interrupt::timer::TimeSpec};
 
@@ -37,27 +37,15 @@ impl FileOP for VirtFile {
         true
     }
 
-    fn read(&self, data: &mut [u8]) -> usize {
-        self.read_at(0, data)
-    }
-
-    fn write(&self, data: &[u8], count: usize) -> usize {
-        self.write_at(0, data, count)
-    }
-
     fn read_at(&self, pos: usize, data: &mut [u8]) -> usize {
         todo!()
     }
 
     fn write_at(&self, pos: usize, data: &[u8], count: usize) -> usize {
-        todo!()
+        todo!("not implemente write virt_file")
     }
 
     fn get_size(&self) -> usize {
         self.file_size
-    }
-
-    fn lseek(&self, offset: usize, whence: usize) -> usize {
-        todo!()
     }
 }
