@@ -429,14 +429,13 @@ impl Task {
             Trap::Exception(Exception::StorePageFault) | Trap::Exception(Exception::StoreFault) => {
                 error!("缺页中断触发 缺页地址: {:#x} 触发地址:{:#x} 已同步映射", stval, context.sepc);
                 drop(context);
-                if stval > 0xf0000000 && stval < 0xf00010000 {
+                if stval > 0xef00_0000 && stval < 0xf00010000 {
                     error!("处理缺页中断;");
                     let mut process = task_inner.process.borrow_mut();
                     process.stack.alloc_until(stval)?;
                 } else {
                     panic!("无法 恢复的缺页中断");
                 }
-                // panic!("系统终止");
             },
             // 用户请求
             Trap::Exception(Exception::UserEnvCall) => {

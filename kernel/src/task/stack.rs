@@ -134,14 +134,13 @@ impl UserStack {
     }
 
     pub fn alloc_until(&mut self, until_addr: usize) -> Result<(), RuntimeError> {
-        if until_addr < self.top {
-            let start_page = until_addr / PAGE_SIZE;
-            let end_page = self.top / PAGE_SIZE;
-            let mem_map = MemMap::new(start_page.into(), end_page - start_page, PTEFlags::UVRWX)?;
+        loop {
+            if until_addr >= self.top { break; }
+            let start_page = self.top / PAGE_SIZE - 1;
+            let mem_map = MemMap::new(start_page.into(), 1, PTEFlags::UVRWX)?;
             self.pmm.add_mapping_by_map(&mem_map)?;
-            info!("start value: {:#x}  end: {:#x}", VirtAddr::from(mem_map.vpn).0,
-                VirtAddr::from(mem_map.vpn + VirtPageNum::from(end_page - start_page)).0);
             self.mem_set.inner().push(mem_map);
+            self.top -= PAGE_SIZE;
         }
         Ok(())
     }
