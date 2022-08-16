@@ -119,6 +119,8 @@ pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
     let lmbench_all = INode::get(None, "lmbench_all").expect("can't find busybox");
     lmbench_all.linkat("sbin/lmbench_all");
     lmbench_all.linkat("bin/lmbench_all");
+    let lmbench_all = INode::get(None, "busybox_cmd.txt").expect("can't find busybox");
+    lmbench_all.linkat("var/tmp/XXX");
 
     INode::root().add(INode::new("proc".to_string(), 
         DiskFileEnum::None, FileType::Directory, None));
