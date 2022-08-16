@@ -37,8 +37,8 @@ lazy_static! {
         // "lmbench_all lat_select -n 100 -P 1 file",
         // "lmbench_all lat_sig -P 1 install",
         // "lmbench_all lat_ctx -P 1 -s 32 2 4 8 16 24 32 64 96",
+        // "lmbench_all lat_sig -P 1 catch",
 
-        // "lmbench_all lat_sig -P 1 catch",    // 暂时出问题
         // "lmbench_all lat_sig -P 1 prot lat_sig", // 暂时出问题
         // "lmbench_all lat_pipe -P 1", // 暂时出问题
         // "lmbench_all lat_proc -P 1 fork",    // 暂时出问题
