@@ -1,3 +1,5 @@
+use core::arch::asm;
+
 use alloc::collections::VecDeque;
 use alloc::rc::Rc;
 use crate::sync::mutex::Mutex;
@@ -49,6 +51,12 @@ impl TaskScheduler {
             if self.queue.len() == 0 {
                 if !load_next_task() {
                     break;
+                }
+                unsafe {
+                    // 为什么需要缓冲？
+                    for i in 0..10 {
+                        asm!("nop");
+                    }
                 }
             }
             // TODO: 判断是否存在等待中的任务 如果存在就切换任务
