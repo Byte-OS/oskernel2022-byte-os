@@ -1,7 +1,6 @@
 use alloc::rc::Rc;
 use alloc::string::ToString;
 use crate::fs::StatFS;
-use crate::fs::file::File;
 use crate::fs::file::FileOP;
 use crate::fs::file::FileType;
 use crate::fs::specials::dev_rtc::DevRtc;
@@ -14,7 +13,6 @@ use crate::interrupt::timer::TimeSpec;
 use crate::memory::addr::UserAddr;
 use crate::task::fd_table::FileDesc;
 use crate::task::fd_table::IoVec;
-use crate::task::pipe::PipeWriter;
 use crate::task::task::Task;
 use crate::task::fd_table::FD_NULL;
 use crate::task::pipe::new_pipe;
@@ -362,7 +360,7 @@ impl Task {
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
         
-        let mut fd = process.fd_table.get(fd)?;
+        let fd = process.fd_table.get(fd)?;
         let mut cnt = 0;
         for i in iov_vec {
             // let buf = get_buf_from_phys_addr(i.iov_base, 
@@ -476,7 +474,7 @@ impl Task {
         let mut inner = self.inner.borrow_mut();
         let mut process = inner.process.borrow_mut();
 
-        let mut file = process.fd_table.get(fd)?;
+        let file = process.fd_table.get(fd)?;
         let offset = file.lseek(offset, whence);
         // debug!("lseek Filename: {}", file.get_inode().get_filename());
         // let inode = file.get_inode();

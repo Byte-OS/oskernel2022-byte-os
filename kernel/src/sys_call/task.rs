@@ -1,14 +1,10 @@
 use alloc::vec::Vec;
 use alloc::string::String;
-use alloc::rc::{Rc, Weak};
-use hashbrown::HashMap;
-use k210_pac::i2c0::con;
+use alloc::rc::Rc;
 use crate::get_free_page_num;
 
 use crate::interrupt::timer::TimeSpec;
 use crate::task::task_scheduler::{add_task_to_scheduler, get_task, get_task_num};
-use crate::task::task_scheduler::switch_next;
-use crate::task::task_scheduler::get_current_task;
 use crate::task::process::Process;
 use crate::task::pid::get_next_pid;
 use crate::task::task::{Task, Rusage};
@@ -16,7 +12,6 @@ use crate::task::exec_with_process;
 use crate::runtime_err::RuntimeError;
 use crate::memory::addr::UserAddr;
 
-use crate::sync::mutex::Mutex;
 use crate::task::task::TaskStatus;
 
 use super::{UTSname, CloneFlags};
@@ -60,7 +55,7 @@ impl Task {
         match &process.parent {
             Some(parent) => {
                 let parent = parent.upgrade().unwrap();
-                let parent = parent.borrow();
+                let _parent = parent.borrow();
 
                 // let end: UserAddr<TimeSpec> = 0x10bb78.into();
                 // let start: UserAddr<TimeSpec> = 0x10bad0.into();
@@ -203,7 +198,7 @@ impl Task {
         Err(RuntimeError::ChangeTask)
     }
 
-    pub fn sys_spec_fork(&self, flags: usize, new_sp: usize, ptid: UserAddr<u32>, tls: usize, ctid_ptr: UserAddr<u32>) -> Result<(), RuntimeError>{
+    pub fn sys_spec_fork(&self, flags: usize, _new_sp: usize, _ptid: UserAddr<u32>, _tls: usize, ctid_ptr: UserAddr<u32>) -> Result<(), RuntimeError>{
         // return self.sys_fork();
         let flags = CloneFlags::from_bits_truncate(flags);
         let mut inner = self.inner.borrow_mut();
@@ -383,56 +378,56 @@ impl Task {
     }
 
     // wait for futex
-    pub fn sys_futex(&self, uaddr: UserAddr<i32>, op: u32, value: i32, value2: usize, value3: usize) -> Result<(), RuntimeError> {
+    pub fn sys_futex(&self, uaddr: UserAddr<i32>, op: u32, value: i32, _value2: usize, _value3: usize) -> Result<(), RuntimeError> {
         debug!("sys_futex uaddr: {:#x} op: {:#x} value: {:#x}", uaddr.bits(), op, value);
-        let uaddr_ref = uaddr.transfer();
-        let op = FutexFlags::from_bits_truncate(op);
-        let mut inner = self.inner.borrow_mut();
-        let process = inner.process.borrow_mut();
+        // let uaddr_ref = uaddr.transfer();
+        // let op = FutexFlags::from_bits_truncate(op);
+        // let mut inner = self.inner.borrow_mut();
+        // let process = inner.process.borrow_mut();
 
-        let op = op - FutexFlags::PRIVATE;
-        debug!(
-            "Futex uaddr: {:#x}, op: {:?}, val: {:#x}, val2(timeout_addr): {:x}",
-            uaddr.bits(), op, value, value2,
-        );
-        match op {
-            FutexFlags::WAIT => {
-                if *uaddr_ref == value {
-                    drop(process);
-                    debug!("等待进程");
-                    inner.context.x[10] = 0;
-                    inner.status = TaskStatus::WAITING;
-                    drop(inner);
-                    futex_wait(uaddr.bits());
-                    switch_next();
-                } else {
-                    // *uaddr_value -= 1;
-                    drop(process);
-                    inner.context.x[10] = 0;
-                }
-            },
-            FutexFlags::WAKE => {
-                // *uaddr_value = -1;
-                drop(process);
-                debug!("debug for ");
-                // 值为唤醒的线程数
-                let count = futex_wake(uaddr.bits(), value as usize);
-                inner.context.x[10] = count;
-                debug!("wake count : {}", count);
-                drop(inner);
-                switch_next();
-            }
-            FutexFlags::REQUEUE => {
-                drop(process);
-                inner.context.x[10] = 0;
+        // let op = op - FutexFlags::PRIVATE;
+        // debug!(
+        //     "Futex uaddr: {:#x}, op: {:?}, val: {:#x}, val2(timeout_addr): {:x}",
+        //     uaddr.bits(), op, value, value2,
+        // );
+        // match op {
+        //     FutexFlags::WAIT => {
+        //         if *uaddr_ref == value {
+        //             drop(process);
+        //             debug!("等待进程");
+        //             inner.context.x[10] = 0;
+        //             inner.status = TaskStatus::WAITING;
+        //             drop(inner);
+        //             // futex_wait(uaddr.bits());
+        //             switch_next();
+        //         } else {
+        //             // *uaddr_value -= 1;
+        //             drop(process);
+        //             inner.context.x[10] = 0;
+        //         }
+        //     },
+        //     FutexFlags::WAKE => {
+        //         // *uaddr_value = -1;
+        //         drop(process);
+        //         debug!("debug for ");
+        //         // 值为唤醒的线程数
+        //         // let count = futex_wake(uaddr.bits(), value as usize);
+        //         // inner.context.x[10] = count;
+        //         // debug!("wake count : {}", count);
+        //         drop(inner);
+        //         switch_next();
+        //     }
+        //     FutexFlags::REQUEUE => {
+        //         drop(process);
+        //         inner.context.x[10] = 0;
 
-            }
-            _ => todo!(),
-        }
-        if op.contains(FutexFlags::WAKE) {
-            // *uaddr_value = 0;
-            futex_requeue(uaddr.bits(), value as u32, value2, value3 as u32);
-        }
+        //     }
+        //     _ => todo!(),
+        // }
+        // if op.contains(FutexFlags::WAKE) {
+        //     // *uaddr_value = 0;
+        //     // futex_requeue(uaddr.bits(), value as u32, value2, value3 as u32);
+        // }
         Ok(())
     }
 
@@ -459,7 +454,7 @@ impl Task {
         Ok(())
     }
 
-    pub fn sys_getrusage(&self, who: usize, usage: UserAddr<Rusage>) -> Result<(), RuntimeError>{
+    pub fn sys_getrusage(&self, _who: usize, usage: UserAddr<Rusage>) -> Result<(), RuntimeError>{
         let mut inner = self.inner.borrow_mut();
         let usage = usage.transfer();
         usage.ru_stime = TimeSpec::now();
@@ -467,42 +462,4 @@ impl Task {
         inner.context.x[10] = SYS_CALL_ERR;
         Ok(())
     }
-}
-
-lazy_static! {
-    pub static ref WAIT_MAP: Mutex<HashMap<usize, FutexWait>> = Mutex::new(HashMap::new());
-}
-
-pub struct FutexWait {
-    wait_queue: Vec<Weak<Task>>
-}
-
-pub fn futex_wait(addr: usize) {
-    let task = get_current_task().unwrap();
-    let mut wait_map = WAIT_MAP.force_get();
-    let futex_wait = wait_map.entry(addr).or_insert(FutexWait {
-        wait_queue: vec![]
-    });
-    futex_wait.wait_queue.push(Rc::downgrade(&task));
-}
-
-pub fn futex_wake(addr: usize, count: usize) -> usize {
-    let mut wait_map = WAIT_MAP.force_get();
-    match wait_map.get_mut(&addr) {
-        Some(tasks_queue) => {
-            let mut n = 0;
-            if n >= count {
-                return n;
-            }
-            while let Some(_) = tasks_queue.wait_queue.pop() {
-                n+=1;
-            }
-            n
-        }
-        None => 0
-    }
-}
-
-pub fn futex_requeue(_uaddr: usize, nr_wake: u32, _uaddr2: usize, _nr_limit: u32) -> isize {
-    return nr_wake as isize;
 }

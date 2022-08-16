@@ -10,8 +10,6 @@ use crate::memory::addr::get_buf_from_phys_addr;
 use crate::task::fd_table::FD_NULL;
 use crate::task::fd_table::FD_RANDOM;
 
-use super::SYS_CALL_ERR;
-
 impl Task {
     pub fn sys_brk(&self, top_pos: usize) -> Result<(), RuntimeError> {
         let mut inner = self.inner.borrow_mut();

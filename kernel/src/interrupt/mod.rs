@@ -2,7 +2,6 @@ pub mod timer;
 
 use core::arch::global_asm;
 use core::arch::asm;
-use k210_pac::i2c0::con;
 use riscv::register::scause::Trap;
 use riscv::register::scause::Exception;
 use riscv::register::scause::Interrupt;

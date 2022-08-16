@@ -1,5 +1,4 @@
 use core::borrow::Borrow;
-use core::cell::RefCell;
 
 use alloc::rc::Rc;
 use hashbrown::HashMap;

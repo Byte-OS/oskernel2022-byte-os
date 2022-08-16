@@ -1,4 +1,3 @@
-use crate::memory::addr::VirtPageNum;
 use alloc::vec::Vec;
 use alloc::collections::BTreeMap;
 use alloc::rc::Rc;

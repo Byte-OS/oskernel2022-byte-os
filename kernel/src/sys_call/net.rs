@@ -1,14 +1,11 @@
 
-use alloc::collections::BTreeMap;
 use alloc::collections::VecDeque;
-
 use alloc::rc::Rc;
 use core::cell::RefCell;
 use crate::fs::file::FileOP;
 use crate::fs::file::fcntl_cmd;
 use crate::memory::addr::UserAddr;
 use crate::runtime_err::RuntimeError;
-use crate::sync::mutex::Mutex;
 use crate::task::fd_table::FileDesc;
 use crate::task::task::Task;
 
@@ -27,20 +24,6 @@ impl SocketFile {
         Rc::new(SocketFile(RefCell::new(VecDeque::new())))
     }
 }
-
-struct SocketDataBuffer {
-    socket_buf: BTreeMap<SocketAddr, Rc<dyn FileOP>>,
-}
-
-impl SocketDataBuffer {
-    const fn new() -> Self {
-        SocketDataBuffer {
-            socket_buf: BTreeMap::new(),
-        }
-    }
-}
-
-static SOCKET_BUF: Mutex<SocketDataBuffer> = Mutex::new(SocketDataBuffer::new());
 
 impl FileOP for SocketFile {
     fn readable(&self) -> bool {
@@ -119,8 +102,8 @@ impl Task {
         Ok(())
     }
 
-    pub fn sys_sendto(&self, fd: usize, buf: UserAddr<u8>, len: usize, _flags: usize,
-                            sa: UserAddr<SocketAddr>, _sa_size: usize) -> Result<(), RuntimeError> {
+    pub fn sys_sendto(&self, _fd: usize, _buf: UserAddr<u8>, _len: usize, _flags: usize,
+                            _sa: UserAddr<SocketAddr>, _sa_size: usize) -> Result<(), RuntimeError> {
         // let sa = sa.transfer();
         // let mut inner = self.inner.borrow_mut();
         // let process = inner.process.borrow_mut();
@@ -136,8 +119,8 @@ impl Task {
         Ok(())
     }
 
-    pub fn sys_recvfrom(&self, _fd: usize, buf: UserAddr<u8>, len: usize, _flags: usize,
-        sa: UserAddr<SocketAddr>, _addr_len: usize) -> Result<(), RuntimeError> {
+    pub fn sys_recvfrom(&self, _fd: usize, _buf: UserAddr<u8>, _len: usize, _flags: usize,
+        _sa: UserAddr<SocketAddr>, _addr_len: usize) -> Result<(), RuntimeError> {
 
         // let sa = sa.transfer();
         // let mut inner = self.inner.borrow_mut();
