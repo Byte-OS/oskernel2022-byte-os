@@ -40,6 +40,8 @@ lazy_static! {
         "lmbench_all lat_proc -P 1 fork",
         "lmbench_all lat_proc -P 1 exec",
         "lmbench_all lat_proc -P 1 shell",
+        "lmbench_all bw_file_rd -P 1 512k io_only /var/tmp/XXX",
+        "lmbench_all bw_file_rd -P 1 512k open2close /var/tmp/XXX",
         // "lmbench_all lat_ctx -P 1 -s 32 2 4 8 16 24 32 64 96",  // 最后执行 可能出现问题
 
         // "lmbench_all lat_sig -P 1 prot lat_sig", // 暂时出问题
@@ -53,8 +55,6 @@ lazy_static! {
         
         // Bandwidth measurements
         // "lmbench_all bw_pipe -P 1",      // 暂时出问题
-        // "lmbench_all bw_file_rd -P 1 512k io_only /var/tmp/XXX",     // 暂时出问题
-        // "lmbench_all bw_file_rd -P 1 512k open2close /var/tmp/XXX",  // 暂时出问题
         // "lmbench_all bw_mmap_rd -P 1 512k mmap_only /var/tmp/XXX",   // 暂时出问题
         // "lmbench_all bw_mmap_rd -P 1 512k open2close /var/tmp/XXX",  // 暂时出问题
 
