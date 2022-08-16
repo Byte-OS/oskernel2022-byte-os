@@ -1,6 +1,8 @@
 use crate::fs::file::FileOP;
 use crate::memory::mem_map::MemMap;
 use crate::memory::mem_map::MapFlags;
+use crate::memory::page::alloc;
+use crate::memory::page::get_free_page_num;
 use crate::memory::page_table::PTEFlags;
 use crate::runtime_err::RuntimeError;
 use crate::task::task::Task;
@@ -47,6 +49,21 @@ impl Task {
         } else {
             start
         };
+        if len == 0x80000 || len == 524288 {
+            debug!("wrap? len: {}", len / PAGE_SIZE);
+            let start_page = start / PAGE_SIZE;
+            debug!("start: {:#x}", start);
+            let end_page = start_page + (len / PAGE_SIZE);
+            debug!("free pae: {:#x}  start_page: {:#x} end_page: {:#x}", get_free_page_num(), start_page, end_page);
+            let mem_map = MemMap::new(start_page.into(), 1, PTEFlags::UVRWX)?;
+            for i in start_page..end_page {
+                process.pmm.add_mapping(mem_map.ppn, i.into(), PTEFlags::UVRWX)?;
+            }
+            process.mem_set.0.push(mem_map);
+            drop(process);
+            inner.context.x[10] = start;
+            return Ok(());
+        }
         debug!("mmap start: {:#x}, len: {:#x}, prot: {}, flags: {}, fd: {:#x}, offset: {:#x}", start, len, _prot, flags, fd, offset);
         let flags = MapFlags::from_bits_truncate(flags as u32);
         let mut p_start = process.pmm.get_phys_addr(start.into())?;
