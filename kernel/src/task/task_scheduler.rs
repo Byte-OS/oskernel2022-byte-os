@@ -1,6 +1,7 @@
 use alloc::collections::VecDeque;
 use alloc::rc::Rc;
 use crate::sync::mutex::Mutex;
+use crate::sys_call::is_vfork_wait;
 use crate::task::pid::PidGenerater;
 use crate::interrupt::timer::task_time_refresh;
 use crate::memory::page_table::switch_to_kernel_page;
@@ -52,6 +53,10 @@ impl TaskScheduler {
             }
             // TODO: 判断是否存在等待中的任务 如果存在就切换任务
             let task = self.queue[0].clone();
+            if is_vfork_wait(task.pid) {
+                switch_next();
+                continue;
+            }
             self.is_run = true;
             warn!("执行pid: {}   tid: {}   tasks len: {}", task.pid, task.tid, self.queue.len());
             task.run();

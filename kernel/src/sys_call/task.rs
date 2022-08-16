@@ -4,6 +4,7 @@ use alloc::rc::Rc;
 use crate::get_free_page_num;
 
 use crate::interrupt::timer::TimeSpec;
+use crate::sys_call::remove_vfork_wait;
 use crate::task::task_scheduler::{add_task_to_scheduler, get_task, get_task_num};
 use crate::task::process::Process;
 use crate::task::pid::get_next_pid;
@@ -14,7 +15,7 @@ use crate::memory::addr::UserAddr;
 
 use crate::task::task::TaskStatus;
 
-use super::{UTSname, CloneFlags};
+use super::{UTSname, CloneFlags, add_vfork_wait};
 use super::SYS_CALL_ERR;
 
 bitflags! {
@@ -55,7 +56,8 @@ impl Task {
         match &process.parent {
             Some(parent) => {
                 let parent = parent.upgrade().unwrap();
-                let _parent = parent.borrow();
+                let parent = parent.borrow();
+                remove_vfork_wait(parent.pid);
 
                 // let end: UserAddr<TimeSpec> = 0x10bb78.into();
                 // let start: UserAddr<TimeSpec> = 0x10bad0.into();
@@ -235,6 +237,7 @@ impl Task {
         drop(child_process);
         drop(inner);
         // Ok(())
+        add_vfork_wait(self.pid);
         Err(RuntimeError::ChangeTask)
     }
     

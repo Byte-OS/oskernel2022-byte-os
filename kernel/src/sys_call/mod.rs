@@ -1,3 +1,4 @@
+use alloc::vec::Vec;
 use riscv::register::scause;
 use riscv::register::scause::Trap;
 use riscv::register::scause::Exception;
@@ -5,6 +6,7 @@ use riscv::register::scause::Interrupt;
 use riscv::register::stval;
 use riscv::register::sstatus;
 use crate::interrupt::timer;
+use crate::sync::mutex::Mutex;
 use crate::sys_call::consts::ENOENT;
 use crate::task::task_scheduler::kill_task;
 use crate::sys_call::consts::EBADF;
@@ -489,6 +491,21 @@ impl Task {
     }
 }
 
-// 0xf000fc40 
-//start_tv: 0x10bb78
-//end_tv: 0x10bad0
+lazy_static! {
+    pub static ref VFORK_WAIT_LIST: Mutex<Vec<usize>> = Mutex::new(Vec::new());
+}
+
+pub fn is_vfork_wait(pid: usize) -> bool {
+    let vfork_wait_list = VFORK_WAIT_LIST.lock();
+    vfork_wait_list.iter().find(|&&x| x == pid).is_some()
+}
+
+pub fn add_vfork_wait(pid: usize) {
+    let mut vfork_wait_list = VFORK_WAIT_LIST.lock();
+    vfork_wait_list.push(pid);
+}
+
+pub fn remove_vfork_wait(pid: usize) {
+    let mut vfork_wait_list = VFORK_WAIT_LIST.lock();
+    vfork_wait_list.drain_filter(|&mut x| x==pid);
+}
