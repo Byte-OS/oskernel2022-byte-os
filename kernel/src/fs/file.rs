@@ -127,7 +127,7 @@ impl File {
                 file_size,
                 buf,
                 mem_size: elf_pages * PAGE_SIZE,
-                mem_map: Some(Rc::new(mem_map)),
+                mem_map: Some(mem_map),
                 file_type: FileType::File
             }))))
             
@@ -152,7 +152,7 @@ impl File {
             file_size,
             buf,
             mem_size: elf_pages * PAGE_SIZE,
-            mem_map: Some(Rc::new(mem_map)),
+            mem_map: Some(mem_map),
             file_type: FileType::File
         }))))
         

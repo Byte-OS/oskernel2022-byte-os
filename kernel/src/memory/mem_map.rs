@@ -1,3 +1,5 @@
+use alloc::rc::Rc;
+
 use crate::memory::page::alloc;
 use crate::runtime_err::RuntimeError;
 
@@ -44,82 +46,82 @@ pub struct MemMap {
 
 impl MemMap {
     // 申请开始页表和页表数量 申请内存
-    pub fn new(vpn: VirtPageNum, page_num: usize, flags: PTEFlags) -> Result<Self, RuntimeError> {
+    pub fn new(vpn: VirtPageNum, page_num: usize, flags: PTEFlags) -> Result<Rc<Self>, RuntimeError> {
         let phys_num_start = alloc_more(page_num)?;
-        Ok(Self {
+        Ok(Rc::new(Self {
             ppn: phys_num_start,
             vpn,
             page_num,
             flags
-        })
+        }))
     }
 
     // 申请开始页表和页表数量 申请内存
-    pub fn new_kernel_buf(page_num: usize) -> Result<Self, RuntimeError> {
+    pub fn new_kernel_buf(page_num: usize) -> Result<Rc<Self>, RuntimeError> {
         let phys_num_start = alloc_more(page_num)?;
-        Ok(Self {
+        Ok(Rc::new(Self {
             ppn: phys_num_start,
             vpn: 0usize.into(),
             page_num,
             flags: PTEFlags::VRWX
-        })
+        }))
     }
 
     // 申请开始页表和页表数量 申请内存
-    pub fn new_virt_file_page() -> Result<Self, RuntimeError> {
+    pub fn new_virt_file_page() -> Result<Rc<Self>, RuntimeError> {
         let phys_num_start = alloc()?;
-        Ok(Self {
+        Ok(Rc::new(Self {
             ppn: phys_num_start,
             vpn: 0usize.into(),
             page_num: 1,
             flags: PTEFlags::VRWX
-        })
+        }))
     }
 
     // 获取pte容器地址
-    pub fn pte_container(ppn: PhysPageNum) -> Self {
-        Self {
+    pub fn pte_container(ppn: PhysPageNum) -> Rc<Self> {
+        Rc::new(Self {
             ppn,
             vpn: VirtPageNum::default(),
             page_num: 1,
             flags: PTEFlags::V
-        }
+        })
     }
 
     // 通过虚拟地址申请内存map
-    pub fn alloc_range(start_va: VirtAddr, end_va: VirtAddr, flags: PTEFlags) -> Result<Self, RuntimeError> {
+    pub fn alloc_range(start_va: VirtAddr, end_va: VirtAddr, flags: PTEFlags) -> Result<Rc<Self>, RuntimeError> {
         let start_page: usize = start_va.0 / PAGE_SIZE * PAGE_SIZE;   // floor get start_page
         let end_page: usize = (end_va.0 + PAGE_SIZE - 1) / PAGE_SIZE;  
         let page_num = end_page - start_page;
         let phys_num_start = alloc_more(page_num)?;
-        Ok(Self {
+        Ok(Rc::new(Self {
             ppn: phys_num_start,
             vpn: VirtPageNum::from(start_va),
             page_num,
             flags
-        })
+        }))
     }
 
     // 添加已经映射的页
-    pub fn exists_page(ppn: PhysPageNum, vpn: VirtPageNum, page_num: usize, flags: PTEFlags) -> Self {
-        Self { 
+    pub fn exists_page(ppn: PhysPageNum, vpn: VirtPageNum, page_num: usize, flags: PTEFlags) -> Rc<Self> {
+        Rc::new(Self { 
             ppn, 
             vpn, 
             page_num, 
             flags
-        }
+        })
     }
 
-    pub fn pte_page(ppn: PhysPageNum) -> Self {
-        Self {
+    pub fn pte_page(ppn: PhysPageNum) -> Rc<Self> {
+        Rc::new(Self {
             ppn,
             vpn: 0usize.into(),
             page_num: 1,
             flags: PTEFlags::V
-        }
+        })
     }
 
-    pub fn clone_with_data(&self) -> Result<Self, RuntimeError> {
+    pub fn clone_with_data(&self) -> Result<Rc<Self>, RuntimeError> {
         let page_num = self.page_num;
         let phys_num_start = alloc_more(page_num)?;
 
@@ -129,18 +131,12 @@ impl MemMap {
         new_data.copy_from_slice(old_data);
 
 
-        Ok(Self {
+        Ok(Rc::new(Self {
             ppn: phys_num_start,
             vpn: self.vpn,
             page_num,
             flags: self.flags.clone()
-        })
-    }
-
-    // 释放map页表资源
-    pub fn release(&self) {
-        // get_buf_from_phys_page(self.ppn, self.page_num).fill(0);
-        dealloc_more(self.ppn, self.page_num);
+        }))
     }
 }
 

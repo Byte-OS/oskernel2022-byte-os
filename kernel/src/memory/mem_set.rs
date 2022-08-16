@@ -1,18 +1,18 @@
-use alloc::vec::Vec;
+use alloc::{vec::Vec, rc::Rc};
 
 use crate::runtime_err::RuntimeError;
 
 use super::mem_map::MemMap;
 
 #[derive(Clone)]
-pub struct MemSet(pub Vec<MemMap>);
+pub struct MemSet(pub Vec<Rc<MemMap>>);
 
 impl MemSet {
     pub fn new() -> Self {
         MemSet(vec![])
     }
 
-    pub fn inner(&mut self) -> &mut Vec<MemMap> {
+    pub fn inner(&mut self) -> &mut Vec<Rc<MemMap>> {
         &mut self.0
     }
 
