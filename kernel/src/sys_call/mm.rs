@@ -57,13 +57,25 @@ impl Task {
             p_start = mem_map.ppn.into();
             process.pmm.add_mapping_by_map(&mem_map)?;
 
+            // let parent = process.parent.clone();
+            // if let Some(parent) = parent.map_or(None, |x| x.upgrade()) {
+            //     let mut parent = parent.borrow_mut();
+            //     parent.pmm.add_mapping_by_map(&mem_map)?;
+            //     parent.mem_set.0.push(mem_map.clone());
+
+            //     let parent = parent.parent.clone();
+            //     if let Some(parent) = parent.map_or(None, |x| x.upgrade()) {
+            //         let mut parent = parent.borrow_mut();
+            //         parent.pmm.add_mapping_by_map(&mem_map)?;
+            //         parent.mem_set.0.push(mem_map.clone());
+
+            //     }
+
+            // }
             process.mem_set.0.push(mem_map);
         }
         let buf = get_buf_from_phys_addr(p_start, len);
-        if start == 0x205000 {
-            debug!("addr :{:#x}", p_start.0);
-            buf[0] = 1;
-        }
+
         if flags.contains(MapFlags::MAP_FIXED) {
             warn!("contains: fixed");
         }

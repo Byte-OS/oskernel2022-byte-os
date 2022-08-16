@@ -38,12 +38,12 @@ lazy_static! {
         "lmbench_all lat_sig -P 1 install",
         "lmbench_all lat_sig -P 1 catch",
         "lmbench_all lat_proc -P 1 fork",
-        "lmbench_all lat_ctx -P 1 -s 32 2 4 8 16 24 32 64 96",  // 最后执行 可能出现问题
+        "lmbench_all lat_proc -P 1 exec",
+        "lmbench_all lat_proc -P 1 shell",
+        // "lmbench_all lat_ctx -P 1 -s 32 2 4 8 16 24 32 64 96",  // 最后执行 可能出现问题
 
         // "lmbench_all lat_sig -P 1 prot lat_sig", // 暂时出问题
         // "lmbench_all lat_pipe -P 1", // 暂时出问题
-        // "lmbench_all lat_proc -P 1 exec",    // 暂时出问题
-        // "lmbench_all lat_proc -P 1 shell",   // 暂时出问题
         // "lmbench_all lmdd label=\"File /var/tmp/XXX write bandwidth:\" of=/var/tmp/XXX move=1m fsync=1 print=3", // 暂时出问题
         // "lmbench_all lat_pagefault -P 1 /var/tmp/XXX",  // 暂时出问题
         // "lmbench_all lat_mmap -P 1 512k /var/tmp/XXX",   // 暂时出问题
@@ -68,7 +68,7 @@ pub fn exec_by_str(str: &'static str) {
     let args: Vec<&str> = str.split(" ").collect();
     if unsafe {LAST_PRO} == args[0] {
         #[cfg(feature = "board_k210")]
-        usleep(100000);
+        usleep(200000);
         unsafe { LAST_PRO = args[0]}
     }
     if let Ok(task) = exec(args[0], args[0..].to_vec()) {

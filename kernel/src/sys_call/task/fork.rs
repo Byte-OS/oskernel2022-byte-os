@@ -1,6 +1,7 @@
 use alloc::{string::String, vec::Vec, rc::Rc};
+use k210_pac::uart1::tar;
 
-use crate::{runtime_err::RuntimeError, sys_call::{SYS_CALL_ERR, CloneFlags, add_vfork_wait}, memory::addr::UserAddr, task::{exec_with_process, task_scheduler::{get_task_num, add_task_to_scheduler}, task::{Task, TaskStatus}, pid::get_next_pid, process::Process}};
+use crate::{runtime_err::RuntimeError, sys_call::{SYS_CALL_ERR, CloneFlags, add_vfork_wait}, memory::{addr::UserAddr, page_table::switch_to_kernel_page}, task::{exec_with_process, task_scheduler::{get_task_num, add_task_to_scheduler}, task::{Task, TaskStatus}, pid::get_next_pid, process::Process}};
 
 impl Task {
 
@@ -157,6 +158,7 @@ impl Task {
         drop(process);
         let process = inner.process.clone();
         drop(inner);
+        switch_to_kernel_page();
         exec_with_process(process.clone(), task, &filename, args.iter().map(AsRef::as_ref).collect())?;
         // process.borrow_mut().new_heap()?;
         self.before_run();
@@ -172,17 +174,52 @@ impl Task {
 
 
         if pid != SYS_CALL_ERR {
+            // let target = 
+            // process.children.iter().find(|&x| x.borrow().pid == pid);
+
+            // if let Some(exit_code) = target.map_or(None, |x| x.borrow().exit_code) {
+            //     if ptr.is_valid() {
+            //         *ptr.transfer() = exit_code as i32;
+            //     }
+
+            //     inner.context.x[10] = pid;
+            //     return Ok(())
+            // }
+
+            
             let target = 
-            process.children.iter().find(|&x| x.borrow().pid == pid);
+                process.children.iter().find(|&x| x.borrow().pid == pid);
 
-            if let Some(exit_code) = target.map_or(None, |x| x.borrow().exit_code) {
-                if ptr.is_valid() {
-                    *ptr.transfer() = exit_code as i32;
+            if let Some(target) = target {
+                let target = target.borrow();
+                if let Some(exit_code) = target.exit_code {
+                    if ptr.is_valid() {
+                        *ptr.transfer() = exit_code as i32;
+                    }
+
+                    debug!("hava task");
+                    
+                    let t_pid = target.pid;
+                    drop(target);
+                    process.children.drain_filter(|x| x.borrow().pid == t_pid);
+
+                    inner.context.x[10] = pid;
+                    return Ok(())
                 }
-
-                inner.context.x[10] = pid;
-                return Ok(())
+            } else {
+                debug!("not hava task");
+                inner.context.x[10] = -10 as isize as usize;
+                return Ok(());
             }
+
+            // if let Some(exit_code) = target.map_or(None, |x| x.borrow().exit_code) {
+            //     if ptr.is_valid() {
+            //         *ptr.transfer() = exit_code as i32;
+            //     }
+
+            //     inner.context.x[10] = pid;
+            //     return Ok(())
+            // }
         } else {
             if process.children.len() == 0 {
                 inner.context.x[10] = -10 as isize as usize;
