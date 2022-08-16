@@ -139,8 +139,6 @@ pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
     // 输出剩余页表
     debug!("剩余页表: {}", get_free_page_num());
 
-    println!("!TEST FINISH!");
-
     // 调用rust api关机
     panic!("正常关机")
 }
