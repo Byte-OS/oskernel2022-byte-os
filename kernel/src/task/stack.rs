@@ -12,7 +12,7 @@ use crate::runtime_err::RuntimeError;
 
 
 pub const PTR_SIZE: usize = 8;
-pub const DEFAULT_STACK_PAGE_NUM: usize = 5;
+pub const DEFAULT_STACK_PAGE_NUM: usize = 40;
 pub const DEFAULT_STACK_ADDR: usize = 0xf0010000;
 
 #[derive(Clone)]

@@ -53,7 +53,7 @@ lazy_static! {
         // "lmbench_all lat_pagefault -P 1 /var/tmp/XXX",  // 暂时出问题
 
         // file system latency
-        // "lmbench_all lat_fs /var/tmp",   // 暂时出问题
+        "lmbench_all lat_fs /var/tmp",   // 暂时出问题
         
         // Bandwidth measurements
         // "lmbench_all bw_pipe -P 1",      // 暂时出问题
