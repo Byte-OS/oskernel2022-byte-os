@@ -105,6 +105,7 @@ impl Task {
         let process = inner.process.borrow_mut();
         // 可能需要更换内存
         // usleep(1000);
+        debug!("执行地址: {:#x}", inner.context.sepc);
         let context_ptr = &inner.context as *const Context as usize;
         // 释放资源
         drop(process);

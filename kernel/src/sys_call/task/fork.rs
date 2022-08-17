@@ -80,9 +80,9 @@ impl Task {
         drop(process);
         drop(child_process);
         drop(inner);
-        // Ok(())
-        add_vfork_wait(self.pid);
-        Err(RuntimeError::ChangeTask)
+        Ok(())
+        // add_vfork_wait(self.pid);
+        // Err(RuntimeError::ChangeTask)
     }
     
     // clone task
@@ -97,8 +97,10 @@ impl Task {
             warn!("sys_clone is calling sys_fork instead, ignoring other args");
             return self.sys_fork();
         } else if flags == 0x1200011 {
-            return self.sys_spec_fork(0x11, new_sp, ptid, tls, ctid_ptr);
+            // return self.sys_spec_fork(0x11, new_sp, ptid, tls, ctid_ptr);
             // return self.sys_fork();
+            self.update_context(|x| x.x[10] = -1 as isize as usize);
+            return Ok(())
         }
 
         debug!(

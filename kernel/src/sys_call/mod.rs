@@ -1,4 +1,7 @@
+use core::arch::asm;
+
 use alloc::vec::Vec;
+use riscv::asm;
 use riscv::register::scause;
 use riscv::register::scause::Trap;
 use riscv::register::scause::Exception;
@@ -386,6 +389,9 @@ impl Task {
         drop(inner);
 
         debug!("handle signal: {}  handler: {:#x}", signal, handler);
+        // unsafe {
+        //     asm!("jr {}", in(reg) handler);
+        // }
         loop {
             self.run();
             if let Err(RuntimeError::SigReturn) = self.interrupt() {
@@ -436,7 +442,14 @@ impl Task {
                     let mut process = task_inner.process.borrow_mut();
                     process.stack.alloc_until(stval)?;
                 } else {
+                    // kill_task(self.pid, self.tid);
+                    // if let Some(parent) = task_inner.process.borrow().parent.clone().map_or(None, |x| x.upgrade()) {
+                    //     remove_vfork_wait(parent.borrow().pid);
+                    //     let task = parent.borrow().tasks[0].upgrade().unwrap().clone();
+                    //     task.signal(17);
+                    // }
                     panic!("无法 恢复的缺页中断");
+                    // return Err(RuntimeError::ChangeTask);
                 }
             },
             // 用户请求
@@ -462,7 +475,22 @@ impl Task {
             },
             // 加载页面错误
             Trap::Exception(Exception::LoadPageFault) => {
-                panic!("加载权限异常 地址:{:#x} 调用地址: {:#x}", stval, context.sepc)
+                // drop(context);
+                // drop(task_inner);
+                // self.signal(11);
+                debug!("加载权限异常 地址:{:#x} 调用地址: {:#x}", stval, context.sepc);
+                // panic!("缺页异常");
+                // kill_task(self.pid, self.tid);
+                // drop(context);
+                // if let Some(parent) = task_inner.process.borrow().parent.clone().map_or(None, |x| x.upgrade()) {
+                //     remove_vfork_wait(parent.borrow().pid);
+                //     // parent.borrow().tasks[0].upgrade().unwrap().before_run();
+                // }
+                // task_inner.process.borrow_mut().exit_code = Some(1);
+                drop(context);
+                drop(task_inner);
+                self.sys_exit_group(0)?;
+                // return Err(RuntimeError::ChangeTask);
             },
             // 页面未对齐错误
             Trap::Exception(Exception::StoreMisaligned) => {

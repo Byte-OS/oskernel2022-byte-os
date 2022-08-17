@@ -28,6 +28,76 @@ impl Task {
                 let parent = parent.upgrade().unwrap();
                 let parent = parent.borrow();
                 remove_vfork_wait(parent.pid);
+                
+                let task = parent.tasks[0].upgrade().unwrap().clone();
+                let mut task_inner = task.inner.borrow_mut();
+
+                task_inner.context.x[10] = -1 as isize as usize;
+
+                debug!("parent:context:
+                ra: {:#},
+                sp: {:#},
+                gp: {:#},
+                tp: {:#},
+                t0: {:#},
+                t1: {:#},
+                t2: {:#},
+                t3: {:#},
+                t4: {:#},
+                t5: {:#},
+                t6: {:#},
+                a0: {:#},
+                a1: {:#},
+                a2: {:#},
+                a3: {:#},
+                a4: {:#},
+                a5: {:#},
+                a6: {:#},
+                a7: {:#},
+                s0: {:#},
+                s1: {:#},
+                s2: {:#},
+                s3: {:#},
+                s4: {:#},
+                s5: {:#},
+                s6: {:#},
+                s7: {:#},
+                s8: {:#},
+                s9: {:#},
+                s10: {:#},
+                s11: {:#}",
+                task_inner.context.x[1],
+                task_inner.context.x[2],
+                task_inner.context.x[3],
+                task_inner.context.x[4],
+                task_inner.context.x[5],
+                task_inner.context.x[6],
+                task_inner.context.x[7],
+                task_inner.context.x[28],
+                task_inner.context.x[29],
+                task_inner.context.x[30],
+                task_inner.context.x[31],
+                task_inner.context.x[10],
+                task_inner.context.x[11],
+                task_inner.context.x[12],
+                task_inner.context.x[13],
+                task_inner.context.x[14],
+                task_inner.context.x[15],
+                task_inner.context.x[16],
+                task_inner.context.x[17],
+                task_inner.context.x[8],
+                task_inner.context.x[9],
+                task_inner.context.x[18],
+                task_inner.context.x[19],
+                task_inner.context.x[20],
+                task_inner.context.x[21],
+                task_inner.context.x[22],
+                task_inner.context.x[23],
+                task_inner.context.x[24],
+                task_inner.context.x[25],
+                task_inner.context.x[26],
+                task_inner.context.x[27],
+            );
 
                 // let end: UserAddr<TimeSpec> = 0x10bb78.into();
                 // let start: UserAddr<TimeSpec> = 0x10bad0.into();
