@@ -7,13 +7,13 @@ const CLOCK_FREQ: usize = 1250000;
 
 #[cfg(feature = "board_k210")]
 // const CLOCK_FREQ: usize = 4030000000 / 62;
-const CLOCK_FREQ: usize = 403000000 / 300;
+const CLOCK_FREQ: usize = 403000000 / 248;
 
 const CHANGE_TASK_TICKS: usize = 10;
 
 // const INTERVAL: usize = CLOCK_FREQ / 100;
 // const INTERVAL: usize = CLOCK_FREQ / 25;
-const INTERVAL: usize = CLOCK_FREQ * 300;
+const INTERVAL: usize = CLOCK_FREQ * 248;
 
 const MSEC_PER_SEC: usize = 1000;
 const NSEC_PER_SEC: usize = 1_000_000_000;
