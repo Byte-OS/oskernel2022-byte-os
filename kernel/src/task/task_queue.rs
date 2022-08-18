@@ -35,6 +35,7 @@ lazy_static! {
         "lmbench_all lat_syscall -P 1 fstat /var/tmp/lmbench",
         "lmbench_all lat_syscall -P 1 open /var/tmp/lmbench",
         "lmbench_all lat_select -n 100 -P 1 file",
+        "lmbench_all lat_fs /var/tmp",   // 暂时出问题
         "lmbench_all lat_sig -P 1 install",
         "lmbench_all lat_sig -P 1 catch",
         "lmbench_all lat_proc -P 1 fork",
@@ -53,7 +54,6 @@ lazy_static! {
         // "lmbench_all lat_pagefault -P 1 /var/tmp/XXX",  // 暂时出问题
 
         // file system latency
-        "lmbench_all lat_fs /var/tmp",   // 暂时出问题
         
         // Bandwidth measurements
         // "lmbench_all bw_pipe -P 1",      // 暂时出问题

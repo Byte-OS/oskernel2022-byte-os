@@ -4,6 +4,9 @@ members = [
     "fatfs",
     "kernel"
 ]
+exclude = [
+    "user"
+]
 # default-members = ["kernel"]
 
 [profile.release]
