@@ -1,4 +1,4 @@
-use crate::{runtime_err::RuntimeError, sys_call::{SYS_CALL_ERR, UTSname}, task::task::{Task, Rusage}, memory::addr::UserAddr, interrupt::timer::TimeSpec};
+use crate::{runtime_err::RuntimeError, sys_call::{SYS_CALL_ERR, UTSname}, task::task::{Task, Rusage}, memory::addr::UserAddr, interrupt::timer::{TimeSpec, TimeVal}};
 
 impl Task {
     // 获取系统信息
@@ -67,8 +67,8 @@ impl Task {
     pub fn sys_getrusage(&self, _who: usize, usage: UserAddr<Rusage>) -> Result<(), RuntimeError>{
         let mut inner = self.inner.borrow_mut();
         let usage = usage.transfer();
-        usage.ru_stime = TimeSpec::now();
-        usage.ru_utime = TimeSpec::now();
+        usage.ru_stime = TimeVal::now();
+        usage.ru_utime = TimeVal::now();
         inner.context.x[10] = SYS_CALL_ERR;
         Ok(())
     }

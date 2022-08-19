@@ -1,6 +1,6 @@
 use core::cell::{RefCell, RefMut};
 use alloc::rc::Rc;
-use crate::interrupt::timer::TimeSpec;
+use crate::interrupt::timer::{TimeSpec, TimeVal};
 use crate::memory::addr::UserAddr;
 use crate::interrupt::Context;
 use crate::task::task_scheduler::kill_task;
@@ -11,8 +11,8 @@ use super::signal::SigSet;
 #[allow(unused)]
 #[derive(Clone, Copy)]
 pub struct Rusage {
-    pub ru_utime: TimeSpec, /* user CPU time used */
-    pub ru_stime: TimeSpec, /* system CPU time used */
+    pub ru_utime: TimeVal, /* user CPU time used */
+    pub ru_stime: TimeVal, /* system CPU time used */
     ru_maxrss: isize,      // 暂不使用
     ru_ixrss: isize,       // 暂不使用
     ru_idrss: isize,       // 暂不使用

@@ -7,15 +7,16 @@ const CLOCK_FREQ: usize = 1250000;
 
 #[cfg(feature = "board_k210")]
 // const CLOCK_FREQ: usize = 4030000000 / 62;
-const CLOCK_FREQ: usize = 403000000 / 250;
+const CLOCK_FREQ: usize = 403000000 / 62;
 
 const CHANGE_TASK_TICKS: usize = 10;
 
 // const INTERVAL: usize = CLOCK_FREQ / 100;
 // const INTERVAL: usize = CLOCK_FREQ / 25;
-const INTERVAL: usize = CLOCK_FREQ * 250;
+const INTERVAL: usize = CLOCK_FREQ;
 
 const MSEC_PER_SEC: usize = 1000;
+const USEC_PER_SEC: usize = 1_000_000;
 const NSEC_PER_SEC: usize = 1_000_000_000;
 
 // tms_utime记录的是进程执行用户代码的时间.
@@ -43,6 +44,23 @@ impl TMS {
 pub struct TimeSpec {
 	pub tv_sec: usize,       /* 秒 */
     pub tv_nsec: usize       /* 纳秒, 范围在0~999999999 */
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct TimeVal {
+	pub tv_sec: usize,       /* 秒 */
+    pub tv_usec: usize       /* 微秒, 范围在0~999999999 */
+}
+
+impl TimeVal {
+    pub fn now() -> Self {
+        let tick = time::read();
+        Self {
+            tv_sec: tick / CLOCK_FREQ,
+            tv_usec: (tick % CLOCK_FREQ) * USEC_PER_SEC / CLOCK_FREQ,
+        }
+    }
 }
 
 impl TimeSpec {
