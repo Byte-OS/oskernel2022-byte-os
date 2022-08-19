@@ -1,7 +1,7 @@
 use crate::runtime_err::RuntimeError;
 use crate::task::task::Task;
 use crate::task::fd_table::FD_CWD;
-use crate::interrupt::timer::{get_time_us, TimeSpec};
+use crate::interrupt::timer::{get_time_us, TimeSpec, NSEC_PER_SEC, get_time_ns};
 use crate::interrupt::timer::TMS;
 use crate::memory::addr::{VirtAddr, UserAddr};
 use crate::fs::filetree::INode;
@@ -15,13 +15,13 @@ impl Task {
 
         // 获取文件参数
         if inner.wake_time == 0 {
-            inner.wake_time = get_time_us() + (req_time.tv_sec * 1000000) as usize + req_time.tv_nsec as usize;
+            inner.wake_time = get_time_ns() + (req_time.tv_sec * NSEC_PER_SEC) as usize + req_time.tv_nsec as usize;
             inner.context.sepc -= 4;
             return Ok(())
         }
         let task_wake_time = inner.wake_time;
 
-        if get_time_us() > task_wake_time {
+        if get_time_ns() > task_wake_time {
             // 到达解锁时间
             inner.wake_time = 0;
         } else {

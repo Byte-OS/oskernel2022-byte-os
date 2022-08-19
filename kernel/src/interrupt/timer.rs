@@ -13,11 +13,11 @@ const CHANGE_TASK_TICKS: usize = 10;
 
 // const INTERVAL: usize = CLOCK_FREQ / 100;
 // const INTERVAL: usize = CLOCK_FREQ / 25;
-const INTERVAL: usize = CLOCK_FREQ;
+pub const INTERVAL: usize = CLOCK_FREQ;
 
-const MSEC_PER_SEC: usize = 1000;
-const USEC_PER_SEC: usize = 1_000_000;
-const NSEC_PER_SEC: usize = 1_000_000_000;
+pub const MSEC_PER_SEC: usize = 1000;
+pub const USEC_PER_SEC: usize = 1_000_000;
+pub const NSEC_PER_SEC: usize = 1_000_000_000;
 
 // tms_utime记录的是进程执行用户代码的时间.
 // tms_stime记录的是进程执行内核代码的时间.
@@ -95,6 +95,10 @@ pub fn get_time_ms() -> usize {
 
 pub fn get_time_us() -> usize {
     time::read() * MSEC_PER_SEC * MSEC_PER_SEC / (CLOCK_FREQ)
+}
+
+pub fn get_time_ns() -> usize {
+    time::read() * MSEC_PER_SEC * NSEC_PER_SEC / (CLOCK_FREQ)
 }
 
 // 下一个任务ticks

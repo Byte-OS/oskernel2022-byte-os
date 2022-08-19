@@ -1,7 +1,6 @@
 use crate::fs::file::FileOP;
 use crate::memory::mem_map::MemMap;
 use crate::memory::mem_map::MapFlags;
-use crate::memory::page::alloc;
 use crate::memory::page::get_free_page_num;
 use crate::memory::page_table::PTEFlags;
 use crate::runtime_err::RuntimeError;
