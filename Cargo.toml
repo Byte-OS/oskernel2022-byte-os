@@ -2,7 +2,9 @@
 members = [
     "device",
     "fatfs",
-    "kernel"
+    "kernel",
+    "kernel-entry",
+    "linux-syscall"
 ]
 # default-members = ["kernel"]
 

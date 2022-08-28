@@ -4,7 +4,7 @@
 TARGET      := riscv64imac-unknown-none-elf
 MODE        ?= release
 MODE_FLAG	:= --target=riscv64imac-unknown-none-elf
-KERNEL_FILE := target/$(TARGET)/$(MODE)/os
+KERNEL_FILE := target/$(TARGET)/$(MODE)/kernel-entry
 BIN_FILE    := target/$(TARGET)/$(MODE)/kernel.bin
 DEBUG_FILE  ?= $(KERNEL_FILE)
 FEATURES	?= 
@@ -22,7 +22,7 @@ BOOTLOADER_K210 := bootloader/rustsbi-k210.bin
 K210-SERIALPORT	= /dev/ttyUSB0
 K210-BURNER	= tools/kflash.py
 
-LINK_FILE_DIR = kernel/src
+LINK_FILE_DIR = kernel-entry/src
 
 ifeq ($(MODE), release)
 MODE_FLAG += --release

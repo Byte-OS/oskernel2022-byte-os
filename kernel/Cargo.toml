@@ -1,5 +1,5 @@
 [package]
-name = "os"
+name = "kernel"
 version = "0.1.0"
 edition = "2021"
 
@@ -38,3 +38,4 @@ k210-hal = { git = "https://github.com/wyfcyx/k210-hal" }
 k210-soc = { git = "https://github.com/wyfcyx/k210-soc" }
 
 fatfs = { path = "../fatfs" }
+# linux-syscall = { path = "../linux-syscall" }

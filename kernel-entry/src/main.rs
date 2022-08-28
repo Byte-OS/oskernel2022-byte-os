@@ -4,43 +4,28 @@
 #![feature(panic_info_message)]
 #![feature(default_alloc_error_handler)]
 #![allow(unaligned_references)]
-#![feature(const_btree_new)]
-#![feature(drain_filter)]
 
 
-// 使用定义的命令行宏   
 #[macro_use]
-mod console;
-mod device;
-pub mod interrupt;
-mod memory;
-mod fs;
-mod sbi;
-mod panic;
-mod sync;
-pub mod task;
-pub mod runtime_err;
-pub mod elf;
-pub mod sys_call;
-
-#[macro_use]
-extern crate bitflags;
-#[macro_use]
-extern crate lazy_static; 
-#[macro_use]
+extern crate kernel;
 extern crate alloc;
-use core::arch::global_asm;
-
-
-use alloc::{rc::Rc, string::ToString};
-use riscv::register::sstatus;
-use crate::fs::filetree::INode;
-use crate::fs::filetree::DiskFileEnum;
-use crate::fs::file::FileType;
-use crate::fs::cache::cache_file;
-use crate::memory::page::get_free_page_num;
 mod virtio_impl;
 
+use core::arch::global_asm;
+use alloc::rc::Rc;
+use alloc::string::ToString;
+use kernel::fs::cache::cache_file;
+use kernel::fs::file::FileType;
+use kernel::fs::filetree::DiskFileEnum;
+use kernel::fs::filetree::INode;
+use kernel::memory;
+use kernel::interrupt;
+use kernel::device;
+use kernel::fs;
+use kernel::memory::page::get_free_page_num;
+use kernel::task;
+use riscv::register::sstatus;
+use kernel::sbi;
 
 global_asm!(include_str!("entry.asm"));
 
