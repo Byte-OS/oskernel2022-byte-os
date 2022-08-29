@@ -5,6 +5,7 @@ extern crate kernel;
 #[macro_use]
 extern crate lazy_static; 
 
+mod task;
 mod pid;
 
 use core::arch::asm;
