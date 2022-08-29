@@ -1,9 +1,8 @@
 use core::cell::{RefCell, RefMut};
 use alloc::rc::Rc;
-use crate::interrupt::timer::{TimeSpec, TimeVal};
+use crate::interrupt::timer::TimeVal;
 use crate::memory::addr::UserAddr;
 use crate::interrupt::Context;
-use crate::task::task_scheduler::kill_task;
 
 use super::process::Process;
 use super::signal::SigSet;

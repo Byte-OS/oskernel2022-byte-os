@@ -23,9 +23,8 @@ use kernel::interrupt;
 use kernel::device;
 use kernel::fs;
 use kernel::memory::page::get_free_page_num;
-use kernel::task;
 use riscv::register::sstatus;
-use kernel::sbi;
+use task_scheduler::start_tasks;
 
 global_asm!(include_str!("entry.asm"));
 
@@ -118,8 +117,9 @@ pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
         cache_file("lmbench_all");
     }
 
-    // 初始化多任务
-    task::init();
+    // // 初始化多任务
+    // task::init();
+    start_tasks();
 
     // 输出剩余页表
     debug!("剩余页表: {}", get_free_page_num());

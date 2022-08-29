@@ -12,7 +12,6 @@ use super::task::Task;
 use super::task::TaskStatus;
 use super::stack::UserStack;
 use super::fd_table::FDTable;
-use super::task_scheduler::kill_process;
 use super::signal::SigAction;
 use super::user_heap::UserHeap;
 

@@ -4,7 +4,8 @@ members = [
     "fatfs",
     "kernel",
     "kernel-entry",
-    "linux-syscall"
+    "linux-syscall",
+    "task_scheduler"
 ]
 # default-members = ["kernel"]
 

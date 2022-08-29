@@ -1,5 +1,4 @@
 use alloc::{vec::Vec, collections::VecDeque};
-use k210_soc::sleep::usleep;
 
 use crate::sync::mutex::Mutex;
 use crate::memory::page::get_free_page_num;
@@ -24,16 +23,9 @@ lazy_static! {
     ]));
 }
 
-pub static mut LAST_PRO: &str = "";
-
 pub fn exec_by_str(str: &'static str) {
     debug!("执行任务: {}", str);
     let args: Vec<&str> = str.split(" ").collect();
-    if unsafe {LAST_PRO} == args[0] {
-        #[cfg(feature = "board_k210")]
-        usleep(200000);
-        unsafe { LAST_PRO = args[0]}
-    }
     if let Ok(task) = exec(args[0], args[0..].to_vec()) {
         task.before_run();
         add_task_to_scheduler(task);

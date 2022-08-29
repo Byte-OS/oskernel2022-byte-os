@@ -1,15 +1,23 @@
-use core::arch::asm;
+#![no_std]
+extern crate alloc;
+#[macro_use]
+extern crate kernel;
+#[macro_use]
+extern crate lazy_static; 
 
+mod pid;
+
+use core::arch::asm;
 use alloc::collections::VecDeque;
 use alloc::rc::Rc;
-use crate::sync::mutex::Mutex;
-// use crate::sys_call::is_vfork_wait;
-use crate::task::pid::PidGenerater;
-use crate::interrupt::timer::task_time_refresh;
-use crate::memory::page_table::switch_to_kernel_page;
-use super::task::Task;
-use super::task::TaskStatus;
-use super::task_queue::load_next_task;
+use kernel::interrupt::timer::task_time_refresh;
+use kernel::memory::page_table::switch_to_kernel_page;
+use kernel::sync::mutex::Mutex;
+use kernel::task::pid::PidGenerater;
+use kernel::task::task::Task;
+use kernel::task::task::TaskStatus;
+use kernel::task::task_queue::load_next_task;
+use linux_syscall::catch;
 
 // 任务控制器管理器
 pub struct TaskScheduler {

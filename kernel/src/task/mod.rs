@@ -14,34 +14,25 @@ use crate::memory::mem_map::MemMap;
 use crate::memory::page::alloc_more;
 use crate::runtime_err::RuntimeError;
 use crate::task::process::Process;
-use crate::task::task_scheduler::start_tasks;
 use crate::memory::page_table::PTEFlags;
 use crate::memory::addr::PAGE_SIZE;
 use crate::memory::addr::VirtAddr;
 use crate::memory::addr::PhysAddr;
 use self::task::Task;
-use self::task_scheduler::NEXT_PID;
 
 pub mod pipe;
 pub mod task_queue;
 pub mod stack;
 pub mod controller;
-pub mod pid;
 pub mod process;
 pub mod task;
 pub mod signal;
 pub mod fd_table;
-pub mod task_scheduler;
 pub mod user_heap;
 
 pub const STDIN: usize = 0;
 pub const STDOUT: usize = 1;
 pub const STDERR: usize = 2;
-
-// 获取pid
-pub fn get_new_pid() -> usize {
-    NEXT_PID.lock().next()
-}
 
 pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path: &'a str, args: Vec<&'a str>) 
         -> Result<Rc<Task>, RuntimeError> {
@@ -175,10 +166,3 @@ pub fn exec<'a>(path: &'a str, args: Vec<&'a str>) -> Result<Rc<Task>, RuntimeEr
 
 // 包含更换任务代码
 global_asm!(include_str!("change_task.asm"));
-
-// 初始化多任务系统
-pub fn init() {
-    info!("多任务初始化");
-    // run_first();
-    start_tasks();
-}
