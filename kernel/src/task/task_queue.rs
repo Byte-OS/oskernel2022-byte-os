@@ -2,7 +2,7 @@ use alloc::{vec::Vec, collections::VecDeque};
 
 use crate::sync::mutex::Mutex;
 use crate::memory::page::get_free_page_num;
-use crate::task::task_scheduler::add_task_to_scheduler;
+use crate::task::interface::add_task_to_scheduler;
 
 
 use super::exec;
@@ -28,7 +28,7 @@ pub fn exec_by_str(str: &'static str) {
     let args: Vec<&str> = str.split(" ").collect();
     if let Ok(task) = exec(args[0], args[0..].to_vec()) {
         task.before_run();
-        add_task_to_scheduler(task);
+        unsafe { add_task_to_scheduler(task); }
     }
 }
 

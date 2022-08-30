@@ -35,6 +35,8 @@ use fd::stat::sys_fstat;
 use fd::stat::sys_fstatat;
 use fd::stat::sys_getdents;
 use fd::stat::sys_statfs;
+use kernel::task::interface::kill_task;
+use kernel::task::interface::switch_next;
 use mm::sys_brk;
 use mm::sys_mmap;
 use mm::sys_mprotect;
@@ -48,12 +50,10 @@ use riscv::register::stval;
 use riscv::register::sstatus;
 use kernel::interrupt::timer;
 use kernel::sync::mutex::Mutex;
-use kernel::task::task_scheduler::kill_task;
 use kernel::interrupt::timer::set_last_ticks;
 use kernel::runtime_err::RuntimeError;
 use kernel::task::signal::SignalUserContext;
 use kernel::task::task::Task;
-use kernel::task::task_scheduler::switch_next;
 use signal::sys_sigaction;
 use signal::sys_sigprocmask;
 use signal::sys_sigreturn;
@@ -375,7 +375,7 @@ pub fn catch(task: SyscallTask) {
     if let Err(err) = result {
         match err {
             RuntimeError::KillCurrentTask => {
-                kill_task(task.pid, task.tid);
+                unsafe { kill_task(task.pid, task.tid); }
             }
             RuntimeError::NoEnoughPage => {
                 panic!("No Enough Page");
@@ -396,7 +396,7 @@ pub fn catch(task: SyscallTask) {
                 inner.context.x[10] = EBADF;
             }
             // 统一处理任务切换
-            RuntimeError::ChangeTask => switch_next(),
+            RuntimeError::ChangeTask => unsafe { switch_next() },
             _ => {
                 warn!("异常: {:?}", err);
             }

@@ -1,6 +1,6 @@
 use alloc::{string::String, vec::Vec, rc::Rc};
 
-use kernel::{runtime_err::RuntimeError, memory::{addr::UserAddr, page_table::switch_to_kernel_page}, task::{exec_with_process, task_scheduler::{get_task_num, add_task_to_scheduler}, task::{Task, TaskStatus}, pid::get_next_pid, process::Process}};
+use kernel::{runtime_err::RuntimeError, memory::{addr::UserAddr, page_table::switch_to_kernel_page}, task::{exec_with_process, task::{Task, TaskStatus}, process::Process, interface::{add_task_to_scheduler, get_new_pid}}};
 use crate::{SYS_CALL_ERR, CloneFlags, add_vfork_wait};
 
 use crate::SyscallTask;
@@ -18,13 +18,13 @@ pub fn sys_fork(task: SyscallTask) -> Result<(), RuntimeError> {
     let mut process = process.borrow_mut();
 
     let (child_process, child_task) =
-        Process::new(get_next_pid(), Some(Rc::downgrade(&inner.process)))?;
+        Process::new(unsafe { get_new_pid() }, Some(Rc::downgrade(&inner.process)))?;
     process.children.push(child_process.clone());
     let mut child_task_inner = child_task.inner.borrow_mut();
     child_task_inner.context.clone_from(&inner.context);
     child_task_inner.context.x[10] = 0;
     drop(child_task_inner);
-    add_task_to_scheduler(child_task.clone());
+    unsafe { add_task_to_scheduler(child_task.clone()); }
     let cpid = child_task.pid;
     inner.context.x[10] = cpid;
     let mut child_process = child_process.borrow_mut();
@@ -50,7 +50,7 @@ pub fn sys_spec_fork(task: SyscallTask, flags: usize, _new_sp: usize, _ptid: Use
     let mut inner = task.inner.borrow_mut();
     let process = inner.process.clone();
 
-    let cpid = get_next_pid();
+    let cpid = unsafe { get_new_pid() };
     let (child_process, child_task) =
         Process::fork(cpid, process.clone())?;
     
@@ -62,7 +62,7 @@ pub fn sys_spec_fork(task: SyscallTask, flags: usize, _new_sp: usize, _ptid: Use
     child_task_inner.context.x[10] = 0;
     drop(child_task_inner);
 
-    add_task_to_scheduler(child_task.clone());
+    unsafe { add_task_to_scheduler(child_task.clone()); }
 
     let mut child_process = child_process.borrow_mut();
     child_process.stack = process.stack.clone_with_data(child_process.pmm.clone())?;
@@ -119,11 +119,11 @@ pub fn sys_clone(task: SyscallTask, flags: usize, new_sp: usize, ptid: UserAddr<
     new_task_inner.context.x[2] = new_sp;
     new_task_inner.context.x[4] = tls;
     new_task_inner.context.x[10] = 0;
-    add_task_to_scheduler(new_task.clone());
+    unsafe { add_task_to_scheduler(new_task.clone()); }
     // 添加到process
     inner.context.x[10] = ctid;
     
-    debug!("tasks: len {}", get_task_num());
+    // debug!("tasks: len {}", get_task_num());
 
     drop(new_task_inner);
     drop(inner);

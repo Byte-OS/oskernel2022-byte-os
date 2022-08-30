@@ -25,6 +25,7 @@ use kernel::fs;
 use kernel::memory::page::get_free_page_num;
 use riscv::register::sstatus;
 use task_scheduler::start_tasks;
+use kernel::sbi;
 
 global_asm!(include_str!("entry.asm"));
 

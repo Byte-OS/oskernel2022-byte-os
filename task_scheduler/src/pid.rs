@@ -1,3 +1,5 @@
+use crate::NEXT_PID;
+
 // PID生成器
 pub struct PidGenerater(usize);
 
@@ -14,6 +16,7 @@ impl PidGenerater {
     }
 }
 
-pub fn get_next_pid() -> usize {
+#[no_mangle]
+pub fn get_new_pid() -> usize {
     NEXT_PID.lock().next()
 }

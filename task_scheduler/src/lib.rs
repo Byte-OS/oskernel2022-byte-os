@@ -14,11 +14,12 @@ use alloc::rc::Rc;
 use kernel::interrupt::timer::task_time_refresh;
 use kernel::memory::page_table::switch_to_kernel_page;
 use kernel::sync::mutex::Mutex;
-use kernel::task::pid::PidGenerater;
 use kernel::task::task::Task;
 use kernel::task::task::TaskStatus;
 use kernel::task::task_queue::load_next_task;
 use linux_syscall::catch;
+
+use crate::pid::PidGenerater;
 
 // 任务控制器管理器
 pub struct TaskScheduler {
@@ -99,6 +100,7 @@ lazy_static! {
     pub static ref NEXT_PID: Mutex<PidGenerater> = Mutex::new(PidGenerater::new());
 }
 
+#[no_mangle]
 pub fn start_tasks() {
     // 刷新下一个调度时间
     // info!("开始任务");
@@ -109,18 +111,22 @@ pub fn start_tasks() {
     // 切换到内核页表
 }
 
+#[no_mangle]
 pub fn add_task_to_scheduler(task: Rc<Task>) {
     TASK_SCHEDULER.force_get().add_task(task);
 }
 
+#[no_mangle]
 pub fn kill_process(pid: usize) {
     TASK_SCHEDULER.force_get().kill_process(pid);
 }
 
+#[no_mangle]
 pub fn kill_task(pid: usize, tid: usize) {
     TASK_SCHEDULER.force_get().kill_task(pid, tid);
 }
 
+#[no_mangle]
 pub fn switch_next() {
     TASK_SCHEDULER.force_get().switch_next();
 }
@@ -132,6 +138,7 @@ pub fn get_current_task() -> Option<Rc<Task>> {
     }
 }
 
+#[no_mangle]
 pub fn get_task(pid: usize, tid: usize) -> Option<Rc<Task>> {
     let task_scheduler = TASK_SCHEDULER.force_get();
     for i in 0..task_scheduler.queue.len() {

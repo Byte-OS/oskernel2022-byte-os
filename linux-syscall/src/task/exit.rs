@@ -1,7 +1,6 @@
 use kernel::memory::page::get_free_page_num;
-use kernel::{
-    task::task_scheduler::get_task, 
-    runtime_err::RuntimeError};
+use kernel::runtime_err::RuntimeError;
+use kernel::task::interface::get_task;
 use crate::{remove_vfork_wait, SYS_CALL_ERR, signal};
 
 
@@ -74,7 +73,7 @@ pub fn sys_kill(task: SyscallTask, _pid: usize, _signum: usize) -> Result<(), Ru
 pub fn sys_tkill(task: SyscallTask, tid: usize, signum: usize) -> Result<(), RuntimeError> {
     let mut inner = task.inner.borrow_mut();
     inner.context.x[10] = 0;
-    let signal_task = get_task(task.pid, tid);
+    let signal_task = unsafe { get_task(task.pid, tid) };
     debug!("signum: {}", signum);
     if let Some(signal_task) = signal_task {
         drop(inner);
@@ -85,7 +84,7 @@ pub fn sys_tkill(task: SyscallTask, tid: usize, signum: usize) -> Result<(), Run
 
 pub fn sys_tgkill(task: SyscallTask, tgid: usize, tid: usize, signum: usize) -> Result<(), RuntimeError> {
     debug!("tgkill: tgid: {}  tid: {}  signum {}", tgid, tid, signum);
-    if let Some(task) = get_task(tgid, tid) {
+    if let Some(task) = unsafe { get_task(tgid, tid) } {
         signal(task, signum)?;
     } else {
         task.update_context(|x| x.x[10] = SYS_CALL_ERR);

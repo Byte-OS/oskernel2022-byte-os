@@ -18,6 +18,7 @@ use crate::memory::page_table::PTEFlags;
 use crate::memory::addr::PAGE_SIZE;
 use crate::memory::addr::VirtAddr;
 use crate::memory::addr::PhysAddr;
+use self::interface::get_new_pid;
 use self::task::Task;
 
 pub mod pipe;
@@ -29,6 +30,7 @@ pub mod task;
 pub mod signal;
 pub mod fd_table;
 pub mod user_heap;
+pub mod interface;
 
 pub const STDIN: usize = 0;
 pub const STDOUT: usize = 1;
@@ -160,9 +162,10 @@ pub fn exec_with_process<'a>(process: Rc<RefCell<Process>>, task: Rc<Task>, path
 // 执行一个程序 path: 文件名 思路：加入程序准备池  等待执行  每过一个时钟周期就执行一次
 pub fn exec<'a>(path: &'a str, args: Vec<&'a str>) -> Result<Rc<Task>, RuntimeError> { 
     // 创建新的任务控制器 并映射栈
-    let (process, task) = Process::new(get_new_pid(), None)?;
+    let (process, task) = Process::new(unsafe { get_new_pid() }, None)?;
     exec_with_process(process, task, path, args)
 }
 
 // 包含更换任务代码
 global_asm!(include_str!("change_task.asm"));
+

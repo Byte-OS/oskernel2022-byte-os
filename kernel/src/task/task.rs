@@ -4,6 +4,7 @@ use crate::interrupt::timer::TimeVal;
 use crate::memory::addr::UserAddr;
 use crate::interrupt::Context;
 
+use super::interface::kill_task;
 use super::process::Process;
 use super::signal::SigSet;
 
@@ -49,6 +50,7 @@ pub struct TaskInner {
 }
 
 #[derive(Clone)]
+#[repr(C)]
 pub struct Task {
     pub tid: usize,
     pub pid: usize,
@@ -79,7 +81,7 @@ impl Task {
 
     // 退出进程
     pub fn exit(&self) {
-        kill_task(self.pid, self.tid);
+        unsafe { kill_task(self.pid, self.tid); }
     }
 
     // 设置 tid ptr

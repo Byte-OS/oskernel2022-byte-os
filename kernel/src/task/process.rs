@@ -8,6 +8,7 @@ use crate::memory::addr::VirtAddr;
 use crate::runtime_err::RuntimeError;
 use crate::interrupt::timer::TMS;
 use crate::fs::filetree::INode;
+use super::interface::kill_process;
 use super::task::Task;
 use super::task::TaskStatus;
 use super::stack::UserStack;
@@ -124,7 +125,7 @@ impl Process {
         // 如果没有子进程
         self.exit_code = Some(exit_code);
         // 进程回收
-        kill_process(self.pid);
+        unsafe { kill_process(self.pid); }
     }
 
     // 重置内存信息
