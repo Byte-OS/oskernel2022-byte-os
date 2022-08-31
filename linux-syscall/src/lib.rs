@@ -396,7 +396,9 @@ pub fn catch(task: SyscallTask) {
                 inner.context.x[10] = EBADF;
             }
             // 统一处理任务切换
-            RuntimeError::ChangeTask => unsafe { switch_next() },
+            RuntimeError::ChangeTask => unsafe { 
+                switch_next() 
+            },
             _ => {
                 warn!("异常: {:?}", err);
             }

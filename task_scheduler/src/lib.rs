@@ -62,19 +62,9 @@ impl TaskScheduler {
                 if !load_next_task() {
                     break;
                 }
-                unsafe {
-                    // 为什么需要缓冲？
-                    for i in 0..10 {
-                        asm!("nop");
-                    }
-                }
             }
             // TODO: 判断是否存在等待中的任务 如果存在就切换任务
             let task = self.queue[0].clone();
-            // if is_vfork_wait(task.pid) {
-            //     switch_next();
-            //     continue;
-            // }
             self.is_run = true;
             warn!("执行pid: {}   tid: {}   tasks len: {}", task.pid, task.tid, self.queue.len());
             task.run();

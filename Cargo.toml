@@ -1,9 +1,9 @@
 [workspace]
 members = [
+    "kernel-entry",
+    "kernel",
     "device",
     "fatfs",
-    "kernel",
-    "kernel-entry",
     "linux-syscall",
     "task_scheduler"
 ]
