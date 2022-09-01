@@ -5,7 +5,6 @@ extern crate output;
 #[macro_use]
 extern crate lazy_static; 
 
-mod task;
 mod pid;
 
 use alloc::collections::VecDeque;
@@ -23,7 +22,6 @@ use crate::pid::PidGenerater;
 // 任务控制器管理器
 pub struct TaskScheduler {
     pub queue: VecDeque<Rc<Task>>,          // 准备队列
-    pub is_run: bool                    // 任务运行标志
 }
 
 impl TaskScheduler {
@@ -31,56 +29,8 @@ impl TaskScheduler {
     pub fn new() -> Self {
         Self {
             queue: VecDeque::new(),
-            is_run: false
         }
     }
-
-    // 添加任务调度器
-    pub fn add_task(&mut self, task: Rc<Task>) {
-        self.queue.push_back(task.clone());
-    }
-
-    // 执行下一个任务
-    pub fn switch_next(&mut self) {
-        if let Some(task) = self.queue.pop_front() {
-            // task.before_run();
-            task.inner.borrow_mut().status = TaskStatus::READY;
-            self.queue.push_back(task);
-            self.queue[0].before_run();
-        }
-        task_time_refresh();     
-    }
-
-    // 执行第一个任务
-    /// 进行调度更新
-    pub fn start(&mut self) {
-        loop {
-            // 没有任务时从任务队列取出任务
-            if self.queue.len() == 0 {
-                if !load_next_task() {
-                    break;
-                }
-            }
-            // TODO: 判断是否存在等待中的任务 如果存在就切换任务
-            let task = self.queue[0].clone();
-            self.is_run = true;
-            
-            warn!("执行pid: {}   tid: {}   tasks len: {}", task.pid, task.tid, self.queue.len());
-            task.run();
-            catch(task);
-        }
-    }
-
-    // 关闭进程
-    pub fn kill_process(&mut self, pid: usize) {
-        self.queue = self.queue.clone().into_iter().filter(|x| x.pid != pid).collect();
-    }
-
-    // 关闭进程
-    pub fn kill_task(&mut self, pid: usize, tid: usize) {
-        self.queue = self.queue.clone().into_iter().filter(|x| x.pid != pid || x.tid != tid).collect();
-    }
-
 }
 
 lazy_static! {
@@ -89,37 +39,80 @@ lazy_static! {
     pub static ref NEXT_PID: Mutex<PidGenerater> = Mutex::new(PidGenerater::new());
 }
 
+/// 开始任务调度
+/// 
+/// 开始进行任务调度 直到任务全部执行完毕会退出
 #[no_mangle]
 pub fn start_tasks() {
     // 刷新下一个调度时间
-    // info!("开始任务");
     task_time_refresh();
-    let mut task_scheduler = TASK_SCHEDULER.force_get();
-    task_scheduler.start();
+
+    // 此处用force_get， 防止占用后得不到释放导致其他地方无法使用发生死锁
+    let task_scheduler = TASK_SCHEDULER.force_get();
+
+    // 调度开始 直到所有任务执行完毕
+    loop {
+        // 没有任务时从任务队列取出任务
+        if task_scheduler.queue.len() == 0 {
+            if !load_next_task() {
+                break;
+            }
+        }
+        // TODO: 判断是否存在等待中的任务 如果存在就切换任务
+        let task = task_scheduler.queue[0].clone();
+        
+        warn!("执行pid: {}   tid: {}   tasks len: {}", task.pid, task.tid, self.queue.len());
+        task.run();
+        catch(task);
+    }
+
+    // 任务执行完毕 切换到内核页表 继续内核主线程
     switch_to_kernel_page();
-    // 切换到内核页表
 }
 
+/// 添加任务到调度器
+/// 
+/// 将`task`添加到调度器，且优先级应当为当前的最低值
 #[no_mangle]
 pub fn add_task_to_scheduler(task: Rc<Task>) {
-    TASK_SCHEDULER.force_get().add_task(task);
+    TASK_SCHEDULER.lock().queue.push_back(task);
 }
 
+/// 删除线程
+/// 
+/// 根据pid将调度器中属于某个线程的所有任务删除，不再执行
 #[no_mangle]
 pub fn kill_process(pid: usize) {
-    TASK_SCHEDULER.force_get().kill_process(pid);
+    TASK_SCHEDULER.lock().queue.retain(|x| x.pid != pid);
 }
 
+/// 删除任务
+/// 
+/// 根据pid和tid将任务从调度器移除，不再执行
 #[no_mangle]
 pub fn kill_task(pid: usize, tid: usize) {
-    TASK_SCHEDULER.force_get().kill_task(pid, tid);
+    TASK_SCHEDULER.lock().queue.retain(|x| x.pid != pid || x.tid != tid);
 }
 
+/// 切换到下一个任务
+/// 
+/// 进行任务调度，切换到下一个需要执行的任务，并为任务指定相应的时间片
 #[no_mangle]
 pub fn switch_next() {
-    TASK_SCHEDULER.force_get().switch_next();
+    let queue = &mut TASK_SCHEDULER.lock().queue;
+    if let Some(task) = queue.pop_front() {
+        task.inner.borrow_mut().status = TaskStatus::READY;
+        queue.push_back(task);
+        queue[0].before_run();
+    }
+    task_time_refresh();
 }
 
+/// 获取当前正在执行的任务
+/// 
+/// 放回当前正在执行的任务，由于当前任务总是任务队列的第一个，因此也是返回第一个任务
+/// 如果没有任务则返回Option::None
+#[no_mangle]
 pub fn get_current_task() -> Option<Rc<Task>> {
     match TASK_SCHEDULER.force_get().queue.front() {
         Some(task) => Some(task.clone()),
@@ -127,6 +120,9 @@ pub fn get_current_task() -> Option<Rc<Task>> {
     }
 }
 
+/// 获取任务
+/// 
+/// 根据任务的pid和tid寻找任务，寻找到则返回任务，未寻找到则返回Option::None
 #[no_mangle]
 pub fn get_task(pid: usize, tid: usize) -> Option<Rc<Task>> {
     let task_scheduler = TASK_SCHEDULER.force_get();
@@ -139,6 +135,10 @@ pub fn get_task(pid: usize, tid: usize) -> Option<Rc<Task>> {
     None
 }
 
+/// 切换到指定的任务
+/// 
+/// 指定任务的pid和tid，找到相应的任务后并进行切换。如果没找到则不切换
+#[no_mangle]
 pub fn switch_to_task(pid: usize, tid: usize) {
     let mut task_scheduler = TASK_SCHEDULER.force_get();
 
@@ -151,7 +151,9 @@ pub fn switch_to_task(pid: usize, tid: usize) {
     }
 }
 
-// 获取当前的任务数量
+/// 获取当前的任务数量
+/// 
+/// 返回当前调度器中队列的长度
 pub fn get_task_num() -> usize {
-    TASK_SCHEDULER.force_get().queue.len()
+    TASK_SCHEDULER.lock().queue.len()
 }

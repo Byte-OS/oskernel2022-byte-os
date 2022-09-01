@@ -14,13 +14,12 @@ extern crate output;
 extern crate alloc;
 mod virtio_impl;
 
+use core::arch::asm;
+
 use alloc::rc::Rc;
+use kernel::{memory, interrupt, device, fs};
 use kernel::fs::cache::cache_file;
 use kernel::fs::filetree::INode;
-use kernel::memory;
-use kernel::interrupt;
-use kernel::device;
-use kernel::fs;
 use riscv::register::sstatus;
 use task_scheduler::start_tasks;
 use arch::sbi;
@@ -48,10 +47,11 @@ unsafe extern "C" fn _start() -> ! {
 }
 
 /// rust 入口函数
+/// 
+/// 进行操作系统的初始化，
 #[no_mangle]
 pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
-    // // 保证仅有一个核心工作
-    #[cfg(not(debug_assertions))]
+    // 保证仅有一个核心工作
     if hart_id != 0 {
         sbi::hart_suspend(0x00000000, support_hart_resume as usize, 0);
     }
@@ -108,32 +108,41 @@ pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
     panic!("正常关机")
 }
 
-/// 辅助核心恢复 暂时不使用  目前只使用单核
+
+/// 辅助核心进入的函数
+/// 
+/// 目前让除 0 核之外的其他内核进入该函数进行等待
 #[allow(unused)]
 extern "C" fn support_hart_resume(hart_id: usize, _param: usize) {
-    info!("核心 {} 作为辅助核心进行等待", hart_id);
-    loop {} // 进入循环
+    loop {
+        // 使用wfi 省电
+        unsafe { asm!("wfi") }
+    }
 }
 
 
 /// 打印目录树
+/// 
+/// 将文件目录以树的形式打印出来 相当于tree指令
 pub fn print_file_tree(node: Rc<INode>) {
+
+    /// 打印目录树 - 递归部分
+    fn print_file_tree_back(node: Rc<INode>, space: usize) {
+        let iter = node.clone_children();
+        let mut iter = iter.iter().peekable();
+        while let Some(sub_node) = iter.next() {
+            if iter.peek().is_none() {
+                info!("{:>2$}└──{}", "", sub_node.get_filename(), space);
+            } else {
+                info!("{:>2$}├──{}", "", sub_node.get_filename(), space);
+            }
+            if sub_node.is_dir() {
+                print_file_tree_back(sub_node.clone(), space + 3);
+            }
+        }
+    }
+
     info!("{}", node.get_pwd());
     print_file_tree_back(node, 0);
 }
 
-/// 打印目录树 - 递归
-pub fn print_file_tree_back(node: Rc<INode>, space: usize) {
-    let iter = node.clone_children();
-    let mut iter = iter.iter().peekable();
-    while let Some(sub_node) = iter.next() {
-        if iter.peek().is_none() {
-            info!("{:>2$}└──{}", "", sub_node.get_filename(), space);
-        } else {
-            info!("{:>2$}├──{}", "", sub_node.get_filename(), space);
-        }
-        if sub_node.is_dir() {
-            print_file_tree_back(sub_node.clone(), space + 3);
-        }
-    }
-}

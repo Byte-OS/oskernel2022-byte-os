@@ -8,15 +8,15 @@ impl PidGenerater {
     pub fn new() -> Self {
         PidGenerater(1000)
     }
-    // 切换到下一个pid
-    pub fn next(&mut self) -> usize {
-        let n = self.0;
-        self.0 = n + 1;
-        n
-    }
 }
 
+/// 获取一个pid
+/// 
+/// 获取一个新的pid并将pid的指针后移，防止发生重复
 #[no_mangle]
 pub fn get_new_pid() -> usize {
-    NEXT_PID.lock().next()
+    let mut next_pid = NEXT_PID.lock();
+    let n = next_pid.0;
+    next_pid.0 = n + 1;
+    n
 }
