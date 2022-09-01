@@ -50,20 +50,14 @@ pub fn sys_exit_group(task: SyscallTask, exit_code: usize) -> Result<(), Runtime
         }
         None => {}
     }
-    debug!("剩余页表: {}", get_free_page_num());
-    debug!("exit_code: {:#x}", exit_code);
+    // debug!("剩余页表: {}", get_free_page_num());
+    // debug!("exit_code: {:#x}", exit_code);
     Err(RuntimeError::ChangeTask)
 }
 
 // kill task
 pub fn sys_kill(task: SyscallTask, _pid: usize, _signum: usize) -> Result<(), RuntimeError> {
     let mut inner = task.inner.borrow_mut();
-    debug!(
-        "kill: thread {} kill process {} with signal {:?}",
-        0,
-        _pid,
-        _signum
-    );
 
     inner.context.x[10] = 0;
     Ok(())
@@ -83,7 +77,6 @@ pub fn sys_tkill(task: SyscallTask, tid: usize, signum: usize) -> Result<(), Run
 }
 
 pub fn sys_tgkill(task: SyscallTask, tgid: usize, tid: usize, signum: usize) -> Result<(), RuntimeError> {
-    debug!("tgkill: tgid: {}  tid: {}  signum {}", tgid, tid, signum);
     if let Some(task) = unsafe { get_task(tgid, tid) } {
         signal(task, signum)?;
     } else {

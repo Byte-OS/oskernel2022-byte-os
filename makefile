@@ -28,10 +28,6 @@ ifeq ($(MODE), release)
 MODE_FLAG += --release
 endif
 
-ifeq ($(VERBOSE), 0)
-FEATURES += not_debug
-endif
-
 .PHONY: all doc kernel build clean qemu run k210 flash
 
 # all: qemu

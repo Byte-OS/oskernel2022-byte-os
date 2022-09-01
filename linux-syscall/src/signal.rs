@@ -39,14 +39,6 @@ pub fn sys_sigaction(task: SyscallTask, signum: usize, act: UserAddr<SigAction>,
     }
     if act.is_valid() {
         let act = act.transfer();
-        debug!(
-            "rt_sigaction: signal={:?}, act={:?}, oldact={:?}, sigsetsize={}, thread={}",
-            signum,
-            act,
-            oldact.bits(),
-            _sigsetsize,
-            task.tid
-        );
         process.sig_actions[signum].copy_from(act);
     }
     drop(process);

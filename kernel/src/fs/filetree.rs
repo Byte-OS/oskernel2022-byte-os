@@ -128,8 +128,6 @@ impl INode {
         } else {
             let (dir_path, filename) = split_path(path);
             
-            debug!("split path: {:?}  filename: {}", dir_path, filename);
-
             let dir_inode = 
                 dir_path.map_or(Ok(INode::root()), |x| INode::get(current, x))?;
 

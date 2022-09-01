@@ -7,7 +7,6 @@ use crate::SyscallTask;
 
 // 获取当前路径
 pub fn get_cwd(task: SyscallTask, buf: UserAddr<u8>, size: usize) -> Result<(), RuntimeError> {
-    debug!("get_cwd size: {}", size);
     let mut inner = task.inner.borrow_mut();
     let process = inner.process.borrow_mut();
 
@@ -43,7 +42,6 @@ pub fn sys_mkdirat(task: SyscallTask, dir_fd: usize, filename: UserAddr<u8>, fla
     let filename = filename.read_string();
     let mut inner = task.inner.borrow_mut();
     let process = inner.process.borrow_mut();
-    debug!("dir_fd: {:#x}, filename: {}", dir_fd, filename);
 
     // 判断文件描述符是否存在
     let current = if dir_fd == FD_NULL {

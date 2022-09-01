@@ -48,7 +48,7 @@ pub fn sys_fstat(task: SyscallTask, fd: usize, buf_ptr: UserAddr<Kstat>) -> Resu
 pub fn sys_fstatat(task: SyscallTask, dir_fd: usize, filename: UserAddr<u8>, stat_ptr: UserAddr<Kstat>, _flags: usize) -> Result<(), RuntimeError> {
     let filename = filename.read_string();
     let kstat = stat_ptr.transfer();
-    debug!("sys_fstatat: dir_fd {:#x}, filename: {}, filename_len: {}", dir_fd, filename, filename.len());
+    // debug!("sys_fstatat: dir_fd {:#x}, filename: {}, filename_len: {}", dir_fd, filename, filename.len());
 
     let mut inner = task.inner.borrow_mut();
     let process = inner.process.borrow_mut();
@@ -102,14 +102,12 @@ pub fn sys_fstatat(task: SyscallTask, dir_fd: usize, filename: UserAddr<u8>, sta
 pub fn sys_getdents(task: SyscallTask, fd: usize, ptr: UserAddr<u8>, len: usize) -> Result<(), RuntimeError> {
     let mut inner = task.inner.borrow_mut();
     let process = inner.process.borrow_mut();
-    debug!("get dents: fd: {} ptr: {:#x} len: {:#x}", fd, ptr.bits(), len);
     let buf = ptr.transfer_vec(len);
     let dir_file = process.fd_table.get_file(fd)?;
     
     let mut pos = 0;
     while let Some((i, inode)) = dir_file.entry_next() {
         let sub_node_name = inode.get_filename();
-        debug!("子节点: {}  filetype: {:?} filename len: {}", sub_node_name, inode.get_file_type(), sub_node_name.len());
         let sub_node_name = sub_node_name.as_bytes();
         let node_size = ((19 + sub_node_name.len() as u16 + 1 + 7) / 8) * 8;
         let next = pos + node_size as usize;
@@ -135,7 +133,6 @@ pub fn sys_getdents(task: SyscallTask, fd: usize, ptr: UserAddr<u8>, len: usize)
     }
 
     drop(process);
-    debug!("written size: {}", pos);
     inner.context.x[10] = pos;
     // 运行时使用
     // inner.context.x[10] = 0;

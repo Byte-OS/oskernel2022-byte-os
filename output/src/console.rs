@@ -21,7 +21,6 @@ macro_rules! info {
 #[macro_export]
 macro_rules! warn {
     ($fmt: literal $(, $($arg: tt)+)?) => {
-        // #[cfg(not(feature = "not_debug"))]
         // $crate::console::print(format_args!(concat!("\x1b[1;33m", "[WARN] ", $fmt, "\x1b[0m", "\n") $(, $($arg)+)?));
     }
 }
@@ -29,7 +28,6 @@ macro_rules! warn {
 #[macro_export]
 macro_rules! debug {
     ($fmt: literal $(, $($arg: tt)+)?) => {
-        #[cfg(not(feature = "not_debug"))]
         $crate::console::print(format_args!(concat!("\x1b[1;31m", "[DEBUG] ", $fmt, "\x1b[0m", "\n") $(, $($arg)+)?));
     }
 }
@@ -37,7 +35,6 @@ macro_rules! debug {
 #[macro_export]
 macro_rules! error {
     ($fmt: literal $(, $($arg: tt)+)?) => {
-        // #[cfg(not(feature = "not_debug"))]
         // $crate::console::print(format_args!(concat!("\x1b[1;31m", "[ERROR] ", $fmt, "\x1b[0m", "\n") $(, $($arg)+)?));
     }
 }

@@ -23,7 +23,6 @@ pub fn sys_read(task: SyscallTask, fd: usize, buf_ptr: UserAddr<u8>, count: usiz
 
 // 写入
 pub fn sys_write(task: SyscallTask, fd: usize, buf_ptr: UserAddr<u8>, count: usize) -> Result<(), RuntimeError> {
-    debug!("write fd: {} buf_ptr: {:#x} count: {}", fd, buf_ptr.bits(), count);
     let buf = buf_ptr.transfer_vec(count);
     let mut inner = task.inner.borrow_mut();
     let mut process = inner.process.borrow_mut();
@@ -79,7 +78,6 @@ pub fn sys_readv(task: SyscallTask, fd: usize, iov: UserAddr<IoVec>, iovcnt: usi
 }
 
 pub fn sys_lseek(task: SyscallTask, fd: usize, offset: usize, whence: usize) -> Result<(), RuntimeError> {
-    debug!("lseek: fd {}, offset: {}, whench: {}", fd, offset as isize, whence);
     let mut inner = task.inner.borrow_mut();
     let mut process = inner.process.borrow_mut();
 
@@ -105,7 +103,6 @@ pub fn sys_pread(task: SyscallTask, fd: usize, ptr: UserAddr<u8>, len: usize, of
 }
 
 pub fn sys_sendfile(task: SyscallTask, out_fd: usize, in_fd: usize, offset_ptr: usize, count: usize) -> Result<(), RuntimeError> {
-    debug!("out_fd: {}  in_fd: {}  offset_ptr: {:#x}   count: {}", out_fd, in_fd, offset_ptr, count);
     let mut inner = task.inner.borrow_mut();
     let mut process = inner.process.borrow_mut();
     let in_file = process.fd_table.get(in_fd)?;

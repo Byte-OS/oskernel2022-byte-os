@@ -1,3 +1,5 @@
+use core::arch::asm;
+
 use alloc::{vec::Vec, collections::VecDeque};
 
 use crate::sync::mutex::Mutex;
@@ -28,9 +30,13 @@ pub fn exec_by_str(str: &'static str) {
     // TIP: 这里为什么需要显示东西
     // println!("执行任务: {}", str);
     let args: Vec<&str> = str.split(" ").collect();
+    unsafe {
+        for _ in 0..0x10000 {
+            asm!("nop");
+        }
+    }
     // println!("{:?}", args);
     // let len = args.len();
-    // println!("args0: {}", args[0]);
     if let Ok(task) = exec(args[0], args[0..].to_vec()) {
         task.before_run();
         unsafe { add_task_to_scheduler(task); }

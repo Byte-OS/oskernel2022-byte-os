@@ -30,7 +30,6 @@ pub fn sys_dup(task: SyscallTask, fd: usize) -> Result<(), RuntimeError> {
 }
 // 复制文件描述符
 pub fn sys_dup3(task: SyscallTask, fd: usize, new_fd: usize) -> Result<(), RuntimeError> {
-    debug!("dup fd: {} to fd: {}", fd, new_fd);
     let mut inner = task.inner.borrow_mut();
     let mut process = inner.process.borrow_mut();
     // 判断是否存在文件描述符
@@ -46,7 +45,6 @@ pub fn sys_dup3(task: SyscallTask, fd: usize, new_fd: usize) -> Result<(), Runti
 // 打开文件
 pub fn sys_openat(task: SyscallTask, fd: usize, filename: UserAddr<u8>, flags: usize, _open_mod: usize) -> Result<(), RuntimeError> {
     let filename = filename.read_string();
-    debug!("open file: {}  flags: {:#x}", filename, flags);
     let mut inner = task.inner.borrow_mut();
     let mut process = inner.process.borrow_mut();
 
@@ -105,13 +103,11 @@ pub fn sys_openat(task: SyscallTask, fd: usize, filename: UserAddr<u8>, flags: u
     let fd = process.fd_table.alloc();
     process.fd_table.set(fd, FileDesc::new(file));
     drop(process);
-    debug!("return fd: {}", fd);
     inner.context.x[10] = fd;
     Ok(())
 }
 // 关闭文件
 pub fn sys_close(task: SyscallTask, fd: usize) -> Result<(), RuntimeError> {
-    debug!("close fd: {}", fd);
     let mut inner = task.inner.borrow_mut();
     let mut process = inner.process.borrow_mut();
     process.fd_table.dealloc(fd);
@@ -124,7 +120,6 @@ pub fn sys_readlinkat(task: SyscallTask, dir_fd: usize, path: UserAddr<u8>,
     buf: UserAddr<u8>, len: usize) -> Result<(), RuntimeError> {
     let mut inner = task.inner.borrow_mut();
     let path = path.read_string();
-    debug!("read {} from dir_fd: {:#x} len: {}", path, dir_fd, len);
     let path = if path == "/proc/self/exe" {
         "/lmbench_all".to_string()
     } else {

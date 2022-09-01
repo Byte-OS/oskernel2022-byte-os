@@ -93,7 +93,6 @@ pub fn sys_utimeat(task: SyscallTask, dir_fd: usize, filename: UserAddr<u8>, tim
 
     if filename.bits() != 0 {
         let filename = filename.read_string();
-        debug!("dir_fd: {:#x}, filename: {}, _flags: {:#x}", dir_fd, filename, _flags);
 
         if &filename == "/dev/null/invalid" {
             drop(process);

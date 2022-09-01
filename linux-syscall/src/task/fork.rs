@@ -35,7 +35,6 @@ pub fn sys_fork(task: SyscallTask) -> Result<(), RuntimeError> {
     // 创建新的heap
     // child_process.heap = UserHeap::new(child_process.pmm.clone())?;
     child_process.heap = process.heap.clone_with_data(child_process.pmm.clone())?;
-    debug!("heap_pointer: {:#x}", child_process.heap.get_heap_top());
     child_process.pmm.add_mapping_by_set(&child_process.mem_set)?;
     drop(process);
     drop(child_process);
@@ -88,10 +87,10 @@ pub fn sys_spec_fork(task: SyscallTask, flags: usize, _new_sp: usize, _ptid: Use
 // clone task
 pub fn sys_clone(task: SyscallTask, flags: usize, new_sp: usize, ptid: UserAddr<u32>, tls: usize, ctid_ptr: UserAddr<u32>) -> Result<(), RuntimeError> {
     // let flags = flags & 0x4fff;
-    debug!(
-        "clone: flags={:#x}, newsp={:#x}, parent_tid={:#x}, child_tid={:#x}, newtls={:#x}",
-        flags, new_sp, ptid.bits(), ctid_ptr.0 as usize, tls
-    );
+    // debug!(
+    //     "clone: flags={:#x}, newsp={:#x}, parent_tid={:#x}, child_tid={:#x}, newtls={:#x}",
+    //     flags, new_sp, ptid.bits(), ctid_ptr.0 as usize, tls
+    // );
     if flags == 0x4111 || flags == 0x11 {
         // VFORK | VM | SIGCHILD
         warn!("sys_clone is calling sys_fork instead, ignoring other args");
@@ -101,10 +100,10 @@ pub fn sys_clone(task: SyscallTask, flags: usize, new_sp: usize, ptid: UserAddr<
         // return self.sys_fork();
     }
 
-    debug!(
-        "clone: flags={:#x}, newsp={:#x}, parent_tid={:#x}, child_tid={:#x}, newtls={:#x}",
-        flags, new_sp, ptid.bits(), ctid_ptr.0 as usize, tls
-    );
+    // debug!(
+    //     "clone: flags={:#x}, newsp={:#x}, parent_tid={:#x}, child_tid={:#x}, newtls={:#x}",
+    //     flags, new_sp, ptid.bits(), ctid_ptr.0 as usize, tls
+    // );
 
     let mut inner = task.inner.borrow_mut();
     let process = inner.process.clone();
@@ -144,7 +143,6 @@ pub fn sys_execve(task: SyscallTask, filename: UserAddr<u8>, argv: UserAddr<User
     let mut process = inner.process.borrow_mut();
     let filename = filename.read_string();
 
-    debug!("run {}", filename);
     let args = argv.transfer_until(|x| !x.is_valid());
     let args:Vec<String> = args.iter_mut().map(|x| x.read_string()).collect();
 
@@ -227,8 +225,6 @@ pub fn sys_wait4(task: SyscallTask, pid: usize, ptr: UserAddr<i32>, _options: us
 
         let cprocess_vec = 
             process.children.drain_filter(|x| x.borrow().exit_code.is_some()).collect::<Vec<_>>();
-
-        debug!("cpro len: {}", cprocess_vec.len());
 
         if cprocess_vec.len() != 0 {
             let cprocess = cprocess_vec[0].borrow();

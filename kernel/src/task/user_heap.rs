@@ -57,7 +57,6 @@ impl UserHeap {
 
     pub fn set_heap_top(&mut self, top: usize) -> Result<usize, RuntimeError>{
         if self.start == 0 {
-            debug!("设置heap: {:#x}", top);
             self.start = top;
             self.pointer = top;
             let mem_map = MemMap::new((top / PAGE_SIZE).into(), DEFAULT_HEAP_PAGE_NUM, PTEFlags::VRWX | PTEFlags::U)?;

@@ -18,7 +18,7 @@ pub fn sys_brk(task: SyscallTask, top_pos: usize) -> Result<(), RuntimeError> {
     if top_pos == 0 {
         let top = process.heap.get_heap_top();
         drop(process);
-        debug!("[sys_brk] brk_addr: {:X}; new_addr: {:X} caller addr: {:X}", top_pos, top, inner.context.sepc);
+        // debug!("[sys_brk] brk_addr: {:X}; new_addr: {:X} caller addr: {:X}", top_pos, top, inner.context.sepc);
         inner.context.x[10] = top;
     } else {
         let ret = if top_pos > process.heap.get_heap_top() + PAGE_SIZE {
@@ -26,7 +26,7 @@ pub fn sys_brk(task: SyscallTask, top_pos: usize) -> Result<(), RuntimeError> {
         } else {
             process.heap.set_heap_top(top_pos)?
         };
-        debug!("[sys_brk] brk_addr: {:X}; new_addr: {:X} caller addr: {:X}", top_pos, ret, inner.context.sepc);
+        // debug!("[sys_brk] brk_addr: {:X}; new_addr: {:X} caller addr: {:X}", top_pos, ret, inner.context.sepc);
         drop(process);
         inner.context.x[10] = ret;
     }
@@ -61,7 +61,6 @@ pub fn sys_mmap(task: SyscallTask, start: usize, len: usize, _prot: usize,
     }
     let flags = MapFlags::from_bits_truncate(flags as u32);
     let mut p_start = process.pmm.get_phys_addr(start.into())?;
-    debug!("申请: {:#x}", p_start.0);
     if p_start.0 < 0x8000_0000 {
         let page_num = len / PAGE_SIZE;
         let mem_map = MemMap::new(VirtAddr::from(start).into(), page_num, PTEFlags::UVRWX)?;
@@ -107,7 +106,7 @@ pub fn sys_mmap(task: SyscallTask, start: usize, len: usize, _prot: usize,
 }
 
 pub fn sys_mprotect(task: SyscallTask, _addr: usize, _len: usize, _prot: usize) -> Result<(), RuntimeError> {
-    debug!("保护页面: {:#x}  len: {:#x}", _addr, _len);
+    // debug!("保护页面: {:#x}  len: {:#x}", _addr, _len);
     let mut inner = task.inner.borrow_mut();
     inner.context.x[10] = 0;
     Ok(())

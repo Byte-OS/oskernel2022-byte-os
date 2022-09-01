@@ -5,7 +5,7 @@ use crate::SyscallTask;
 use crate::fd::open::sys_dup;
 
 pub fn sys_fcntl(task: SyscallTask, fd: usize, cmd: usize, _arg: usize) -> Result<(), RuntimeError> {
-    debug!("val: fd {}  cmd {:#x} arg {:#x}", fd, cmd, _arg);
+    // debug!("val: fd {}  cmd {:#x} arg {:#x}", fd, cmd, _arg);
     // let mut inner = self.inner.borrow_mut();
     // let node = self.map.get_mut(&fd).ok_or(SysError::EBADF)?;
     if fd >= 50 {
@@ -25,7 +25,6 @@ pub fn sys_fcntl(task: SyscallTask, fd: usize, cmd: usize, _arg: usize) -> Resul
     } else {
         match cmd {
             fcntl_cmd::DUPFD_CLOEXEC => {
-                debug!("copy value");
                 sys_dup(task, fd)?;
             }
             _ => {}
