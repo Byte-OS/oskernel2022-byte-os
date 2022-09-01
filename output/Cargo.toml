@@ -8,6 +8,5 @@ edition = "2021"
 [features]
 not_debug = []
 
-
 [dependencies]
 arch = { path = "../arch" }
