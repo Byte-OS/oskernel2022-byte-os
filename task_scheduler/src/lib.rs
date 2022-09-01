@@ -54,7 +54,6 @@ impl TaskScheduler {
     // 执行第一个任务
     /// 进行调度更新
     pub fn start(&mut self) {
-        info!("开始执行任务");
         loop {
             // 没有任务时从任务队列取出任务
             if self.queue.len() == 0 {

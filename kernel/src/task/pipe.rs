@@ -93,12 +93,10 @@ impl FileOP for PipeReader {
     }
 
     fn read_at(&self, pos: usize, data: &mut [u8]) -> usize {
-        debug!("write?");
         self.0.read_at(pos, data)
     }
 
     fn write_at(&self, _pos: usize, _data: &[u8], _count: usize) -> usize {
-        debug!("write?");
         todo!()
     }
 
@@ -118,12 +116,10 @@ impl FileOP for PipeWriter {
     }
 
     fn read_at(&self, _pos: usize, _data: &mut [u8]) -> usize {
-        debug!("write?");
         todo!()
     }
 
     fn write_at(&self, pos: usize, data: &[u8], count: usize) -> usize {
-        debug!("write?");
         self.0.write_at(pos, data, count)
     }
 

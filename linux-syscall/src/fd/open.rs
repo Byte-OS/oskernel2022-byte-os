@@ -144,10 +144,6 @@ pub fn sys_readlinkat(task: SyscallTask, dir_fd: usize, path: UserAddr<u8>,
 pub fn sys_ppoll(task: SyscallTask, fds: UserAddr<PollFD>, nfds: usize, _timeout: UserAddr<TimeSpec>) -> Result<(), RuntimeError> {
     let fds = fds.transfer_vec(nfds);
     let mut inner = task.inner.borrow_mut();
-    debug!("wait for fds: {}", fds.len());
-    for i in fds {
-        debug!("wait fd: {}", i.fd);
-    }
     inner.context.x[10] = 1;
     Ok(())
 }

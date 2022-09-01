@@ -167,7 +167,6 @@ pub fn sys_execve(task: SyscallTask, filename: UserAddr<u8>, argv: UserAddr<User
 
 // wait task
 pub fn sys_wait4(task: SyscallTask, pid: usize, ptr: UserAddr<i32>, _options: usize) -> Result<(), RuntimeError> {
-    debug!("pid: {:#x}, ptr: {:#x}, _options: {}", pid, ptr.bits(), _options);
     let mut inner = task.inner.borrow_mut();
     let process = inner.process.clone();
     let mut process = process.borrow_mut();

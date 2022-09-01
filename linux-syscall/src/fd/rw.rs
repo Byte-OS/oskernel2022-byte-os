@@ -4,7 +4,7 @@ use crate::SyscallTask;
 
 // 读取
 pub fn sys_read(task: SyscallTask, fd: usize, buf_ptr: UserAddr<u8>, count: usize) -> Result<(), RuntimeError> {
-    debug!("sys_read, fd: {}, buf_ptr: {:#x}, count: {}", fd, buf_ptr.bits(), count);
+    // debug!("sys_read, fd: {}, buf_ptr: {:#x}, count: {}", fd, buf_ptr.bits(), count);
     let buf = buf_ptr.transfer_vec(count);
     let mut inner = task.inner.borrow_mut();
     let mut process = inner.process.borrow_mut();
@@ -17,7 +17,6 @@ pub fn sys_read(task: SyscallTask, fd: usize, buf_ptr: UserAddr<u8>, count: usiz
         usize::MAX
     };
     drop(process);
-    debug!("read_size = {}", value);
     inner.context.x[10] = value;
     Ok(())
 }
@@ -118,7 +117,6 @@ pub fn sys_sendfile(task: SyscallTask, out_fd: usize, in_fd: usize, offset_ptr: 
     out_file.write(&buf, buf.len());
 
     drop(process);
-    debug!("write size: {}", read_size);
     inner.context.x[10] = read_size;
     Ok(())
 }

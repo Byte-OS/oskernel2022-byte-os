@@ -23,9 +23,14 @@ lazy_static! {
     ]));
 }
 
+#[no_mangle]
 pub fn exec_by_str(str: &'static str) {
-    debug!("执行任务: {}", str);
+    // TIP: 这里为什么需要显示东西
+    // println!("执行任务: {}", str);
     let args: Vec<&str> = str.split(" ").collect();
+    // println!("{:?}", args);
+    // let len = args.len();
+    // println!("args0: {}", args[0]);
     if let Ok(task) = exec(args[0], args[0..].to_vec()) {
         task.before_run();
         unsafe { add_task_to_scheduler(task); }

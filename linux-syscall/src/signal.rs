@@ -9,14 +9,7 @@ pub fn sys_sigprocmask(task: SyscallTask, how: u32, set:  UserAddr<SigSet>, olds
         _sigsetsize: usize) -> Result<(), RuntimeError> {
     // let pmm = self.get_pmm();
     let mut inner = task.inner.borrow_mut();
-    debug!(
-        "rt_sigprocmask: how={:#x}, set={:#?}, oldset={:#?}, sigsetsize={}, thread={}",
-        how,
-        set.bits(),
-        oldset.bits(),
-        _sigsetsize,
-        task.tid
-    );
+
     if oldset.is_valid() {
         oldset.transfer().copy_from(&inner.sig_mask);
     }

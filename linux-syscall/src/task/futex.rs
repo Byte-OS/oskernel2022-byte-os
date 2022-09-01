@@ -14,7 +14,6 @@ bitflags! {
     }
 }
 
-// wait for futex
 pub fn sys_futex(task: SyscallTask, uaddr: UserAddr<i32>, op: u32, value: i32, _value2: usize, _value3: usize) -> Result<(), RuntimeError> {
     debug!("sys_futex uaddr: {:#x} op: {:#x} value: {:#x}", uaddr.bits(), op, value);
     // let uaddr_ref = uaddr.transfer();
