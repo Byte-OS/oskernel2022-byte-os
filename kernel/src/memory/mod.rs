@@ -1,13 +1,13 @@
 use core::arch::asm;
 
+use arch::KERNEL_STACK_SIZE;
+
 mod heap;
 pub mod page;
 pub mod addr;
 pub mod page_table;
 pub mod mem_map;
 pub mod mem_set;
-
-pub const KERNEL_STACK_SIZE: usize = 4096;
 
 lazy_static! {
     static ref KERNEL_STACK:[u8; KERNEL_STACK_SIZE] = [0u8; KERNEL_STACK_SIZE];

@@ -11,6 +11,7 @@ extern crate output;
 extern crate alloc;
 mod virtio_impl;
 
+use core::arch::asm;
 use core::arch::global_asm;
 use alloc::rc::Rc;
 use alloc::string::ToString;

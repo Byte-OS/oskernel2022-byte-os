@@ -123,7 +123,7 @@ __load_kernel_context:
         .set n, n+1
     .endr
 
-    la a0, kernel_callback_entry
+    la a0, kernelvec
     csrw stvec, a0
     
     # 回收栈

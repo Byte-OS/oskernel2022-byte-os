@@ -2,6 +2,7 @@ use core::arch::asm;
 use core::slice::from_raw_parts_mut;
 use core::slice;
 use _core::cell::RefCell;
+use arch::ADDR_END;
 use bitflags::*;
 
 use crate::memory::addr::PhysAddr;
@@ -13,7 +14,6 @@ use super::addr::VirtAddr;
 use super::addr::PAGE_PTE_NUM;
 use super::addr::PAGE_SIZE;
 use super::addr::VirtPageNum;
-use super::page::ADDR_END;
 use super::page::PAGE_ALLOCATOR;
 use super::mem_map::MemMap;
 use super::mem_set::MemSet;

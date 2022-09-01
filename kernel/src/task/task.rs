@@ -90,7 +90,6 @@ impl Task {
     }
 
     pub fn before_run(&self) {
-        debug!("run before task");
         let inner = self.inner.borrow();
         let process = inner.process.borrow_mut();
         process.pmm.change_satp();

@@ -1,6 +1,7 @@
 use core::{mem::size_of, slice::from_raw_parts_mut};
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
+use arch::ADDR_END;
 
 use crate::sync::mutex::Mutex;
 use crate::memory::addr::PAGE_SIZE;
@@ -11,12 +12,6 @@ use super::addr::PhysPageNum;
 use super::addr::UserAddr;
 
 const USIZE_PER_PAGES: usize = PAGE_SIZE / size_of::<usize>();
-
-#[cfg(not(feature = "board_k210"))]
-pub const ADDR_END: usize = 0x81fe0000;
-
-#[cfg(feature = "board_k210")]
-pub const ADDR_END: usize = 0x80800000;
 
 // 内存页分配器
 pub struct MemoryPageAllocator {

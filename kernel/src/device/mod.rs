@@ -1,10 +1,10 @@
 pub mod block;
-pub mod sdcard;
 
 use alloc::borrow::ToOwned;
 use alloc::boxed::Box;
 use alloc::rc::Rc;
 use alloc::vec::Vec;
+use arch::VIRTIO0;
 use fatfs::{Dir as OtherDir, File as OtherFile, FileSystem as OtherFileSystem};
 use fatfs::LossyOemCpConverter;
 use fatfs::NullTimeProvider;
@@ -15,14 +15,10 @@ use crate::sync::mutex::Mutex;
 use crate::runtime_err::RuntimeError;
 
 use self::block::VirtIOBlock;
-use self::sdcard::SDCardWrapper;
 
 pub type Dir = OtherDir<DiskCursor, NullTimeProvider, LossyOemCpConverter>;
 pub type DiskFile = OtherFile<DiskCursor, NullTimeProvider, LossyOemCpConverter>;
 pub type FileSystem = OtherFileSystem<DiskCursor, NullTimeProvider, LossyOemCpConverter>;
-
-#[cfg(not(feature = "board_k210"))]
-pub const VIRTIO0: usize = 0x10001000;
 
 // 存储设备控制器 用来存储读取设备
 pub static mut BLK_CONTROL: Vec<Box<dyn BlockDevice>> = vec![];
@@ -59,17 +55,6 @@ pub fn add_virt_io(virtio: usize) {
     };
 }
 
-#[allow(unused)]
-pub fn add_sdcard() {
-    // 创建SD存储设备
-    let block_device = Box::new(SDCardWrapper::new());
-
-    // 加入存储设备表
-    unsafe {
-        BLK_CONTROL.push(block_device);
-    }
-}
-
 // 初始化函数
 pub fn init() {
     info!("初始化设备");
@@ -77,11 +62,6 @@ pub fn init() {
     {
         // qemu 时添加 储存设备
         add_virt_io(VIRTIO0);
-    }
-    #[cfg(feature = "board_k210")]
-    {
-        // 添加 k210 存储设备
-        add_sdcard();
     }
 }
 
