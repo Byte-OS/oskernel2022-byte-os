@@ -2,6 +2,7 @@ pub mod timer;
 
 use core::arch::global_asm;
 use core::arch::asm;
+use arch::kernelvec;
 use riscv::register::scause::Trap;
 use riscv::register::scause::Exception;
 use riscv::register::scause::Interrupt;
@@ -93,20 +94,13 @@ fn kernel_callback(context: &mut Context, scause: Scause, stval: usize) -> usize
 }
 
 
-// 包含中断代码
-global_asm!(include_str!("interrupt-kernel.asm"));
-
 // 设置中断
 pub fn init() {
-    extern "C" {
-        fn kernel_callback_entry();
-    }
-
     // 输出内核信息
-    info!("kernel_callback_entry addr: {:#x}", kernel_callback_entry as usize);
+    info!("kernelvec addr: {:#x}", kernelvec as usize);
 
     unsafe {
-        asm!("csrw stvec, a0", in("a0") kernel_callback_entry as usize);
+        asm!("csrw stvec, a0", in("a0") kernelvec as usize);
     }
 
     // 初始化定时器

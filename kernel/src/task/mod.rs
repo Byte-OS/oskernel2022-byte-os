@@ -165,7 +165,3 @@ pub fn exec<'a>(path: &'a str, args: Vec<&'a str>) -> Result<Rc<Task>, RuntimeEr
     let (process, task) = Process::new(unsafe { get_new_pid() }, None)?;
     exec_with_process(process, task, path, args)
 }
-
-// 包含更换任务代码
-global_asm!(include_str!("change_task.asm"));
-

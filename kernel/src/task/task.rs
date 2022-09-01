@@ -1,5 +1,6 @@
 use core::cell::{RefCell, RefMut};
 use alloc::rc::Rc;
+use arch::change_task;
 use crate::interrupt::timer::TimeVal;
 use crate::memory::addr::UserAddr;
 use crate::interrupt::Context;
@@ -97,10 +98,6 @@ impl Task {
 
     // 运行当前任务
     pub fn run(&self) {
-        extern "C" {
-            // 改变任务
-            fn change_task(stack: usize);
-        }
         let inner = self.inner.borrow_mut();
         let process = inner.process.borrow_mut();
         // 可能需要更换内存
@@ -109,8 +106,9 @@ impl Task {
         // 释放资源
         drop(process);
         drop(inner);
+
         unsafe {
-            change_task(context_ptr)
+            change_task(context_ptr as usize)
         };
     }
 
