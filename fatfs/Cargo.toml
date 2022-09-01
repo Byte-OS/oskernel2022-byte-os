@@ -26,5 +26,4 @@ default = ["alloc", "lfn"]
 
 [dependencies]
 bitflags = "1.0"
-device = { path = "../device" }
-
+output = { path = "../output" }

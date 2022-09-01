@@ -56,7 +56,7 @@ extern crate alloc;
 mod log_macros;
 
 #[macro_use]
-extern crate device;
+extern crate output;
 
 mod boot_sector;
 mod dir;
