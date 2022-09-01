@@ -5,7 +5,9 @@ members = [
     "device",
     "fatfs",
     "linux-syscall",
-    "task_scheduler"
+    "task_scheduler",
+    "output",
+    "arch"
 ]
 # default-members = ["kernel"]
 

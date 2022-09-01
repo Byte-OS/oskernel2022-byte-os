@@ -1,7 +1,7 @@
 #![no_std]
 extern crate alloc;
 #[macro_use]
-extern crate kernel;
+extern crate output;
 #[macro_use]
 extern crate lazy_static; 
 

@@ -39,3 +39,5 @@ k210-soc = { git = "https://github.com/wyfcyx/k210-soc" }
 
 fatfs = { path = "../fatfs" }
 # linux-syscall = { path = "../linux-syscall" }
+output = { path = "../output" }
+arch = { path = "../arch" }

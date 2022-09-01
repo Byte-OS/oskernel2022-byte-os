@@ -20,3 +20,5 @@ not_debug = []
 riscv = { git = "https://github.com/rcore-os/riscv", features = ["inline-asm"] }
 kernel = { path = "../kernel" }
 task_scheduler = { path = "../task_scheduler" }
+output = { path = "../output" }
+arch = { path = "../arch" }

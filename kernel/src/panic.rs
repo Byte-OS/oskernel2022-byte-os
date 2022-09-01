@@ -1,5 +1,7 @@
 use core::panic::PanicInfo;
-use crate::sbi::shutdown;
+
+use arch::sbi::shutdown;
+
 
 // 程序遇到错误
 #[panic_handler]

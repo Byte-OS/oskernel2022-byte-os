@@ -10,3 +10,4 @@ kernel = { path = "../kernel" }
 linux-syscall = { path = "../linux-syscall"}
 
 lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
+output = { path = "../output" }

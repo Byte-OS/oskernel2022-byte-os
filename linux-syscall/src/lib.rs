@@ -7,7 +7,7 @@ extern crate riscv;
 #[macro_use]
 extern crate bitflags;
 #[macro_use]
-extern crate kernel;
+extern crate output;
 #[macro_use]
 extern crate lazy_static; 
 

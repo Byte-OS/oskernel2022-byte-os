@@ -7,7 +7,7 @@
 
 
 #[macro_use]
-extern crate kernel;
+extern crate output;
 extern crate alloc;
 mod virtio_impl;
 
@@ -25,7 +25,7 @@ use kernel::fs;
 use kernel::memory::page::get_free_page_num;
 use riscv::register::sstatus;
 use task_scheduler::start_tasks;
-use kernel::sbi;
+use arch::sbi;
 
 global_asm!(include_str!("entry.asm"));
 

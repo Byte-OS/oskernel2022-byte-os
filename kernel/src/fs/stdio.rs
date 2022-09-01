@@ -1,4 +1,4 @@
-use crate::console::puts;
+use output::console::puts;
 use super::file::FileOP;
 
 pub struct StdIn;

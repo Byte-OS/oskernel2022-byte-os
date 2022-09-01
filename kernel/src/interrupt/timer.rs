@@ -1,5 +1,5 @@
 use crate::sync::mutex::Mutex;
-use crate::sbi::set_timer;
+use arch::sbi::set_timer;
 use riscv::register::{sie, time};
 
 #[cfg(not(feature = "board_k210"))]
