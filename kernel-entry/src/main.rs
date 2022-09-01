@@ -3,6 +3,9 @@
 #![no_main]
 #![feature(panic_info_message)]
 #![feature(default_alloc_error_handler)]
+#![feature(naked_functions)]
+#![feature(asm_const)]
+#![feature(asm_sym)]
 #![allow(unaligned_references)]
 
 
@@ -11,8 +14,6 @@ extern crate output;
 extern crate alloc;
 mod virtio_impl;
 
-use core::arch::asm;
-use core::arch::global_asm;
 use alloc::rc::Rc;
 use alloc::string::ToString;
 use kernel::fs::cache::cache_file;
@@ -23,12 +24,30 @@ use kernel::memory;
 use kernel::interrupt;
 use kernel::device;
 use kernel::fs;
-use kernel::memory::page::get_free_page_num;
 use riscv::register::sstatus;
 use task_scheduler::start_tasks;
 use arch::sbi;
 
-global_asm!(include_str!("entry.asm"));
+// global_asm!(include_str!("entry.asm"));
+
+#[naked]
+#[no_mangle]
+#[link_section = ".text.entry"]
+unsafe extern "C" fn _start() -> ! {
+    const STACK_SIZE: usize = 4096 * 16;
+
+    #[link_section = ".bss.stack"]
+    static mut STACK: [u8; STACK_SIZE] = [0u8; STACK_SIZE];
+
+    core::arch::asm!(
+        "   la  sp, {stack} + {stack_size}
+            j   rust_main
+        ",
+        stack_size = const STACK_SIZE,
+        stack      =   sym STACK,
+        options(noreturn),
+    )
+}
 
 /// 清空bss段
 fn clear_bss() {
