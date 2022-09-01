@@ -49,22 +49,6 @@ unsafe extern "C" fn _start() -> ! {
     )
 }
 
-/// 清空bss段
-fn clear_bss() {
-    extern "C" {
-        fn sbss();
-        fn ebss();
-    }
-    let bss_start_addr = sbss as usize as *mut u8;
-    let bss_size = ebss as usize - sbss as usize;
-    unsafe {
-        core::slice::from_raw_parts_mut(bss_start_addr, bss_size).fill(0);
-    }
-    
-    // 显示BSS段信息
-    info!("the bss section range: {:X}-{:X}, {} KB", sbss as usize, ebss as usize, bss_size / 0x1000);
-}
-
 #[no_mangle]
 pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
     // // 保证仅有一个核心工作
@@ -76,16 +60,13 @@ pub extern "C" fn rust_main(hart_id: usize, device_tree_p_addr: usize) -> ! {
     unsafe {
         sstatus::set_fs(sstatus::FS::Dirty);
     }
-    
-    // 清空bss段
-    clear_bss();
 
     // 输出设备信息
     info!("当前核心 {}", hart_id);
     info!("设备树地址 {:#x}", device_tree_p_addr);
 
     // 提示信息
-    info!("Welcome to test os!");
+    info!("Welcome to Byte os!");
 
     // 开启SUM位 让内核可以访问用户空间  踩坑：  
     // only in qemu. eg: qemu is riscv 1.10    k210 is riscv 1.9.1  
