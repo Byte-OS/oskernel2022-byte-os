@@ -18,7 +18,6 @@ pub fn sys_brk(task: SyscallTask, top_pos: usize) -> Result<(), RuntimeError> {
     if top_pos == 0 {
         let top = process.heap.get_heap_top();
         drop(process);
-        // debug!("[sys_brk] brk_addr: {:X}; new_addr: {:X} caller addr: {:X}", top_pos, top, inner.context.sepc);
         inner.context.x[10] = top;
     } else {
         let ret = if top_pos > process.heap.get_heap_top() + PAGE_SIZE {
@@ -26,7 +25,6 @@ pub fn sys_brk(task: SyscallTask, top_pos: usize) -> Result<(), RuntimeError> {
         } else {
             process.heap.set_heap_top(top_pos)?
         };
-        // debug!("[sys_brk] brk_addr: {:X}; new_addr: {:X} caller addr: {:X}", top_pos, ret, inner.context.sepc);
         drop(process);
         inner.context.x[10] = ret;
     }
@@ -66,22 +64,6 @@ pub fn sys_mmap(task: SyscallTask, start: usize, len: usize, _prot: usize,
         let mem_map = MemMap::new(VirtAddr::from(start).into(), page_num, PTEFlags::UVRWX)?;
         p_start = mem_map.ppn.into();
         process.pmm.add_mapping_by_map(&mem_map)?;
-
-        // let parent = process.parent.clone();
-        // if let Some(parent) = parent.map_or(None, |x| x.upgrade()) {
-        //     let mut parent = parent.borrow_mut();
-        //     parent.pmm.add_mapping_by_map(&mem_map)?;
-        //     parent.mem_set.0.push(mem_map.clone());
-
-        //     let parent = parent.parent.clone();
-        //     if let Some(parent) = parent.map_or(None, |x| x.upgrade()) {
-        //         let mut parent = parent.borrow_mut();
-        //         parent.pmm.add_mapping_by_map(&mem_map)?;
-        //         parent.mem_set.0.push(mem_map.clone());
-
-        //     }
-
-        // }
         process.mem_set.0.push(mem_map);
     }
     let buf = get_buf_from_phys_addr(p_start, len);
