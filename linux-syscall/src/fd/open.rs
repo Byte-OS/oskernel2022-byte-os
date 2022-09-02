@@ -13,9 +13,9 @@ use kernel::runtime_err::RuntimeError;
 use kernel::task::pipe::new_pipe;
 use kernel::task::fd_table::FD_NULL;
 use kernel::task::fd_table::FileDesc;
-use crate::OpenFlags;
 
 use crate::SyscallTask;
+use crate::consts::flags::OpenFlags;
 
 // 复制文件描述符
 pub fn sys_dup(task: SyscallTask, fd: usize) -> Result<(), RuntimeError> {

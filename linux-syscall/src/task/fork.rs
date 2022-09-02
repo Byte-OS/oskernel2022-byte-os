@@ -8,9 +8,9 @@ use kernel::task::task::{Task, TaskStatus};
 use kernel::task::exec_with_process;
 use kernel::runtime_err::RuntimeError;
 use crate::consts::errors::EPERM;
-use crate::{CloneFlags, add_vfork_wait};
 
 use crate::SyscallTask;
+use crate::consts::flags::CloneFlags;
 
 pub fn sys_sched_yield(task: SyscallTask) -> Result<(), RuntimeError> {
     let mut inner = task.inner.borrow_mut();
@@ -87,7 +87,6 @@ pub fn sys_spec_fork(task: SyscallTask, flags: usize, _new_sp: usize, _ptid: Use
     drop(child_process);
     drop(inner);
     // Ok(())
-    add_vfork_wait(task.pid);
     Err(RuntimeError::ChangeTask)
 }
 

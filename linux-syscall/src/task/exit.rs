@@ -1,7 +1,7 @@
 use kernel::runtime_err::RuntimeError;
 use kernel::task::interface::get_task;
 use crate::consts::errors::EPERM;
-use crate::{remove_vfork_wait, signal};
+use crate::signal;
 
 
 use crate::SyscallTask;
@@ -31,7 +31,6 @@ pub fn sys_exit_group(task: SyscallTask, exit_code: usize) -> Result<(), Runtime
         Some(parent) => {
             let parent = parent.upgrade().unwrap();
             let parent = parent.borrow();
-            remove_vfork_wait(parent.pid);
 
             // let end: UserAddr<TimeSpec> = 0x10bb78.into();
             // let start: UserAddr<TimeSpec> = 0x10bad0.into();

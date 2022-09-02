@@ -2,10 +2,19 @@ use kernel::interrupt::timer::TimeVal;
 use kernel::memory::addr::UserAddr;
 use kernel::task::task::Rusage;
 use kernel::runtime_err::RuntimeError;
-use crate::UTSname;
 
 use crate::SyscallTask;
 use crate::consts::errors::EPERM;
+
+// 系统信息结构
+pub struct UTSname  {
+    sysname: [u8;65],
+    nodename: [u8;65],
+    release: [u8;65],
+    version: [u8;65],
+    machine: [u8;65],
+    domainname: [u8;65],
+}
 
 // 获取系统信息
 pub fn sys_uname(task: SyscallTask, ptr: UserAddr<UTSname>) -> Result<(), RuntimeError> {
