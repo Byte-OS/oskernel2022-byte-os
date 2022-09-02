@@ -1,7 +1,11 @@
-use kernel::{runtime_err::RuntimeError, task::task::{Task, Rusage}, memory::addr::UserAddr, interrupt::timer::{TimeSpec, TimeVal}};
-use crate::{SYS_CALL_ERR, UTSname};
+use kernel::interrupt::timer::TimeVal;
+use kernel::memory::addr::UserAddr;
+use kernel::task::task::Rusage;
+use kernel::runtime_err::RuntimeError;
+use crate::UTSname;
 
 use crate::SyscallTask;
+use crate::consts::errors::EPERM;
 
 // 获取系统信息
 pub fn sys_uname(task: SyscallTask, ptr: UserAddr<UTSname>) -> Result<(), RuntimeError> {
@@ -53,7 +57,7 @@ pub fn sys_getppid(task: SyscallTask) -> Result<(), RuntimeError> {
             let x = parent.borrow().pid; 
             x
         },
-        None => SYS_CALL_ERR
+        None => EPERM
     };
 
     Ok(())
@@ -71,7 +75,7 @@ pub fn sys_getrusage(task: SyscallTask, _who: usize, usage: UserAddr<Rusage>) ->
     let usage = usage.transfer();
     usage.ru_stime = TimeVal::now();
     usage.ru_utime = TimeVal::now();
-    inner.context.x[10] = SYS_CALL_ERR;
+    inner.context.x[10] = EPERM;
     Ok(())
 }
 

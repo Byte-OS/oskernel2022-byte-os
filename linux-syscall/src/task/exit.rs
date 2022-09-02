@@ -1,7 +1,7 @@
-use kernel::memory::page::get_free_page_num;
 use kernel::runtime_err::RuntimeError;
 use kernel::task::interface::get_task;
-use crate::{remove_vfork_wait, SYS_CALL_ERR, signal};
+use crate::consts::errors::EPERM;
+use crate::{remove_vfork_wait, signal};
 
 
 use crate::SyscallTask;
@@ -80,7 +80,7 @@ pub fn sys_tgkill(task: SyscallTask, tgid: usize, tid: usize, signum: usize) -> 
     if let Some(task) = unsafe { get_task(tgid, tid) } {
         signal(task, signum)?;
     } else {
-        task.update_context(|x| x.x[10] = SYS_CALL_ERR);
+        task.update_context(|x| x.x[10] = EPERM);
     }
     Ok(())
 }

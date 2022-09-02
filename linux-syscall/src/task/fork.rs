@@ -1,7 +1,14 @@
 use alloc::{string::String, vec::Vec, rc::Rc};
 
-use kernel::{runtime_err::RuntimeError, memory::{addr::UserAddr, page_table::switch_to_kernel_page}, task::{exec_with_process, task::{Task, TaskStatus}, process::Process, interface::{add_task_to_scheduler, get_new_pid}}};
-use crate::{SYS_CALL_ERR, CloneFlags, add_vfork_wait};
+use kernel::memory::page_table::switch_to_kernel_page;
+use kernel::memory::addr::UserAddr;
+use kernel::task::interface::{add_task_to_scheduler, get_new_pid};
+use kernel::task::process::Process;
+use kernel::task::task::{Task, TaskStatus};
+use kernel::task::exec_with_process;
+use kernel::runtime_err::RuntimeError;
+use crate::consts::errors::EPERM;
+use crate::{CloneFlags, add_vfork_wait};
 
 use crate::SyscallTask;
 
@@ -170,7 +177,7 @@ pub fn sys_wait4(task: SyscallTask, pid: usize, ptr: UserAddr<i32>, _options: us
     let mut process = process.borrow_mut();
 
 
-    if pid != SYS_CALL_ERR {
+    if pid != EPERM {
         // let target = 
         // process.children.iter().find(|&x| x.borrow().pid == pid);
 
