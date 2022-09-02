@@ -52,9 +52,9 @@ bitflags! {
 #[repr(C)]
 #[allow(unused)]
 struct Dirent {
-    d_ino: u64,	        // 索引结点号
-    d_off: u64,	        // 到下一个dirent的偏移
-    d_reclen: u16,	    // 当前dirent的长度
-    d_type: u8,	        // 文件类型
-    // d_name_start: u8	//文件名 文件名 自行处理？
+    d_ino: u64,	         // 索引结点号
+    d_off: u64,	         // 到下一个dirent的偏移
+    d_reclen: u16,	     // 当前dirent的长度
+    d_type: u8,	         // 文件类型
+    d_name_start: [u8;0 ]//文件名 文件名 自行处理？
 }
