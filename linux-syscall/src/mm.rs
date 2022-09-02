@@ -1,7 +1,6 @@
 use kernel::fs::file::FileOP;
 use kernel::memory::mem_map::MemMap;
 use kernel::memory::mem_map::MapFlags;
-use kernel::memory::page::get_free_page_num;
 use kernel::memory::page_table::PTEFlags;
 use kernel::memory::addr::PAGE_SIZE;
 use kernel::memory::addr::VirtAddr;

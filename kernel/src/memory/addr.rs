@@ -301,10 +301,12 @@ pub fn get_buf_from_phys_page<'a>(phys_page: PhysPageNum, pages: usize) -> &'a m
 pub struct UserAddr<T>(pub *mut T);
 
 impl<T> UserAddr<T> {
+    #[inline]
     pub fn is_valid(&self) -> bool {
         self.0 as usize != 0
     }
 
+    #[inline]
     pub fn bits(&self) -> usize {
         self.0 as _
     }

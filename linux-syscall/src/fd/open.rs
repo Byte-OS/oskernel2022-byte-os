@@ -1,5 +1,6 @@
 use alloc::{rc::Rc, string::ToString};
 
+use kernel::fs::file::fcntl_cmd;
 use kernel::interrupt::timer::TimeSpec;
 use kernel::fs::specials::dev_rtc::DevRtc;
 use kernel::fs::stdio::StdNull;
@@ -16,6 +17,7 @@ use kernel::task::fd_table::FileDesc;
 
 use crate::SyscallTask;
 use crate::consts::flags::OpenFlags;
+use crate::consts::flags::PollFD;
 
 // 复制文件描述符
 pub fn sys_dup(task: SyscallTask, fd: usize) -> Result<(), RuntimeError> {
@@ -160,9 +162,14 @@ pub fn sys_pipe2(task: SyscallTask, req_ptr: UserAddr<u32>) -> Result<(), Runtim
     Ok(())
 }
 
-#[repr(C)]
-pub struct PollFD {
-    pub fd: u32,
-    pub envents: u16,
-    pub revents: u16
+/// 操作文件描述符
+/// 
+/// 对打开的文件描述符fd执行操作。操作由cmd决定。
+/// 详细描述地址: https://man7.org/linux/man-pages/man2/fcntl.2.html
+pub fn sys_fcntl(task: SyscallTask, fd: usize, cmd: usize, _arg: usize) -> Result<(), RuntimeError> {
+    match cmd {
+        fcntl_cmd::DUPFD_CLOEXEC => sys_dup(task, fd)?,
+        _ => {}
+    }
+    Ok(())
 }

@@ -12,36 +12,14 @@ extern crate output;
 extern crate lazy_static; 
 
 use alloc::rc::Rc;
-use alloc::vec::Vec;
-use fd::dir::get_cwd;
-use fd::dir::sys_chdir;
-use fd::dir::sys_mkdirat;
-use fd::dir::sys_unlinkat;
-use fd::open::sys_close;
-use fd::open::sys_dup;
-use fd::open::sys_dup3;
-use fd::open::sys_openat;
-use fd::open::sys_pipe2;
-use fd::open::sys_ppoll;
-use fd::open::sys_readlinkat;
-use fd::rw::sys_lseek;
-use fd::rw::sys_pread;
-use fd::rw::sys_read;
-use fd::rw::sys_readv;
-use fd::rw::sys_sendfile;
-use fd::rw::sys_write;
-use fd::rw::sys_writev;
-use fd::stat::sys_fstat;
-use fd::stat::sys_fstatat;
-use fd::stat::sys_getdents;
-use fd::stat::sys_statfs;
-use kernel::task::interface::kill_task;
-use kernel::task::interface::switch_next;
-use mm::sys_brk;
-use mm::sys_mmap;
-use mm::sys_mprotect;
-use mm::sys_munmap;
-use net::sys_fcntl;
+use fd::{dir::*, open::*};
+use fd::{rw::*, stat::*};
+use mm::*;
+use signal::*;
+use task::{exit::*, fork::*};
+use task::{futex::*, info::*};
+use time::*;
+use kernel::task::interface::*;
 use riscv::register::scause;
 use riscv::register::scause::Trap;
 use riscv::register::scause::Exception;
@@ -49,40 +27,14 @@ use riscv::register::scause::Interrupt;
 use riscv::register::stval;
 use riscv::register::sstatus;
 use kernel::interrupt::timer;
-use kernel::sync::mutex::Mutex;
 use kernel::interrupt::timer::set_last_ticks;
 use kernel::runtime_err::RuntimeError;
 use kernel::task::signal::SignalUserContext;
 use kernel::task::task::Task;
-use signal::sys_sigaction;
-use signal::sys_sigprocmask;
-use signal::sys_sigreturn;
-use task::exit::sys_exit;
-use task::exit::sys_exit_group;
-use task::exit::sys_kill;
-use task::exit::sys_tgkill;
-use task::exit::sys_tkill;
-use task::fork::sys_clone;
-use task::fork::sys_execve;
-use task::fork::sys_sched_yield;
-use task::fork::sys_wait4;
-use task::futex::sys_futex;
-use task::info::sys_getpid;
-use task::info::sys_getppid;
-use task::info::sys_getrusage;
-use task::info::sys_gettid;
-use task::info::sys_set_tid_address;
-use task::info::sys_uname;
-use time::sys_gettime;
-use time::sys_gettimeofday;
-use time::sys_nanosleep;
-use time::sys_times;
-use time::sys_utimeat;
 
 use crate::consts::errors;
 use crate::consts::flags::SignalFlag;
 use crate::consts::syscalls::*;
-
 
 pub mod fd;
 pub mod task;
@@ -90,7 +42,6 @@ pub mod time;
 pub mod mm;
 pub mod consts;
 pub mod signal;
-pub mod net;
 
 type SyscallTask = Rc<Task>;
 
@@ -183,13 +134,13 @@ pub fn sys_call(task: SyscallTask, call_type: usize, args: [usize; 7]) -> Result
         // 信号返回程序
         SYS_SIGRETURN => sys_sigreturn(task),
         // 获取文件时间
-        SYS_TIMES => sys_times(task, args[0]),
+        SYS_TIMES => sys_times(task, args[0].into()),
         // 获取系统信息
         SYS_UNAME => sys_uname(task, args[0].into()),
         // 获取任务获取信息
         SYS_GETRUSAGE => sys_getrusage(task, args[0], args[1].into()),
         // 获取时间信息
-        SYS_GETTIMEOFDAY => sys_gettimeofday(task, args[0]),
+        SYS_GETTIMEOFDAY => sys_gettimeofday(task, args[0].into()),
         // 获取进程信息
         SYS_GETPID => sys_getpid(task),
         // 获取进程父进程

@@ -1,7 +1,6 @@
 use kernel::runtime_err::RuntimeError;
-use kernel::task::task::Task;
 use kernel::task::fd_table::FD_CWD;
-use kernel::interrupt::timer::{get_time_us, TimeSpec, NSEC_PER_SEC, get_time_ns};
+use kernel::interrupt::timer::{TimeSpec, NSEC_PER_SEC, get_time_ns};
 use kernel::interrupt::timer::TMS;
 use kernel::memory::addr::{VirtAddr, UserAddr};
 use kernel::fs::filetree::INode;
@@ -9,73 +8,78 @@ use kernel::interrupt::timer::get_ticks;
 
 use crate::SyscallTask;
 
+/// 任务睡眠一段时间
+/// 
+/// 任务睡眠一段时间 目前采用不断循环的方式直到到达唤醒时间 （后面一定要改）
+/// 中间会进行任务切换，而不是让CPU闲置
 pub fn sys_nanosleep(task: SyscallTask, req_ptr: UserAddr<TimeSpec>, _rem_ptr: VirtAddr) -> Result<(), RuntimeError> {
     let req_time = req_ptr.transfer();
-
     let mut inner = task.inner.borrow_mut();
 
-    // 获取文件参数
+    // 如果任务没有被唤醒过
     if inner.wake_time == 0 {
+        // 唤醒时间 = 当前时间 + 需要等待的时间 目前以ns为单位 
         inner.wake_time = get_time_ns() + (req_time.tv_sec * NSEC_PER_SEC) as usize + req_time.tv_nsec as usize;
-        inner.context.sepc -= 4;
-        return Ok(())
     }
-    let task_wake_time = inner.wake_time;
 
-    if get_time_ns() > task_wake_time {
+    if get_time_ns() > inner.wake_time {
         // 到达解锁时间
         inner.wake_time = 0;
+        Ok(())
     } else {
         // 未到达解锁时间 重复执行
         inner.context.sepc -= 4;
+        return Err(RuntimeError::ChangeTask)
     }
-    Ok(())
 }
 
-pub fn sys_times(task: SyscallTask, tms_ptr: usize) -> Result<(), RuntimeError> {
+/// 获取任务消耗的时间
+/// 
+/// 获取任务消耗的时间 包含内核态执行时间和用户态执行时间
+pub fn sys_times(task: SyscallTask, tms_ptr: UserAddr<TMS>) -> Result<(), RuntimeError> {
     let mut inner = task.inner.borrow_mut();
     let process = inner.process.borrow_mut();
-    // 等待添加
-    let tms = usize::from(process.pmm.get_phys_addr(tms_ptr.into()).unwrap()) 
-        as *mut TMS;
-    let tms = unsafe { tms.as_mut().unwrap() };
 
-    // 写入文件时间
+    // 获取时间结构引用
+    let tms = tms_ptr.transfer();
+
+    // 写入进程使用的时间
     tms.tms_cstime = process.tms.tms_cstime;
     tms.tms_cutime = process.tms.tms_cutime;
     drop(process);
 
+    // 更新context
     inner.context.x[10] = get_ticks();
     Ok(())
 }
 
-pub fn sys_gettimeofday(task: SyscallTask, ptr: usize) -> Result<(), RuntimeError> {
-    let mut inner = task.inner.borrow_mut();
-    let process = inner.process.borrow_mut();
+/// 获取时间
+/// 
+/// 获取当前时间 并写入 `time_ptr`
+pub fn sys_gettimeofday(task: SyscallTask, time_ptr: UserAddr<TimeSpec>) -> Result<(), RuntimeError> {
+    *time_ptr.transfer() = TimeSpec::now();
 
-    let timespec = usize::from(process.pmm.get_phys_addr(ptr.into()).unwrap()) as *mut TimeSpec;
-    unsafe { timespec.as_mut().unwrap().get_now() };
-    drop(process);
-    inner.context.x[10] = 0;
+    task.update_context(|ctx| ctx.x[10] = 0);
     Ok(())
 }
 
-pub fn sys_gettime(task: SyscallTask, _clock_id: usize, times_ptr: UserAddr<TimeSpec>) -> Result<(), RuntimeError> {
-    let mut inner = task.inner.borrow_mut();
-    let process = inner.process.borrow_mut();
 
-    let req = times_ptr.transfer();
+/// 获取时间
+/// 
+/// 获取时间 目前不考虑clock_id这个参数 sys_gettimeofday相似
+pub fn sys_gettime(task: SyscallTask, _clock_id: usize, time_ptr: UserAddr<TimeSpec>) -> Result<(), RuntimeError> {
+    *time_ptr.transfer() = TimeSpec::now();
 
-    // let time_now = TimeSpec::now();
-    // req.tv_sec = time_now.tv_sec;
-    // req.tv_nsec = time_now.tv_nsec;
-    *req = TimeSpec::now();
-    drop(process);
-    inner.context.x[10] = 0;
+    task.update_context(|ctx| ctx.x[10] = 0);
     Ok(())
 }
 
-pub fn sys_utimeat(task: SyscallTask, dir_fd: usize, filename: UserAddr<u8>, times_ptr: UserAddr<TimeSpec>, _flags: usize) -> Result<(), RuntimeError> {
+/// 更改文件的最后访问和修改时间
+/// 
+/// 详细描述地址: https://man7.org/linux/man-pages/man2/utime.2.html
+/// 
+pub fn sys_utimeat(task: SyscallTask, dir_fd: usize, filename: UserAddr<u8>, 
+    times_ptr: UserAddr<TimeSpec>, _flags: usize) -> Result<(), RuntimeError> {
     let mut inner = task.inner.borrow_mut();
     let process = inner.process.borrow_mut();
 

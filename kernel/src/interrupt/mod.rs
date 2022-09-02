@@ -1,6 +1,5 @@
 pub mod timer;
 
-use core::arch::global_asm;
 use core::arch::asm;
 use arch::kernelvec;
 use riscv::register::scause::Trap;

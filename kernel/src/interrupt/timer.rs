@@ -1,18 +1,10 @@
 use crate::sync::mutex::Mutex;
-use arch::sbi::set_timer;
+use arch::{sbi::set_timer, CLOCK_FREQ};
 use riscv::register::{sie, time};
 
-#[cfg(not(feature = "board_k210"))]
-const CLOCK_FREQ: usize = 1250000;
-
-#[cfg(feature = "board_k210")]
-// const CLOCK_FREQ: usize = 4030000000 / 62;
-const CLOCK_FREQ: usize = 403000000 / 62;
 
 const CHANGE_TASK_TICKS: usize = 10;
 
-// const INTERVAL: usize = CLOCK_FREQ / 100;
-// const INTERVAL: usize = CLOCK_FREQ / 25;
 pub const INTERVAL: usize = CLOCK_FREQ;
 
 pub const MSEC_PER_SEC: usize = 1000;
@@ -64,18 +56,7 @@ impl TimeVal {
 }
 
 impl TimeSpec {
-    pub fn get_now(&mut self) {
-        let tick = time::read();
-        self.tv_sec = tick / CLOCK_FREQ;
-        self.tv_nsec = (tick % CLOCK_FREQ) * NSEC_PER_SEC / CLOCK_FREQ;
-    }
-
     pub fn now() -> Self {
-        // let ms = get_time_ms();
-        // Self{
-        //     tv_sec: ms / 1000,
-        //     tv_nsec: (ms % 1000) * 1000
-        // }
         let tick = time::read();
         Self {
             tv_sec: tick / CLOCK_FREQ,

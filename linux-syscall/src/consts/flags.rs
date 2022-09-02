@@ -58,3 +58,10 @@ struct Dirent {
     d_type: u8,	         // 文件类型
     d_name_start: [u8;0 ]//文件名 文件名 自行处理？
 }
+
+#[repr(C)]
+pub struct PollFD {
+    pub fd: u32,
+    pub envents: u16,
+    pub revents: u16
+}
