@@ -45,7 +45,7 @@ ifeq ($(MODE), release)
 	echo "release"
 endif
 	@cp $(LINK_FILE_DIR)/linker-qemu.ld $(LINK_FILE_DIR)/linker.ld
-	@RUSTFLAGS="-Clink-arg=-T$(LINK_FILE_DIR)/linker.ld" cargo build $(MODE_FLAG) --features "board_qemu $(FEATURES)" --offline
+	@RUSTFLAGS="-Clink-arg=-T$(LINK_FILE_DIR)/linker.ld" cargo build $(MODE_FLAG) --features "board_qemu $(FEATURES)"
 	@rm $(LINK_FILE_DIR)/linker.ld
 	$(OBJCOPY) $(KERNEL_FILE) --strip-all -O binary $(BIN_FILE)
 
@@ -58,7 +58,7 @@ clean:
 
 k210: 
 	@cp $(LINK_FILE_DIR)/linker-k210.ld $(LINK_FILE_DIR)/linker.ld
-	RUSTFLAGS="-Clink-arg=-T$(LINK_FILE_DIR)/linker.ld" cargo build $(MODE_FLAG) --features "board_k210 $(FEATURES)" --offline
+	RUSTFLAGS="-Clink-arg=-T$(LINK_FILE_DIR)/linker.ld" cargo build $(MODE_FLAG) --features "board_k210 $(FEATURES)"
 	@rm $(LINK_FILE_DIR)/linker.ld
 	$(OBJCOPY) $(KERNEL_FILE) --strip-all -O binary $(BIN_FILE)
 	@cp $(BOOTLOADER_K210) $(BOOTLOADER_K210).copy

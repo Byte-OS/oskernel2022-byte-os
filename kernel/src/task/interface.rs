@@ -2,7 +2,7 @@ use alloc::rc::Rc;
 
 use super::task::Task;
 
-extern "C" {
+extern "Rust" {
     pub fn kill_process(pid: usize);
     pub fn kill_task(pid: usize, tid: usize);
     pub fn add_task_to_scheduler(task: Rc<Task>);
