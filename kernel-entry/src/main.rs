@@ -5,7 +5,6 @@
 #![feature(default_alloc_error_handler)]
 #![feature(naked_functions)]
 #![feature(asm_const)]
-#![feature(asm_sym)]
 #![allow(unaligned_references)]
 
 

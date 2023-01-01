@@ -360,6 +360,7 @@ pub fn add_files_to_dir(dir: Dir, node: Rc<INode>) {
 }
 
 pub fn init(path: &str, root_dir: Dir) {
+    info!("Hello Wo");
     if path == "/" {
         let inode = INode::new(String::from(""), DiskFileEnum::DiskDir(root_dir.clone()), 
             FileType::Directory, None);

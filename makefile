@@ -25,7 +25,7 @@ K210-BURNER	= tools/kflash.py
 LINK_FILE_DIR = kernel-entry/src
 
 ifeq ($(MODE), release)
-MODE_FLAG += --release
+@MODE_FLAG += --release
 endif
 
 .PHONY: all doc kernel build clean qemu run k210 flash
@@ -55,6 +55,7 @@ asm:
 # 清理编译出的文件
 clean:
 	@cargo clean
+	rm $(KERNEL_FILE) $(BIN_FILE)
 
 k210: 
 	@cp $(LINK_FILE_DIR)/linker-k210.ld $(LINK_FILE_DIR)/linker.ld
@@ -108,9 +109,6 @@ coredump:
 
 objdump:
 	rust-objdump --arch-name=riscv64 -d $(KERNEL_FILE)
-
-clean:
-	rm $(KERNEL_FILE) $(BIN_FILE)
 
 fs-img: 
 	@rm -f $(FS_IMG)
